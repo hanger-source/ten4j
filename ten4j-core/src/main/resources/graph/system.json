@@ -6,7 +6,7 @@
     "nodes": [
       {
         "name": "client-connection-extension",
-        "type": "com.tenframework.core.extension.system.ClientConnectionExtension"
+        "type": "source.hanger.core.extension.system.ClientConnectionExtension"
       }
     ]
   }

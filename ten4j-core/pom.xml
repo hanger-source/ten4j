@@ -5,8 +5,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.tenframework</groupId>
-        <artifactId>ten-framework-java</artifactId>
+        <groupId>source.hanger</groupId>
+        <artifactId>ten4j</artifactId>
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 
@@ -24,7 +24,7 @@
     </properties>
 
     <artifactId>ten4j-core</artifactId>
-    <name>ten-core</name>
+    <name>ten4j-core</name>
     <description>核心API定义，包含消息系统、位置定位、基础接口等</description>
 
     <dependencies>

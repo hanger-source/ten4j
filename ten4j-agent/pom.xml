@@ -5,27 +5,27 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.tenframework</groupId>
-        <artifactId>ten-framework-java</artifactId>
+        <groupId>source.hanger</groupId>
+        <artifactId>ten4j</artifactId>
         <version>1.0.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>ten-agent</artifactId>
-    <name>ten-agent</name>
+    <artifactId>ten4j-agent</artifactId>
+    <name>ten4j-agent</name>
     <description>Minimal runnable example for TEN Agent</description>
 
     <dependencies>
         <dependency>
-            <groupId>com.tenframework</groupId>
-            <artifactId>ten-core</artifactId>
+            <groupId>source.hanger</groupId>
+            <artifactId>ten4j-core</artifactId>
             <version>${project.parent.version}</version> <!-- 使用父模块版本 -->
         </dependency>
 
         <!-- Add dependency on ten-server -->
         <dependency>
-            <groupId>com.tenframework</groupId>
-            <artifactId>ten-server</artifactId>
+            <groupId>source.hanger</groupId>
+            <artifactId>ten4j-server</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
 
@@ -108,7 +108,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>com.tenframework.agent.Main</mainClass>
+                            <mainClass>source.hanger.agent.Main</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
@@ -192,7 +192,7 @@
                             <transformers>
                                 <transformer
                                     implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>com.tenframework.agent.Main</mainClass>
+                                    <mainClass>source.hanger.agent.Main</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>

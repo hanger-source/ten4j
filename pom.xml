@@ -4,12 +4,12 @@
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.tenframework</groupId>
-    <artifactId>ten-framework-java</artifactId>
+    <groupId>source.hanger</groupId>
+    <artifactId>ten4j</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>ten-framework-java</name>
+    <name>ten4j</name>
     <description>Java implementation of TEN Framework real-time dialogue engine</description>
 
     <properties>
@@ -33,9 +33,9 @@
     </properties>
 
     <modules>
-        <module>ten-core</module>
-        <module>ten-server</module>
-        <module>ten-agent</module>
+        <module>ten4j-core</module>
+        <module>ten4j-server</module>
+        <module>ten4j-agent</module>
     </modules>
 
     <dependencyManagement>

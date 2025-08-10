@@ -9,7 +9,7 @@
       },
       {
         "name": "SimpleEcho",
-        "type": "com.tenframework.core.extension.SimpleEchoExtension"
+        "type": "source.hanger.core.extension.SimpleEchoExtension"
       }
     ],
     "connections": [
