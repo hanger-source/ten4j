@@ -281,7 +281,7 @@ public class App implements Agent {
                     // 暂时发送回源连接，表示无法路由
                     if (sourceConnection != null) {
                         appEnvProxy.sendResult(CommandResult.fail(message.getId(),
-                                "Remote " + remoteId + " not found.")); // 使用 appEnvProxy 发送错误结果
+                            "Remote %s not found.".formatted(remoteId))); // 使用 appEnvProxy 发送错误结果
                     }
                 } else {
                     log.debug("App: 路由消息 {} 到 Remote {}。", message.getId(), remoteId);
