@@ -259,8 +259,52 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
             connection != null ? connection.getConnectionId() : "N/A"); // 打印连接信息
 
         if (message instanceof Command command) {
-            // 处理命令
-            processCommand(command);
+            // 如果是 App 级别或 Engine 级别的命令，由 Engine 自身处理
+            if (command.getDestLocs() != null && !command.getDestLocs().isEmpty()) {
+                Location destLoc = command.getDestLocs().getFirst(); // 假设只处理第一个目的地
+
+                // **新增逻辑：处理针对 App 自身的命令**
+                if (app.getAppUri().equals(destLoc.getAppUri()) && (destLoc.getGraphId() == null || !graphId.equals(destLoc.getGraphId()))) {
+                    // 目标是当前 App 自身，将命令转发回 App 处理
+                    log.debug("Engine {}: 将 App 级别命令 {} 转发回 App。", graphId, command.getId());
+                    app.handleInboundMessage(command, connection); // 将命令转发回 App
+                    return; // 命令已处理，无需继续路由
+                }
+
+                if (graphId.equals(destLoc.getGraphId()) && destLoc.getExtensionName() == null) {
+                    // 目标是当前 Engine 自身
+                    EngineCommandHandler handler = commandHandlers.get(command.getType());
+                    if (handler != null) {
+                        try {
+                            handler.handle(engineEnvProxy, command);
+                        } catch (Exception e) {
+                            log.error("Engine {}: 命令处理器处理命令 {} 失败: {}", graphId, command.getId(), e.getMessage(),
+                                e);
+                            submitCommandResult(CommandResult.fail(command.getId(),
+                                "Engine command handling failed: %s".formatted(
+                                    e.getMessage()))); // Changed to submitCommandResult
+                        }
+                    } else {
+                        log.warn("Engine {}: 未知 Engine 级别命令类型或没有注册处理器: {}", graphId, command.getType());
+                        submitCommandResult(CommandResult.fail(command.getId(),
+                            "Unknown Engine command type or no handler registered: %s".formatted(
+                                command.getType())));
+                    }
+                } else if (graphId.equals(destLoc.getGraphId())) {
+                    // 目标是当前 Engine 内部的 Extension
+                    engineExtensionContext.dispatchCommandToExtension(command, destLoc.getExtensionName());
+                } else if (destLoc.getAppUri() != null && !destLoc.getAppUri().isEmpty()) { // 目标是其他 App/Remote
+                    routeMessageToRemote(command); // 修正：直接通过 Engine 路由到 Remote
+                } else {
+                    // 没有目的地，无法处理
+                    submitCommandResult(CommandResult.fail(command.getId(), "Command has no destination.")); // Changed to
+                    // submitCommandResult
+                }
+            } else {
+                // 没有目的地，无法处理
+                log.warn("Engine {}: 命令 {} 没有目的地 Location，无法处理。", graphId, command.getId());
+                submitCommandResult(CommandResult.fail(command.getId(), "Command has no destination.")); // Changed to
+            }
         } else if (message instanceof CommandResult) {
             // 处理命令结果
             submitCommandResult((CommandResult)message);
@@ -421,7 +465,7 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
 
         // 关键：创建 Remote 实例时，initialConnection 也会被传入 Remote 的构造函数
         // Remote 的构造函数将负责调用 connection.attachToRemote(this) 完成依附
-        DummyRemote newRemote = new DummyRemote(targetAppUri, initialConnection.orElse(null), this, remoteRunloop);
+        DummyRemote newRemote = new DummyRemote(targetAppUri, initialConnection, this, remoteRunloop);
 
         // 将新创建的 Remote 添加到 remotes 映射中
         addRemote(newRemote); // <-- 关键修改点
