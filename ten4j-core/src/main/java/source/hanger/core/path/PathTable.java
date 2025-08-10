@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import source.hanger.core.connection.Connection;
 import source.hanger.core.engine.MessageSubmitter;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.Location;
@@ -16,6 +17,7 @@ import source.hanger.core.message.command.Command;
 import source.hanger.core.server.GraphStoppedException;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.message.Message;
 
 /**
  * 路径表，负责管理命令和数据在Engine内部的流转路径 (PathOut, PathIn)。
@@ -71,9 +73,10 @@ public class PathTable {
      */
     public void createOutPath(String commandId, String parentCommandId, String commandName, Location sourceLocation,
             Location destinationLocation, CompletableFuture<Object> resultFuture,
-            ResultReturnPolicy returnPolicy, Location returnLocation) {
+            ResultReturnPolicy returnPolicy, Location returnLocation, Message originalCommand) { // 添加 originalCommand
+                                                                                                 // 参数
         PathOut pathOut = new PathOut(commandId, parentCommandId, commandName, sourceLocation,
-                destinationLocation, resultFuture, returnPolicy, returnLocation);
+                destinationLocation, resultFuture, returnPolicy, returnLocation, originalCommand); // 传递 originalCommand
         pathOuts.put(commandId, pathOut); // 直接使用 String commandId 作为键
 
         log.debug("PathTable: 创建PathOut: commandId={}, parentCommandId={}, source={}, dest={}, returnLoc={}",
@@ -105,17 +108,21 @@ public class PathTable {
     /**
      * 创建一个PathIn实例并添加到路径表中。
      *
-     * @param command 命令实例
+     * @param command    命令实例
+     * @param connection 消息来自的物理连接
      */
-    public void createInPath(Command command) {
+    public void createInPath(Command command, Connection connection) {
         // C 端 ten_path_in_create 接收的是 table, cmd_name, parent_cmd_id, cmd_id, src_loc,
         // result_conversion
-        // Java 端 PathIn 构造函数接收 commandName, commandId, parentCommandId, sourceLocation
+        // Java 端 PathIn 构造函数接收 commandName, commandId, parentCommandId, sourceLocation,
+        // originalMessage, sourceConnection
         PathIn pathIn = new PathIn(command.getName(), command.getId(), command.getParentCommandId(),
-                command.getSrcLoc());
+                command.getSrcLoc(), command, connection); // 传递 command 作为 originalMessage, connection 作为
+                                                           // sourceConnection
         inPaths.put(command.getId(), pathIn);
-        log.debug("PathTable: 创建PathIn: commandId={}, commandName={}, parentCommandId={}, srcLoc={}",
-                command.getId(), command.getName(), command.getParentCommandId(), command.getSrcLoc());
+        log.debug("PathTable: 创建PathIn: commandId={}, commandName={}, parentCommandId={}, srcLoc={}, connection={}",
+                command.getId(), command.getName(), command.getParentCommandId(), command.getSrcLoc(),
+                connection.getConnectionId());
     }
 
     /**

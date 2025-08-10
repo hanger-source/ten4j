@@ -3,7 +3,11 @@ package source.hanger.core.tenenv;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import source.hanger.core.app.AppEnvImpl;
+import source.hanger.core.engine.EngineEnvImpl;
+import source.hanger.core.engine.MessageSubmitter;
 import source.hanger.core.extension.Extension;
+import source.hanger.core.extension.ExtensionEnvImpl;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
@@ -11,6 +15,7 @@ import source.hanger.core.message.Message;
 import source.hanger.core.message.VideoFrameMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.runloop.Runloop;
+import source.hanger.core.connection.Connection;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -20,7 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 public record TenEnvProxy<T extends TenEnv>(
         Runloop targetRunloop,
         T targetEnv,
-        String signature) implements TenEnv {
+        String signature) implements TenEnv, MessageSubmitter {
 
     /**
      * 提交一个任务到代理的目标 Runloop。
@@ -78,7 +83,7 @@ public record TenEnvProxy<T extends TenEnv>(
                 targetEnv.sendResult(commandResult);
             } catch (Exception e) {
                 log.error("Failed to proxy sendResult to {}: {}. CommandResult {} dropped.",
-                        signature, e.getMessage(), commandResult, e); // Changed name to signature
+                        signature, e.getMessage(), commandResult, e);
             }
         });
     }
@@ -207,8 +212,22 @@ public record TenEnvProxy<T extends TenEnv>(
 
     @Override
     public void close() {
-        log.info("TenEnvProxy {}: Received close signal. Delegating to target TenEnv.", signature); // Changed name to
-                                                                                                    // signature
+        log.info("TenEnvProxy {}: Received close signal. Delegating to target TenEnv.", signature);
         targetRunloop.postTask(targetEnv::close);
+    }
+
+    // 实现 MessageSubmitter 接口方法
+    @Override
+    public boolean submitInboundMessage(Message message, Connection connection) {
+        if (targetEnv instanceof AppEnvImpl appEnv) {
+            return appEnv.getApp().handleInboundMessage(message, connection);
+        } else if (targetEnv instanceof EngineEnvImpl engineEnv) {
+            return engineEnv.getEngine().submitInboundMessage(message, connection);
+        } else if (targetEnv instanceof ExtensionEnvImpl extensionEnv) {
+            // 委托给 ExtensionEnvImpl 关联的 EngineExtensionContext 所持有的 Engine
+            return extensionEnv.getExtensionContext().getEngine().submitInboundMessage(message, null);
+        }
+        log.warn("TenEnvProxy {}: 无法处理 submitInboundMessage，未知目标环境类型: {}", signature, targetEnv.getClass().getName());
+        return false;
     }
 }

@@ -3,6 +3,7 @@ package source.hanger.core.extension;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import source.hanger.core.engine.EngineExtensionContext;
 import source.hanger.core.extension.submitter.ExtensionCommandSubmitter;
 import source.hanger.core.extension.submitter.ExtensionMessageSubmitter;
 import source.hanger.core.graph.GraphConfig;
@@ -30,10 +31,11 @@ public class ExtensionEnvImpl implements TenEnv {
     private final ExtensionCommandSubmitter commandSubmitter;
     private final ExtensionMessageSubmitter messageSubmitter;
     private final Runloop extensionRunloop; // Extension 所在的 Runloop
+    private final EngineExtensionContext extensionContext;
 
     public ExtensionEnvImpl(String extensionId, Extension extension, String appUri, String graphId,
             ExtensionCommandSubmitter commandSubmitter, ExtensionMessageSubmitter messageSubmitter,
-            Runloop extensionRunloop) {
+            Runloop extensionRunloop, EngineExtensionContext extensionContext) {
         this.extensionId = extensionId;
         this.extension = extension;
         this.appUri = appUri;
@@ -41,7 +43,12 @@ public class ExtensionEnvImpl implements TenEnv {
         this.commandSubmitter = commandSubmitter;
         this.messageSubmitter = messageSubmitter;
         this.extensionRunloop = extensionRunloop;
+        this.extensionContext = extensionContext;
         log.info("ExtensionEnvImpl created for Extension: {}", extensionId);
+    }
+
+    public EngineExtensionContext getExtensionContext() {
+        return extensionContext;
     }
 
     @Override

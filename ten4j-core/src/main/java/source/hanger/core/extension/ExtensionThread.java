@@ -1,8 +1,13 @@
 package source.hanger.core.extension;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+import source.hanger.core.engine.EngineExtensionContext;
 import source.hanger.core.graph.ExtensionInfo;
+import source.hanger.core.graph.ExtensionGroupInfo;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
@@ -33,9 +38,11 @@ public class ExtensionThread implements Agent {
     private final ConcurrentHashMap<String, ExtensionInfo> extensionInfos; // 存储 ExtensionInfo 实例
     @Setter
     private ExtensionGroup extensionGroup; // 新增：ExtensionGroup 实例
+    private final EngineExtensionContext engineExtensionContext;
 
-    public ExtensionThread(String threadName) {
+    public ExtensionThread(String threadName, EngineExtensionContext engineExtensionContext) {
         this.threadName = threadName;
+        this.engineExtensionContext = engineExtensionContext;
         runloop = Runloop.createRunloop("%s-Runloop".formatted(threadName));
         extensions = new ConcurrentHashMap<>();
         extensionEnvs = new ConcurrentHashMap<>();
@@ -82,16 +89,15 @@ public class ExtensionThread implements Agent {
 
         // 调用 ExtensionGroup 的 onConfigure 和 onInit
         if (extensionGroup != null) {
-            // 创建 ExtensionGroup 自己的 TenEnv 实例并设置
-            // 注意：这里的 ExtensionEnvImpl 是为 ExtensionGroup 自身提供环境，其内部参数需要调整以反映其角色
             ExtensionEnvImpl extensionGroupEnv = new ExtensionEnvImpl(
-                extensionGroup.getName(), // extensionId
-                null, // extension (ExtensionGroup 本身不是 Extension)
-                null, // appUri (ExtensionGroup 不直接管理 appUri)
-                null, // graphId (ExtensionGroup 不直接管理 graphId)
-                null, // commandSubmitter (ExtensionGroup 不直接发送命令)
-                null, // messageSubmitter (ExtensionGroup 不直接发送消息)
-                runloop // 传入 ExtensionThread 的 Runloop
+                    extensionGroup.getName(), // extensionId
+                    null, // extension (ExtensionGroup 本身不是 Extension)
+                    engineExtensionContext.getApp().getAppUri(), // appUri: 从 EngineExtensionContext 的 app 字段获取
+                    engineExtensionContext.getEngine().getGraphId(), // graphId: 从 EngineExtensionContext 的 engine 字段获取
+                    engineExtensionContext, // commandSubmitter: EngineExtensionContext 自身
+                    engineExtensionContext, // messageSubmitter: EngineExtensionContext 自身
+                    runloop, // 传入 ExtensionThread 的 Runloop
+                    engineExtensionContext // <-- 传入 EngineExtensionContext
             );
             extensionGroup.setTenEnv(extensionGroupEnv); // 设置
             runloop.postTask(() -> {
@@ -101,7 +107,7 @@ public class ExtensionThread implements Agent {
                     log.info("ExtensionGroup {}: onConfigure/onInit completed.".formatted(extensionGroup.getName()));
                 } catch (Exception e) {
                     log.error("ExtensionGroup {}: Error during onConfigure/onInit: {}".formatted(
-                        extensionGroup.getName(), e.getMessage()), e);
+                            extensionGroup.getName(), e.getMessage()), e);
                 }
             });
         }
@@ -117,17 +123,17 @@ public class ExtensionThread implements Agent {
 
         // 调用 ExtensionGroup 的 onDeinit
         if (extensionGroup != null
-            && extensionGroup.getTenEnv() != null) {
+                && extensionGroup.getTenEnv() != null) {
             // 确保在 Runloop 线程中执行 onDeinit
-            ExtensionEnvImpl extensionGroupEnv = (ExtensionEnvImpl)extensionGroup
-                .getTenEnv();
+            ExtensionEnvImpl extensionGroupEnv = (ExtensionEnvImpl) extensionGroup
+                    .getTenEnv();
             runloop.postTask(() -> {
                 try {
                     extensionGroup.onDeinit(extensionGroupEnv);
                     log.info("ExtensionGroup %s: onDeinit completed.".formatted(extensionGroup.getName()));
                 } catch (Exception e) {
                     log.error("ExtensionGroup %s: Error during onDeinit: %s".formatted(
-                        extensionGroup.getName(), e.getMessage()), e);
+                            extensionGroup.getName(), e.getMessage()), e);
                 }
             });
         }
@@ -146,7 +152,7 @@ public class ExtensionThread implements Agent {
     public void addExtension(Extension extension, ExtensionEnvImpl extensionEnv, ExtensionInfo extInfo) {
         if (extensions.containsKey(extension.getExtensionId())) {
             log.warn("Extension %s already added to ExtensionThread %s.".formatted(extension.getExtensionId(),
-                threadName));
+                    threadName));
             return;
         }
 
@@ -158,7 +164,7 @@ public class ExtensionThread implements Agent {
                 extensionInfos.put(extension.getExtensionId(), extInfo);
 
                 log.info("ExtensionThread {}: Adding Extension %s to management.".formatted(threadName,
-                    extension.getExtensionId()));
+                        extension.getExtensionId()));
 
                 // 调用生命周期回调
                 // ExtensionGroup 的 onCreateExtensions 将在这里被触发，如果 ExtensionGroup 负责协调 Extension
@@ -172,11 +178,11 @@ public class ExtensionThread implements Agent {
                 extension.onStart(extensionEnv);
 
                 log.info("ExtensionThread %s: Extension %s lifecycle (onConfigure/onInit/onStart) completed.".formatted(
-                    threadName, extension.getExtensionId()));
+                        threadName, extension.getExtensionId()));
 
             } catch (Exception e) {
                 log.error("ExtensionThread %s: Error adding Extension %s or during lifecycle callbacks: %s".formatted(
-                    threadName, extension.getExtensionId(), e.getMessage()), e);
+                        threadName, extension.getExtensionId(), e.getMessage()), e);
             }
         });
     }
@@ -193,7 +199,7 @@ public class ExtensionThread implements Agent {
 
             if (extension != null) {
                 log.info("ExtensionThread %s: Removing Extension %s from management.".formatted(threadName,
-                    extensionId));
+                        extensionId));
                 try {
                     // 调用生命周期回调
                     extension.onStop(extensionEnv);
@@ -206,17 +212,17 @@ public class ExtensionThread implements Agent {
                         // 如果 C 端 on_destroy_extensions 接收一个 List<Extension>，这里需要调整。
                         // 暂时用 Collections.singletonList(extension) 或创建一个新的 List
                         extensionGroup.onDestroyExtensions(extensionEnv,
-                            java.util.Collections.singletonList(extension));
+                                java.util.Collections.singletonList(extension));
                     }
 
                     log.info(
-                        "ExtensionThread %s: Extension %s lifecycle (onStop/onDeinit/destroy) completed.".formatted(
-                            threadName, extensionId));
+                            "ExtensionThread %s: Extension %s lifecycle (onStop/onDeinit/destroy) completed.".formatted(
+                                    threadName, extensionId));
                 } catch (Exception e) {
                     log.error("ExtensionThread %s: Error removing Extension %s or during lifecycle callbacks: %s"
                             .formatted(
-                                threadName, extensionId, e.getMessage()),
-                        e);
+                                    threadName, extensionId, e.getMessage()),
+                            e);
                 }
             } else {
                 log.warn("ExtensionThread %s: Extension %s not found for removal.".formatted(threadName, extensionId));
@@ -235,7 +241,7 @@ public class ExtensionThread implements Agent {
 
             if (extension == null || extensionEnv == null) {
                 log.error("ExtensionThread %s: 无法找到 Extension %s 或其环境，无法分发消息 %s.".formatted(
-                    threadName, targetExtensionId, message.getId()));
+                        threadName, targetExtensionId, message.getId()));
                 // 如果是命令，需要返回一个失败的 CommandResult
                 if (message instanceof Command command) {
                     // 这里需要一个机制将 CommandResult 回传给 Engine，可能通过 ExtensionContext
@@ -248,19 +254,19 @@ public class ExtensionThread implements Agent {
                 // 根据消息类型调用对应的 onXXX 回调
                 switch (message.getType()) {
                     case CMD:
-                        extension.onCmd(extensionEnv, (Command)message);
+                        extension.onCmd(extensionEnv, (Command) message);
                         break;
                     case CMD_RESULT:
-                        extension.onCmdResult(extensionEnv, (CommandResult)message);
+                        extension.onCmdResult(extensionEnv, (CommandResult) message);
                         break;
                     case DATA:
-                        extension.onDataMessage(extensionEnv, (DataMessage)message);
+                        extension.onDataMessage(extensionEnv, (DataMessage) message);
                         break;
                     case AUDIO_FRAME:
-                        extension.onAudioFrame(extensionEnv, (AudioFrameMessage)message);
+                        extension.onAudioFrame(extensionEnv, (AudioFrameMessage) message);
                         break;
                     case VIDEO_FRAME:
-                        extension.onVideoFrame(extensionEnv, (VideoFrameMessage)message);
+                        extension.onVideoFrame(extensionEnv, (VideoFrameMessage) message);
                         break;
                     // 对于 CMD_CLOSE_APP, CMD_START_GRAPH, CMD_STOP_GRAPH 等 Engine/App 级别命令，
                     // ExtensionThread 不应该直接处理，它们应该在 Engine 级别被拦截和处理。
@@ -271,15 +277,15 @@ public class ExtensionThread implements Agent {
                     case CMD_TIMER:
                     case CMD_TIMEOUT:
                         log.warn(
-                            "ExtensionThread %s: 收到不应由 Extension 直接处理的命令 %s (Type: %s), 已忽略。".formatted(
-                                threadName, message.getId(), message.getType()));
+                                "ExtensionThread %s: 收到不应由 Extension 直接处理的命令 %s (Type: %s), 已忽略。".formatted(
+                                        threadName, message.getId(), message.getType()));
                         if (message instanceof Command command) {
                             // 这里需要通过 ExtensionContext 回发 CommandResult
                         }
                         break;
                     default:
                         log.warn("ExtensionThread %s: 收到未知消息类型 %s (ID: %s), 已忽略。".formatted(
-                            threadName, message.getType(), message.getId()));
+                                threadName, message.getType(), message.getId()));
                         if (message instanceof Command command) {
                             // 这里需要通过 ExtensionContext 回发 CommandResult
                         }
@@ -287,7 +293,7 @@ public class ExtensionThread implements Agent {
                 }
             } catch (Exception e) {
                 log.error("ExtensionThread %s: Extension %s 处理消息 %s 时发生异常: %s".formatted(
-                    threadName, targetExtensionId, message.getId(), e.getMessage()), e);
+                        threadName, targetExtensionId, message.getId(), e.getMessage()), e);
                 if (message instanceof Command) {
                     // 这里需要通过 ExtensionContext 回发 CommandResult
                 }

@@ -50,7 +50,7 @@ public class AppEnvImpl implements TenEnv {
 
     @Override
     public void sendResult(CommandResult result) {
-        app.routeCommandResult(result);
+        app.handleInboundMessage(result, null); // <-- 修正：通过 handleInboundMessage 提交命令结果
     }
 
     @Override

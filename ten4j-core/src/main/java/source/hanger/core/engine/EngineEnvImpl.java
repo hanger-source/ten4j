@@ -1,14 +1,18 @@
 package source.hanger.core.engine;
 
+import java.io.IOException;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import source.hanger.core.app.App;
 import source.hanger.core.extension.Extension;
 import source.hanger.core.graph.GraphConfig;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
+import source.hanger.core.message.Message;
 import source.hanger.core.message.VideoFrameMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.runloop.Runloop;
@@ -16,23 +20,27 @@ import source.hanger.core.tenenv.TenEnv;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * `EngineEnvImpl` 是 `Engine` 组件的 `TenEnv` 接口实现。
- * 它将 `TenEnv` 的操作委托给其持有的 `Engine` 实例。
+ * EngineEnvImpl 是 Engine 级别的 TenEnv 实现。
+ * 它为 Extension 提供与 Engine 交互的接口。
  */
 @Slf4j
 public class EngineEnvImpl implements TenEnv {
 
     private final Engine engine;
     private final Runloop engineRunloop;
-    private final GraphConfig graphConfig;
-    private final App app; // 用于获取 App URI
+    private final Map<String, Object> properties; // Engine 的配置属性，来自 GraphDefinition
+    private final App app;
 
-    public EngineEnvImpl(Engine engine, Runloop engineRunloop, GraphConfig graphConfig, App app) {
+    public EngineEnvImpl(Engine engine, Runloop engineRunloop, Map<String, Object> properties, App app) {
         this.engine = engine;
         this.engineRunloop = engineRunloop;
-        this.graphConfig = graphConfig;
-        this.app = app;
+        this.properties = properties;
+        this.app = app; // Added
         log.info("EngineEnvImpl created for Engine: {}", engine.getGraphId());
+    }
+
+    public Engine getEngine() {
+        return engine;
     }
 
     @Override
@@ -47,112 +55,145 @@ public class EngineEnvImpl implements TenEnv {
 
     @Override
     public void sendResult(CommandResult result) {
-        engine.submitCommandResult(result); // Changed to submitCommandResult
+        engine.submitCommandResult(result);
     }
 
     @Override
     public void sendData(DataMessage data) {
-        engine.submitInboundMessage(data, null); // 传入 null
+        engine.submitInboundMessage(data, null);
     }
 
     @Override
     public void sendVideoFrame(VideoFrameMessage videoFrame) {
-        engine.submitInboundMessage(videoFrame, null); // 传入 null
+        engine.submitInboundMessage(videoFrame, null);
     }
 
     @Override
     public void sendAudioFrame(AudioFrameMessage audioFrame) {
-        engine.submitInboundMessage(audioFrame, null); // 传入 null
+        engine.submitInboundMessage(audioFrame, null);
     }
 
     @Override
-    public void sendMessage(source.hanger.core.message.Message message) {
-        engine.submitInboundMessage(message, null); // 传入 null
+    public void sendMessage(Message message) {
+        engine.submitInboundMessage(message, null);
     }
 
     @Override
     public Optional<Object> getProperty(String path) {
-        return graphConfig.getProperty(path);
+        return Optional.ofNullable(properties.get(path)); // <-- 使用 properties Map
     }
 
     @Override
     public void setProperty(String path, Object value) {
-        graphConfig.setProperty(path, value);
+        properties.put(path, value); // <-- 使用 properties Map
     }
 
     @Override
     public boolean hasProperty(String path) {
-        return graphConfig.hasProperty(path);
+        return properties.containsKey(path); // <-- 使用 properties Map
     }
 
     @Override
     public void deleteProperty(String path) {
-        graphConfig.deleteProperty(path);
+        properties.remove(path); // <-- 使用 properties Map
     }
 
     @Override
     public Optional<Integer> getPropertyInt(String path) {
-        return graphConfig.getPropertyInt(path);
+        Object value = properties.get(path); // <-- 使用 properties Map
+        if (value instanceof Integer) {
+            return Optional.of((Integer) value);
+        }
+        return Optional.empty();
     }
 
     @Override
     public void setPropertyInt(String path, int value) {
-        graphConfig.setPropertyInt(path, value);
+        properties.put(path, value); // <-- 使用 properties Map
     }
 
     @Override
     public Optional<Long> getPropertyLong(String path) {
-        return graphConfig.getPropertyLong(path);
+        Object value = properties.get(path); // <-- 使用 properties Map
+        if (value instanceof Long) {
+            return Optional.of((Long) value);
+        }
+        return Optional.empty();
     }
 
     @Override
     public void setPropertyLong(String path, long value) {
-        graphConfig.setPropertyLong(path, value);
+        properties.put(path, value); // <-- 使用 properties Map
     }
 
     @Override
     public Optional<String> getPropertyString(String path) {
-        return graphConfig.getPropertyString(path);
+        Object value = properties.get(path); // <-- 使用 properties Map
+        if (value instanceof String) {
+            return Optional.of((String) value);
+        }
+        return Optional.empty();
     }
 
     @Override
     public void setPropertyString(String path, String value) {
-        graphConfig.setPropertyString(path, value);
+        properties.put(path, value); // <-- 使用 properties Map
     }
 
     @Override
     public Optional<Boolean> getPropertyBool(String path) {
-        return graphConfig.getPropertyBool(path);
+        Object value = properties.get(path); // <-- 使用 properties Map
+        if (value instanceof Boolean) {
+            return Optional.of((Boolean) value);
+        }
+        return Optional.empty();
     }
 
     @Override
     public void setPropertyBool(String path, boolean value) {
-        graphConfig.setPropertyBool(path, value);
+        properties.put(path, value); // <-- 使用 properties Map
     }
 
     @Override
     public Optional<Double> getPropertyDouble(String path) {
-        return graphConfig.getPropertyDouble(path);
+        Object value = properties.get(path); // <-- 使用 properties Map
+        if (value instanceof Double) {
+            return Optional.of((Double) value);
+        }
+        return Optional.empty();
     }
 
     @Override
     public void setPropertyDouble(String path, double value) {
-        graphConfig.setPropertyDouble(path, value);
+        properties.put(path, value); // <-- 使用 properties Map
     }
 
     @Override
     public Optional<Float> getPropertyFloat(String path) {
-        return graphConfig.getPropertyFloat(path);
+        Object value = properties.get(path); // <-- 使用 properties Map
+        if (value instanceof Float) {
+            return Optional.of((Float) value);
+        }
+        return Optional.empty();
     }
 
     @Override
     public void setPropertyFloat(String path, float value) {
-        graphConfig.setPropertyFloat(path, value);
+        properties.put(path, value); // <-- 使用 properties Map
     }
 
     @Override
     public void initPropertyFromJson(String jsonStr) {
-        graphConfig.initPropertyFromJson(jsonStr);
+        // 对于 Map<String, Object> 类型的 properties，需要手动解析 JSON
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> newProperties = new ObjectMapper().readValue(jsonStr, Map.class);
+            this.properties.clear();
+            this.properties.putAll(newProperties);
+            log.debug("EngineEnvImpl: 从 JSON 初始化属性成功。");
+        } catch (IOException e) {
+            log.error("EngineEnvImpl: 从 JSON 初始化属性失败: {}", e.getMessage(), e);
+        }
     }
 
     @Override
@@ -167,16 +208,17 @@ public class EngineEnvImpl implements TenEnv {
 
     @Override
     public String getExtensionName() {
-        return null; // Engine 不是 Extension
+        return null; // EngineEnvImpl 不直接代表 Extension
     }
 
     @Override
     public Extension getAttachedExtension() {
-        return null; // Engine 不会附加到 Extension
+        return null; // EngineEnvImpl 不会附加到 Extension
     }
 
     @Override
     public void close() {
-        engine.stop(); // 调用 Engine 的停止方法
+        // EngineEnvImpl 的 close 行为取决于 Engine 的停止，无需额外操作
+        log.info("EngineEnvImpl {} closed.", engine.getGraphId());
     }
 }

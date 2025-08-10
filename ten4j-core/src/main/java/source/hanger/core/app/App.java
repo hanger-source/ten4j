@@ -32,6 +32,9 @@ import source.hanger.core.message.Message;
 import source.hanger.core.message.MessageType;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.message.command.StartGraphCommand;
+import source.hanger.core.path.PathTable;
+import source.hanger.core.path.PathTableAttachedTo; // 导入 PathTableAttachedTo
+import source.hanger.core.path.PathIn; // 导入 PathIn
 import source.hanger.core.remote.Remote;
 import source.hanger.core.runloop.Runloop;
 import source.hanger.core.tenenv.TenEnvProxy;
@@ -49,7 +52,7 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private final Map<String, Engine> engines; // 管理所有活跃的 Engine 实例，key 为 graphId
     private final List<Connection> orphanConnections; // 尚未绑定到 Engine 的连接
-    // private final PathTable pathTable; // App 级别 PathTable - 移除 App 级别 PathTable
+    private final PathTable pathTable; // App 级别 PathTable - 恢复 App 级别 PathTable
     private final Map<String, Remote> remotes; // 外部远程连接 (跨 App/Engine 通信)
     private final boolean hasOwnRunloopPerEngine; // 每个 Engine 是否有自己的 Runloop
     // 新增：Extension 注册机制
@@ -112,7 +115,6 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
         orphanConnections = Collections.synchronizedList(new java.util.ArrayList<>());
         remotes = new ConcurrentHashMap<>(); // 初始化远程连接映射
         availableExtensions = new ConcurrentHashMap<>(); // 初始化 Extension 注册表
-        // activeConnections = new ConcurrentHashMap<>(); // 此行将被删除
 
         this.appConfig = appConfig != null ? appConfig : new GraphConfig(new ConcurrentHashMap<>()); // 使用传入的配置或默认空配置
         appRunloop = Runloop.createRunloopWithWorker("AppRunloop-%s".formatted(appUri), this);
@@ -124,6 +126,8 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
         // 初始化 App 自身的 TenEnvProxy 实例
         appEnvProxy = new TenEnvProxy<>(appRunloop, new AppEnvImpl(this, appRunloop, appConfig), "App-" + appUri);
         commandFutures = new ConcurrentHashMap<>(); // 初始化 commandFutures
+
+        this.pathTable = new PathTable(PathTableAttachedTo.APP, this, appEnvProxy); // <-- 将 this 替换为 appEnvProxy
 
         log.info("App {} created with hasOwnRunloopPerEngine={}", appUri, hasOwnRunloopPerEngine);
     }
@@ -390,12 +394,21 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
         return inMsgs.drain(queuedMessage -> {
             Message message = queuedMessage.message;
             Connection connection = queuedMessage.connection;
+
             // 实际的消息处理逻辑，与原 handleInboundMessage 内部逻辑相似
             if (message instanceof Command command) {
+                // C 端 App 处理入站消息时，会将其添加到 PathTable
+                // 仅对非内部消息且有 ID 的命令进行 PathIn 记录
+                if (command.getId() != null && !command.getId().isEmpty()) { // 检查 ID 是否存在
+                    // 对于来自外部连接的命令，记录其 PathIn
+                    if (connection != null) { // 仅当有实际连接时才记录 PathIn
+                        pathTable.createInPath(command, connection); // <-- 记录 PathIn
+                    }
+                }
+
                 AppCommandHandler handler = appCommandHandlers.get(command.getType());
                 if (handler != null) {
                     try {
-                        // 将 App.this 替换为 appEnvProxy，因为 AppCommandHandler 期望 TenEnvProxy
                         handler.handle(appEnvProxy, command, connection);
                     } catch (Exception e) {
                         log.error("App {}: 命令处理器处理命令 {} 失败: {}", appUri, command.getId(),
@@ -414,6 +427,39 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
                         CommandResult errorResult = CommandResult.fail(command.getId(),
                                 "Unknown App command type or no handler registered: %s".formatted(command.getType()));
                         connection.sendOutboundMessage(errorResult);
+                    }
+                }
+            } else if (message instanceof CommandResult commandResult) { // 新增：处理 CommandResult
+                // 检查是否是需要通过 PathTable 回溯的 CommandResult
+                if (commandResult.getOriginalCommandId() != null && !commandResult.getOriginalCommandId().isEmpty()) {
+                    Optional<PathIn> pathInOpt = pathTable.getInPath(commandResult.getOriginalCommandId());
+                    if (pathInOpt.isPresent()) {
+                        PathIn pathIn = pathInOpt.get();
+                        Connection originalConnection = pathIn.getSourceConnection(); // 获取原始连接
+
+                        if (originalConnection != null) {
+                            log.debug("App: 路由命令结果 {} 到原始连接 {}。", commandResult.getId(),
+                                    originalConnection.getConnectionId());
+                            originalConnection.sendOutboundMessage(commandResult);
+                        } else {
+                            log.warn("App: 原始连接为空，无法路由命令结果 {}。", commandResult.getId());
+                        }
+                        pathTable.removeInPath(commandResult.getOriginalCommandId()); // <-- 移除 PathIn
+                    } else {
+                        log.warn("App: 未找到与命令结果 {} 对应的 PathIn。可能已超时或已被处理。", commandResult.getOriginalCommandId());
+                        // 如果没有 PathIn，则尝试按照 destLocs 路由
+                        if (commandResult.getDestLocs() != null && !commandResult.getDestLocs().isEmpty()) {
+                            routeMessageToDestination(commandResult, connection); // 对于没有 PathIn 的结果，尝试按目的地路由
+                        } else if (connection != null) { // 如果有来源连接 (例如来自 Engine 的内部结果)，则直接回传给它
+                            // 否则，如果没有 destLocs 且有来源 connection，则尝试直接回传
+                            connection.sendOutboundMessage(commandResult);
+                        }
+                    }
+                } else { // 对于没有 originalCommandId 的 CommandResult，或者其他非命令消息
+                    if (message.getDestLocs() != null && !message.getDestLocs().isEmpty()) {
+                        routeMessageToDestination(message, connection);
+                    } else {
+                        log.warn("App: 消息 {} (Type: {}) 没有目的地，无法处理。", message.getId(), message.getType());
                     }
                 }
             } else { // 对于非命令消息，尝试路由到目标 Engine 或 Remote
@@ -439,39 +485,6 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
     @Override
     public String roleName() {
         return "App-%s".formatted(appUri);
-    }
-
-    /**
-     * 处理传入的命令结果消息。
-     * 这是 App Runloop 线程中的核心处理逻辑。
-     *
-     * @param commandResult 传入的命令结果。
-     */
-    public void routeCommandResult(CommandResult commandResult) {
-        // 确保在 App 的 Runloop 线程中执行
-        if (appRunloop.isNotCurrentThread()) {
-            appRunloop.postTask(() -> routeCommandResult(commandResult));
-            return;
-        }
-
-        String originalCommandId = commandResult.getOriginalCommandId();
-        CompletableFuture<CommandResult> future = commandFutures.remove(originalCommandId);
-        if (future != null) {
-            if (commandResult.getStatusCode() == 0) {
-                future.complete(commandResult);
-            } else {
-                future.completeExceptionally(new RuntimeException(
-                        "Command failed with status: %d, Detail: %s".formatted(commandResult.getStatusCode(),
-                                commandResult.getDetail())));
-            }
-        } else {
-            log.warn("App {}: 未找到与命令结果 {} 对应的 Future。", appUri, commandResult.getOriginalCommandId());
-        }
-
-        // 如果命令结果有返回地址，可能需要向上路由或发送给 Remote
-        if (commandResult.getDestLocs() != null && !commandResult.getDestLocs().isEmpty()) {
-            routeMessageToDestination(commandResult, null); // 使用已有的路由方法
-        }
     }
 
     /**
