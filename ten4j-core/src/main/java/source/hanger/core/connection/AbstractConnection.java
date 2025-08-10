@@ -1,17 +1,16 @@
 package source.hanger.core.connection;
 
+import java.net.SocketAddress;
+import java.util.concurrent.CompletableFuture;
+
+import io.netty.channel.Channel;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.app.MessageReceiver;
 import source.hanger.core.message.ConnectionMigrationState;
 import source.hanger.core.message.Location;
 import source.hanger.core.message.Message;
-import source.hanger.core.protocol.Protocol;
 import source.hanger.core.runloop.Runloop;
-import io.netty.channel.Channel; // 保持导入，尽管不直接存储 Channel 字段
-import lombok.extern.slf4j.Slf4j;
-
-import java.net.SocketAddress; // 新增导入
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture; // 新增导入
-import source.hanger.core.app.MessageReceiver; // 修正导入路径
 
 /**
  * AbstractConnection 提供了 Connection 接口的骨架实现，
@@ -26,6 +25,8 @@ public abstract class AbstractConnection implements Connection {
     protected Location remoteLocation; // 新增：远程 Location
     protected ConnectionMigrationState migrationState; // 追踪连接迁移状态
 
+    // 新增：获取消息接收器
+    @Getter
     protected MessageReceiver messageReceiver; // 消息接收器，用于处理入站消息
 
     // 构造函数重构
@@ -76,26 +77,25 @@ public abstract class AbstractConnection implements Connection {
         this.migrationState = migrationState;
     }
 
-    // 移除 getEngine(), setRemoteLocation(), getProtocol(), setProtocol() 等方法，
-    // 这些现在由 Connection 的使用者（如 App 或 Engine）管理，或由具体 Connection 实现来处理。
-
     @Override
     public void onMessageReceived(Message message) {
         // 消息接收逻辑。如果当前 Runloop 存在，将消息提交到该 Runloop 进行处理。
         if (currentRunloop != null) {
             log.debug("Connection {}: 接收到消息，提交到当前 Runloop: type={}, id={}", connectionId, message.getType(),
-                    message.getId());
+                message.getId());
             currentRunloop.postTask(() -> {
                 // 在 Runloop 线程中，将消息传递给依附的 MessageReceiver
                 if (messageReceiver != null) {
                     messageReceiver.handleInboundMessage(message, this);
                 } else {
-                    log.warn("Connection {}: 消息 {} 没有注册的 MessageReceiver，消息被丢弃。", connectionId, message.getId());
+                    log.warn("Connection {}: 消息 {} 没有注册的 MessageReceiver，消息被丢弃。", connectionId,
+                        message.getId());
                 }
             });
         } else {
-            log.warn("Connection {}: 接收到消息但没有关联的 Runloop，消息将被丢弃: type={}, id={}", connectionId, message.getType(),
-                    message.getId());
+            log.warn("Connection {}: 接收到消息但没有关联的 Runloop，消息将被丢弃: type={}, id={}", connectionId,
+                message.getType(),
+                message.getId());
         }
     }
 
@@ -106,10 +106,12 @@ public abstract class AbstractConnection implements Connection {
     public CompletableFuture<Void> sendOutboundMessage(Message message) {
         // 检查连接是否活跃再发送
         if (getChannel() != null && getChannel().isActive()) {
-            log.debug("Connection {}: 发送消息到远程客户端: type={}, id={}", connectionId, message.getType(), message.getId());
+            log.debug("Connection {}: 发送消息到远程客户端: type={}, id={}", connectionId, message.getType(),
+                message.getId());
             return sendOutboundMessageInternal(message);
         } else {
-            log.warn("Connection {}: 连接不活跃，无法发送消息: type={}, id={}", connectionId, message.getType(), message.getId());
+            log.warn("Connection {}: 连接不活跃，无法发送消息: type={}, id={}", connectionId, message.getType(),
+                message.getId());
             return CompletableFuture.failedFuture(new IllegalStateException("Connection is not active."));
         }
     }
@@ -124,11 +126,11 @@ public abstract class AbstractConnection implements Connection {
     }
 
     @Override
-    public void migrate(Runloop targetRunloop, Location destinationLocation) { // 修改方法签名，接受 Runloop 和 Location
+    public void migrate(Runloop targetRunloop, Location destinationLocation) {
         // 实现 C 语言中 ten_connection_migrate 的逻辑
         // 将 Connection 的所有权和后续处理任务提交到 targetExecutor
         if (migrationState == ConnectionMigrationState.FIRST_MSG
-                || migrationState == ConnectionMigrationState.INITIAL) {
+            || migrationState == ConnectionMigrationState.INITIAL) {
             this.migrationState = ConnectionMigrationState.MIGRATING;
             this.currentRunloop = targetRunloop; // 更新当前 Runloop
             this.remoteLocation = destinationLocation; // 更新目标 Location
@@ -173,27 +175,9 @@ public abstract class AbstractConnection implements Connection {
         }
     }
 
-    // 移除 onProtocolMigrated() 和 onProtocolCleaned()，因为协议处理现在封装在 Netty 层。
-    /*
-     * @Override
-     * public void onProtocolMigrated() {
-     * log.info("Connection {}: 协议层已迁移", connectionId);
-     * }
-     *
-     * @Override
-     * public void onProtocolCleaned() {
-     * log.info("Connection {}: 协议层已清理", connectionId);
-     * }
-     */
-
     // 新增：设置消息接收器
     @Override
     public void setMessageReceiver(MessageReceiver messageReceiver) {
         this.messageReceiver = messageReceiver;
-    }
-
-    // 新增：获取消息接收器
-    public MessageReceiver getMessageReceiver() {
-        return messageReceiver;
     }
 }

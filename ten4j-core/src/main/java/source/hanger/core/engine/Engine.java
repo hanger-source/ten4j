@@ -11,6 +11,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.ManyToOneConcurrentArrayQueue;
 import source.hanger.core.app.App;
 import source.hanger.core.command.EngineCommandHandler;
 import source.hanger.core.command.engine.TimeoutCommandHandler;
@@ -29,10 +33,6 @@ import source.hanger.core.remote.DummyRemote;
 import source.hanger.core.remote.Remote;
 import source.hanger.core.runloop.Runloop;
 import source.hanger.core.tenenv.TenEnvProxy;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
-import org.agrona.concurrent.Agent;
-import org.agrona.concurrent.ManyToOneConcurrentArrayQueue;
 
 import static source.hanger.core.message.MessageType.CMD_TIMEOUT;
 import static source.hanger.core.message.MessageType.CMD_TIMER;
@@ -52,17 +52,11 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter { // Im
     private final EngineExtensionContext engineExtensionContext; // 扩展上下文管理器
     private final ExtensionMessageDispatcher messageDispatcher; // 消息派发器
     private final Map<MessageType, EngineCommandHandler> commandHandlers; // 新增命令处理器映射
-    private final ManyToOneConcurrentArrayQueue<Message> inMsgs; // 消息输入队列
+    private final ManyToOneConcurrentArrayQueue<QueuedMessage> inMsgs; // 消息输入队列, 类型改为 QueuedMessage
     private final boolean hasOwnLoop; // 是否拥有自己的 Runloop
     private final List<Connection> orphanConnections; // 存储未被 Remote 认领的 Connection
     private final Map<String, Remote> remotes; // 管理 Remote 实例
     private final App app; // 引用所属的 App 实例
-    /**
-     * -- GETTER --
-     * 获取 Engine 自身的 TenEnvProxy 实例。
-     *
-     * @return Engine 的 TenEnvProxy 实例。
-     */
     @Getter
     private final TenEnvProxy<EngineEnvImpl> engineEnvProxy; // 新增：Engine 自身的 TenEnvProxy 实例
     private final ConcurrentMap<Long, CompletableFuture<CommandResult>> commandFutures; // Engine 自身的 CompletableFuture
@@ -79,18 +73,16 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter { // Im
         // Engine 自身的 Runloop 初始化
         if (hasOwnLoop) {
             runloop = Runloop.createRunloopWithWorker("%s-runloop".formatted(graphId), this); // 每个 Engine 都有自己的 Runloop
-        } else { // 如果没有自己的 Runloop，则尝试使用 App 的 Runloop
+        } else {
+            // 如果没有自己的 Runloop，则尝试使用 App 的 Runloop
             // 确保 app.getAppRunloop() 不为 null，否则这是一个逻辑错误
             if (app.getAppRunloop() == null) {
                 throw new IllegalStateException(
-                    "Engine %s requires a Runloop, but neither hasOwnLoop is true nor app.getAppRunloop() is available."
-                        .formatted(graphId));
+                        "Engine %s requires a Runloop, but neither hasOwnLoop is true nor app.getAppRunloop() is available."
+                                .formatted(graphId));
             }
             runloop = app.getAppRunloop(); // 使用 App 的 Runloop
         }
-
-        // 移除不必要的初始化，TenEnvProxy 已经处理了底层 TenEnv 的概念
-        // loopRunner = new LoopRunner(this);
 
         commandFutures = new ConcurrentHashMap<>(); // 确保这里已经初始化
 
@@ -99,19 +91,12 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter { // Im
 
         // 修正 extensionContext 的初始化，使用 Engine 自身作为 MessageSubmitter 和 CommandSubmitter
         engineExtensionContext = new EngineExtensionContext(this, app, pathTable, this,
-            this); // Pass this (Engine) as submitters
+                this); // Pass this (Engine) as submitters
 
         // 初始化消息派发器
         // DefaultExtensionMessageDispatcher 期望 ExtensionContext 和 ConcurrentMap<Long,
-        // CompletableFuture<Object>>
-        // 这里需要传递 commandFutures，并处理泛型兼容性问题
         messageDispatcher = new DefaultExtensionMessageDispatcher(engineExtensionContext,
-            (ConcurrentMap)commandFutures); // Cast
-        // to
-        // raw
-        // type
-        // for
-        // now
+                (ConcurrentMap) commandFutures); // Cast
 
         inMsgs = new ManyToOneConcurrentArrayQueue<>(Runloop.DEFAULT_INTERNAL_QUEUE_CAPACITY); // 初始化消息输入队列
         orphanConnections = Collections.synchronizedList(new ArrayList<>());
@@ -119,9 +104,9 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter { // Im
 
         // 初始化 Engine 自身的 TenEnvProxy 实例
         engineEnvProxy = new TenEnvProxy<>(runloop,
-            new EngineEnvImpl(this, runloop, graphDefinition.getProperties(), app), // Modified parameters to match
-            // EngineEnvImpl constructor
-            "Engine-%s".formatted(graphId));
+                new EngineEnvImpl(this, runloop, graphDefinition.getProperties(), app), // Modified parameters to match
+                // EngineEnvImpl constructor
+                "Engine-%s".formatted(graphId));
 
         // 注册 Engine 级别的命令处理器
         commandHandlers = new HashMap<>(); // Initialize commandHandlers map here
@@ -131,19 +116,12 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter { // Im
         log.info("Engine {} created with hasOwnLoop={}", graphId, hasOwnLoop);
     }
 
-    // Moved registerCommandHandlers content to constructor to initialize final
-    // commandHandlers
-    // private void registerCommandHandlers() {
-    // // 注册所有 Engine 级别的命令处理器
-    // commandHandlers = new HashMap<>(); // Initialize commandHandlers map
-    // commandHandlers.put(CMD_TIMER, new TimerCommandHandler());
-    // commandHandlers.put(CMD_TIMEOUT, new TimeoutCommandHandler());
-    // }
-
     @Override
     public int doWork() throws Exception {
         // 从输入队列中排水并处理消息
-        return inMsgs.drain(this::processMessage);
+        return inMsgs.drain(queuedMessage -> {
+            processMessage(queuedMessage.message(), queuedMessage.connection()); // 传递 message 和 connection
+        });
     }
 
     @Override
@@ -164,9 +142,8 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter { // Im
             for (ExtensionInfo extInfo : graphDefinition.getExtensions()) {
                 // 加载 Extension
                 engineExtensionContext.loadExtension(extInfo.getLoc().getExtensionName(),
-                    extInfo.getExtensionAddonName(),
-                    graphDefinition.getProperties(), runloop, extInfo); // Pass graphDefinition.getProperties() as
-                // config
+                        extInfo.getExtensionAddonName(),
+                        graphDefinition.getProperties(), runloop, extInfo); // Pass graphDefinition.getProperties() as
             }
         }
         isReadyToHandleMsg = true;
@@ -223,31 +200,37 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter { // Im
     /**
      * 处理 Engine 的入站消息（在 Runloop 线程中调用）。
      *
-     * @param message 待处理的消息。
+     * @param message    待处理的消息。
+     * @param connection 消息来源的连接，可能为 null。
      */
-    public void processMessage(Message message) {
+    public void processMessage(Message message, Connection connection) { // 增加 connection 参数
         if (!isReadyToHandleMsg && !isMessageAllowedWhenClosing(message)) {
             log.warn("Engine {}: 在非活跃状态下收到消息 {} (Type: {})，已忽略。",
-                graphId, message.getId(), message.getType());
+                    graphId, message.getId(), message.getType());
             // 如果是命令，返回失败结果
             if (message instanceof Command command) {
                 submitCommandResult(
-                    CommandResult.fail(command.getId(), "Engine not ready to handle messages.")); // Changed
-                // to
-                // submitCommandResult
+                        CommandResult.fail(command.getId(), "Engine not ready to handle messages."));
             }
             return;
         }
 
-        log.debug("Engine {}: 处理消息 {} (Type: {})", graphId, message.getId(), message.getType());
+        log.debug("Engine {}: 处理消息 {} (Type: {}) 来自连接 {}", graphId, message.getId(), message.getType(),
+                connection != null ? connection.getConnectionId() : "N/A"); // 打印连接信息
 
         if (message instanceof Command command) {
             // 处理命令
             processCommand(command);
         } else if (message instanceof CommandResult) {
             // 处理命令结果
-            submitCommandResult((CommandResult)message); // Changed to submitCommandResult
+            submitCommandResult((CommandResult) message);
         } else {
+            // 对于非命令和非命令结果的消息，如果连接是孤立连接，则将其从孤立列表中移除
+            if (connection != null && orphanConnections.contains(connection)) {
+                log.info("Engine {}: 收到来自孤立连接 {} 的第一条业务消息，将其从孤立列表中移除。",
+                        graphId, connection.getConnectionId());
+                removeOrphanConnection(connection);
+            }
             // 其他消息类型派发给 ExtensionContext
             messageDispatcher.dispatchOtherMessage(message);
         }
@@ -271,16 +254,16 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter { // Im
                         handler.handle(engineEnvProxy, command);
                     } catch (Exception e) {
                         log.error("Engine {}: 命令处理器处理命令 {} 失败: {}", graphId, command.getId(), e.getMessage(),
-                            e);
+                                e);
                         submitCommandResult(CommandResult.fail(command.getId(),
-                            "Engine command handling failed: %s".formatted(
-                                e.getMessage()))); // Changed to submitCommandResult
+                                "Engine command handling failed: %s".formatted(
+                                        e.getMessage()))); // Changed to submitCommandResult
                     }
                 } else {
                     log.warn("Engine {}: 未知 Engine 级别命令类型或没有注册处理器: {}", graphId, command.getType());
                     submitCommandResult(CommandResult.fail(command.getId(),
-                        "Unknown Engine command type or no handler registered: %s".formatted(
-                            command.getType()))); // Changed
+                            "Unknown Engine command type or no handler registered: %s".formatted(
+                                    command.getType()))); // Changed
                     // to
                     // submitCommandResult
                 }
@@ -321,6 +304,17 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter { // Im
     }
 
     /**
+     * 当连接绑定到 Remote 或不再是孤立连接时，将其从孤立连接列表中移除。
+     *
+     * @param connection 要移除的连接实例。
+     */
+    public void removeOrphanConnection(Connection connection) {
+        if (connection != null && orphanConnections.remove(connection)) {
+            log.info("Engine {}: 连接 {} 已从孤立连接列表中移除。", graphId, connection.getConnectionId());
+        }
+    }
+
+    /**
      * 根据连接 ID 查找孤立连接。
      *
      * @param connId 连接 ID。
@@ -345,7 +339,7 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter { // Im
         // TODO: 实现 Remote 的实际创建逻辑
         // 暂时返回 DummyRemote
         return Optional.of(new DummyRemote(targetAppUri, new Location(targetAppUri, targetGraphId, null), this,
-            initialConnection));
+                initialConnection));
     }
 
     /**
@@ -372,8 +366,8 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter { // Im
                 future.complete(commandResult);
             } else {
                 future.completeExceptionally(new RuntimeException(
-                    "Command failed with status: %d, Detail: %s".formatted(commandResult.getStatusCode(),
-                        commandResult.getDetail())));
+                        "Command failed with status: %d, Detail: %s".formatted(commandResult.getStatusCode(),
+                                commandResult.getDetail())));
             }
         } else {
             log.warn("Engine {}: 未找到与命令结果 {} 对应的 Future。", graphId, commandResult.getOriginalCommandId());
@@ -394,7 +388,7 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter { // Im
      */
     public void routeCommandResultFromExtension(CommandResult commandResult, String sourceExtensionName) {
         log.debug("Engine {}: Extension {} 路由命令结果 {} 到 Engine。", graphId, sourceExtensionName,
-            commandResult.getId());
+                commandResult.getId());
         // 委托给 Engine 处理，Engine 知道如何路由结果
         submitCommandResult(commandResult); // Changed to submitCommandResult
     }
@@ -414,25 +408,25 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter { // Im
             runloop.postTask(() -> {
                 // 将 CompletableFuture 放入 commandFutures 映射
                 commandFutures.put(Long.parseLong(command.getId()), future);
-                // 提交命令到消息队列
-                submitMessage(command); // 使用已有的 submitMessage
+                // 提交命令到消息队列，这里因为命令是内部生成，所以 connection 为 null
+                submitMessage(command, null); // 更新这里
             });
         } else {
             // 如果已经在 Runloop 线程，则直接执行
             commandFutures.put(Long.parseLong(command.getId()), future);
-            submitMessage(command); // 使用已有的 submitMessage
+            submitMessage(command, null); // 更新这里
         }
         return future;
     }
 
     @Override
-    public boolean submitMessage(Message message) {
+    public boolean submitMessage(Message message, Connection connection) {
         if (message == null) {
             log.warn("Engine {}: 尝试提交空消息。", graphId);
             return false;
         }
 
-        boolean success = inMsgs.offer(message);
+        boolean success = inMsgs.offer(new QueuedMessage(message, connection));
         if (!success) {
             log.warn("Engine {}: 内部消息队列已满，消息 {} 被丢弃。", graphId, message.getId());
             return false;
@@ -443,4 +437,7 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter { // Im
         return true;
     }
 
+    // 内部类，用于包装消息和其来源连接
+    private record QueuedMessage(Message message, Connection connection) {
+    }
 }

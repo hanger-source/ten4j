@@ -52,22 +52,22 @@ public class EngineEnvImpl implements TenEnv {
 
     @Override
     public void sendData(DataMessage data) {
-        engine.submitMessage(data);
+        engine.submitMessage(data, null); // 传入 null
     }
 
     @Override
     public void sendVideoFrame(VideoFrameMessage videoFrame) {
-        engine.submitMessage(videoFrame);
+        engine.submitMessage(videoFrame, null); // 传入 null
     }
 
     @Override
     public void sendAudioFrame(AudioFrameMessage audioFrame) {
-        engine.submitMessage(audioFrame);
+        engine.submitMessage(audioFrame, null); // 传入 null
     }
 
     @Override
     public void sendMessage(source.hanger.core.message.Message message) {
-        engine.submitMessage(message);
+        engine.submitMessage(message, null); // 传入 null
     }
 
     @Override

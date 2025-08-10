@@ -10,6 +10,8 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.app.App;
 import source.hanger.core.extension.Extension;
 import source.hanger.core.extension.ExtensionEnvImpl;
@@ -26,11 +28,8 @@ import source.hanger.core.message.Message;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.path.PathTable;
 import source.hanger.core.runloop.Runloop;
-import source.hanger.core.tenenv.TenEnvProxy;
 import source.hanger.core.util.MessageConverter;
 import source.hanger.core.util.ReflectionUtils;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * 管理 Engine 中 Extension 的生命周期和交互。
@@ -324,15 +323,6 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
         return extensionThreads.get(extensionId);
     }
 
-    // 获取所有 Extension 的 ID 列表 (通过 ExtensionThread)
-    public List<String> getExtensionIds() {
-        List<String> allExtensionIds = new ArrayList<>();
-        for (ExtensionThread thread : extensionThreads.values()) {
-            allExtensionIds.addAll(thread.getExtensions().keySet());
-        }
-        return Collections.unmodifiableList(allExtensionIds);
-    }
-
     // 获取 Extension 实例 (通过 ExtensionThread)
     public Extension getExtension(String extensionId) {
         ExtensionThread thread = findExtensionThreadForExtension(extensionId);
@@ -340,19 +330,6 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
             return thread.getExtension(extensionId);
         }
         return null;
-    }
-
-    // 获取 Extension 的 TenEnvProxy 实例 (不再直接在 ExtensionContext 中管理)
-    public TenEnvProxy<ExtensionEnvImpl> getTenEnvProxyForExtension(String extensionId) {
-        // TenEnvProxy 现在由 ExtensionThread 内部的 ExtensionEnvImpl 管理
-        // 理论上，外部不应该直接获取 ExtensionEnvImpl，而是通过 TenEnv 接口交互。
-        // 如果确实需要，ExtensionThread 需要提供一个方法来安全地获取 ExtensionEnvImpl 或其代理。
-        // 暂时返回 null，待后续对齐或移除此方法。
-        log.warn(
-                "Attempted to get TenEnvProxy for Extension {} directly from ExtensionContext. This might indicate a "
-                        + "design misalignment.",
-                extensionId);
-        return null; // or throw UnsupportedOperationException
     }
 
     // 实现 ExtensionCommandSubmitter 接口方法
@@ -372,7 +349,7 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
         log.debug("ExtensionContext: Extension {} 提交消息 {} 到 Engine。", sourceExtensionName, message.getId());
         // 修改 srcLoc 以反映真实的来源 Extension
         message.getSrcLoc().setExtensionName(sourceExtensionName);
-        engineMessageSubmitter.submitMessage(message);
+        engineMessageSubmitter.submitMessage(message, null); // 传入 null 作为 connection 参数
     }
 
     // 实现 ExtensionCommandSubmitter 接口中新增的方法

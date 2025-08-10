@@ -13,6 +13,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.ManyToOneConcurrentArrayQueue;
 import source.hanger.core.command.app.AppCommandHandler;
 import source.hanger.core.command.app.CloseAppCommandHandler;
 import source.hanger.core.command.app.StartGraphCommandHandler;
@@ -32,10 +36,6 @@ import source.hanger.core.remote.Remote;
 import source.hanger.core.runloop.Runloop;
 import source.hanger.core.tenenv.TenEnvProxy;
 import source.hanger.core.util.MessageUtils;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
-import org.agrona.concurrent.Agent;
-import org.agrona.concurrent.ManyToOneConcurrentArrayQueue;
 
 /**
  * App 类作为 Ten 框架的顶层容器和协调器。
@@ -79,9 +79,7 @@ public class App implements Agent {
     private GraphConfig appConfig; // 新增：App 的整体配置，对应 property.json
     // 新增：预定义图的映射，方便通过名称查找
     private Map<String, PredefinedGraphEntry> predefinedGraphsByName;
-
-    // protected AppTenEnv appTenEnv; // 移除此字段
-    // private final TenComponentRuntime tenComponentRuntime; // 移除此字段
+    // private final Map<String, Connection> activeConnections; // 此行将被删除
 
     /**
      * App 的构造函数。
@@ -109,6 +107,7 @@ public class App implements Agent {
         orphanConnections = Collections.synchronizedList(new java.util.ArrayList<>());
         remotes = new ConcurrentHashMap<>(); // 初始化远程连接映射
         availableExtensions = new ConcurrentHashMap<>(); // 初始化 Extension 注册表
+        // activeConnections = new ConcurrentHashMap<>(); // 此行将被删除
 
         this.appConfig = appConfig != null ? appConfig : new GraphConfig(new ConcurrentHashMap<>()); // 使用传入的配置或默认空配置
         appRunloop = Runloop.createRunloopWithWorker("AppRunloop-%s".formatted(appUri), this);
@@ -122,13 +121,6 @@ public class App implements Agent {
         commandFutures = new ConcurrentHashMap<>(); // 初始化 commandFutures
 
         log.info("App {} created with hasOwnRunloopPerEngine={}", appUri, hasOwnRunloopPerEngine);
-    }
-
-    private void registerAppCommandHandlers() {
-        // 注册所有 App 级别的命令处理器
-        appCommandHandlers.put(MessageType.CMD_START_GRAPH, new StartGraphCommandHandler());
-        appCommandHandlers.put(MessageType.CMD_STOP_GRAPH, new StopGraphCommandHandler());
-        appCommandHandlers.put(MessageType.CMD_CLOSE_APP, new CloseAppCommandHandler());
     }
 
     // 私有静态方法：加载配置文件，返回 GraphConfig
@@ -147,6 +139,13 @@ public class App implements Agent {
             log.warn("App: 未提供配置文件路径，使用默认空配置。");
             return new GraphConfig(new ConcurrentHashMap<>()); // 创建一个空的默认配置
         }
+    }
+
+    private void registerAppCommandHandlers() {
+        // 注册所有 App 级别的命令处理器
+        appCommandHandlers.put(MessageType.CMD_START_GRAPH, new StartGraphCommandHandler());
+        appCommandHandlers.put(MessageType.CMD_STOP_GRAPH, new StopGraphCommandHandler());
+        appCommandHandlers.put(MessageType.CMD_CLOSE_APP, new CloseAppCommandHandler());
     }
 
     /**
@@ -227,7 +226,7 @@ public class App implements Agent {
         // 停止 App 的 Runloop
         appRunloop.shutdown();
         // if (appTenEnv != null) {
-        // appTenEnv.close(); // 移除此行
+        // appEnv.close(); // 移除此行
         // }
         log.info("App: 已停止。");
     }
@@ -240,8 +239,32 @@ public class App implements Agent {
     public void onNewConnection(Connection connection) {
         log.info("App: 接收到新连接: {}", connection.getRemoteAddress());
         // 将新连接添加到孤立连接列表，等待 StartGraphCommand 来绑定到 Engine
+        // activeConnections.put(connection.getConnectionId(), connection); // 此行将被删除
         orphanConnections.add(connection);
-        // connection.setMessageReceiver(this); // 移除此行，AppTenEnv 现在是 MessageReceiver
+    }
+
+    /**
+     * 当连接绑定到 Engine 或不再是孤立连接时，将其从孤立连接列表中移除。
+     *
+     * @param connection 要移除的连接实例。
+     */
+    public void removeOrphanConnection(Connection connection) {
+        if (connection != null && orphanConnections.remove(connection)) {
+            log.info("App: 连接 {} 已从孤立连接列表中移除。", connection.getConnectionId());
+        }
+    }
+
+    /**
+     * 当连接关闭时被调用，移除活跃连接映射中的连接。
+     *
+     * @param connection 已关闭的连接实例。
+     */
+    public void onConnectionClosed(Connection connection) {
+        if (connection != null) {
+            // activeConnections.remove(connection.getConnectionId()); // 此行将被删除
+            orphanConnections.remove(connection); // 如果在孤立连接中，也移除
+            log.info("App: 连接 {} 已关闭并从活跃连接列表中移除。", connection.getConnectionId());
+        }
     }
 
     /**
@@ -252,7 +275,6 @@ public class App implements Agent {
      * @param sourceConnection 消息的来源连接，如果来自内部则为 null。
      */
     public void sendMessageToLocation(Message message, Connection sourceConnection) {
-        // 此处不需要 postTask，因为此方法预期在 App 的 Runloop 线程上调用
         // 或者，如果从外部线程调用，则应通过 TenEnvProxy 进行代理，TenEnvProxy 会负责 postTask
         if (message.getDestLocs() == null || message.getDestLocs().isEmpty()) {
             log.warn("App: 消息 {} 没有目的地 Location，无法路由。", message.getId());
@@ -281,7 +303,7 @@ public class App implements Agent {
                     // 暂时发送回源连接，表示无法路由
                     if (sourceConnection != null) {
                         appEnvProxy.sendResult(CommandResult.fail(message.getId(),
-                            "Remote %s not found.".formatted(remoteId))); // 使用 appEnvProxy 发送错误结果
+                                "Remote %s not found.".formatted(remoteId))); // 使用 appEnvProxy 发送错误结果
                     }
                 } else {
                     log.debug("App: 路由消息 {} 到 Remote {}。", message.getId(), remoteId);
@@ -318,7 +340,8 @@ public class App implements Agent {
                 String remoteAppUri = destLoc.getAppUri();
                 Remote remote = remotes.get(remoteAppUri);
                 if (remote == null) {
-                    log.warn("App: 目标远程 App URI {} 不存在 Remote 实例，消息 {} 无法路由。", remoteAppUri, message.getId());
+                    log.warn("App: 目标远程 App URI {} 不存在 Remote 实例，消息 {} 无法路由。", remoteAppUri,
+                            message.getId());
                     // 如果 remote 不存在，并且有 sourceConnection，通过 appEnvProxy 返回错误结果
                     if (sourceConnection != null) {
                         appEnvProxy.sendResult(CommandResult.fail(message.getId(),

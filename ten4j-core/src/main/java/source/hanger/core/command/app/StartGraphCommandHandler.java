@@ -1,7 +1,8 @@
 package source.hanger.core.command.app;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.app.App;
+import source.hanger.core.app.AppEnvImpl;
 import source.hanger.core.connection.Connection;
 import source.hanger.core.engine.Engine;
 import source.hanger.core.graph.GraphDefinition;
@@ -10,16 +11,12 @@ import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.message.command.StartGraphCommand;
 import source.hanger.core.tenenv.TenEnvProxy;
-import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.app.AppEnvImpl;
 
 /**
  * `StartGraphCommandHandler` 处理 `StartGraphCommand` 命令，负责启动 Engine。
  */
 @Slf4j
 public class StartGraphCommandHandler implements AppCommandHandler {
-
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
     public Object handle(TenEnvProxy<AppEnvImpl> appEnvProxy, Command command, Connection connection) { // 修改签名
@@ -73,7 +70,7 @@ public class StartGraphCommandHandler implements AppCommandHandler {
                 log.error("StartGraphCommandHandler: 创建 GraphDefinition 失败: {}", e.getMessage(), e);
                 if (connection != null) {
                     CommandResult errorResult = CommandResult.fail(command.getId(),
-                        "Failed to create GraphDefinition: %s".formatted(e.getMessage()));
+                            "Failed to create GraphDefinition: %s".formatted(e.getMessage()));
                     connection.sendOutboundMessage(errorResult);
                 }
                 return null;
@@ -94,7 +91,7 @@ public class StartGraphCommandHandler implements AppCommandHandler {
             log.warn("StartGraphCommandHandler: Engine {} 已经存在，不再重复启动。", graphId);
             if (connection != null) {
                 CommandResult errorResult = CommandResult.fail(command.getId(),
-                    "Engine already exists: %s".formatted(graphId));
+                        "Engine already exists: %s".formatted(graphId));
                 connection.sendOutboundMessage(errorResult);
             }
             return null;
@@ -106,10 +103,16 @@ public class StartGraphCommandHandler implements AppCommandHandler {
 
         engine.start(); // 启动 Engine
 
+        // 如果命令来源于一个孤立连接，那么该连接现在已绑定到 Engine，从孤立列表中移除它
+        if (connection != null) {
+            app.removeOrphanConnection(connection); // 从 App 的孤立连接列表中移除
+            engine.addOrphanConnection(connection); // 将连接添加到 Engine 的孤立连接列表中
+        }
+
         log.info("StartGraphCommandHandler: Engine {} 启动成功。", graphId);
         if (connection != null) {
             CommandResult successResult = CommandResult.success(command.getId(),
-                "Engine %s started successfully.".formatted(graphId));
+                    "Engine %s started successfully.".formatted(graphId));
             connection.sendOutboundMessage(successResult);
         }
         return null;

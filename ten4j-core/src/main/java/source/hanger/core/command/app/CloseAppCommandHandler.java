@@ -1,12 +1,11 @@
 package source.hanger.core.command.app;
 
-import source.hanger.core.app.App;
+import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.app.AppEnvImpl;
 import source.hanger.core.connection.Connection;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnvProxy;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * `CloseAppCommandHandler` 处理 `CloseAppCommand` 命令，负责关闭整个 App。

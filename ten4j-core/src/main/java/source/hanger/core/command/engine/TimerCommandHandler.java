@@ -1,13 +1,12 @@
 package source.hanger.core.command.engine;
 
+import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.command.EngineCommandHandler;
-import source.hanger.core.engine.Engine;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.message.command.TimeoutCommand;
 import source.hanger.core.message.command.TimerCommand;
 import source.hanger.core.tenenv.TenEnv;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * `TimerCommandHandler` 处理 `TimerCommand` 命令。
@@ -23,15 +22,15 @@ public class TimerCommandHandler implements EngineCommandHandler {
             // 返回失败结果
             return CommandResult.fail(command.getId(), "Unexpected command type for TimerHandler.");
         }
-        return handleTimerCommand(engineEnv, (TimerCommand) command);
+        return handleTimerCommand(engineEnv, (TimerCommand)command);
     }
 
     @Override
     public Object handleTimerCommand(TenEnv engineEnv, TimerCommand command) {
         log.debug("TimerCommand received for timerId: {}, timeoutUs: {}, times: {}",
-                command.getTimerId(), command.getTimeoutUs(), command.getTimes());
+            command.getTimerId(), command.getTimeoutUs(), command.getTimes());
         // TODO: Implement timer logic
-        return "Timer " + command.getTimerId() + " handled.";
+        return "Timer %d handled.".formatted(command.getTimerId());
     }
 
     @Override
@@ -39,6 +38,6 @@ public class TimerCommandHandler implements EngineCommandHandler {
         // TimerCommandHandler 不处理 TimeoutCommand
         log.warn("TimerCommandHandler 不支持 TimeoutCommand: {}", command.getId());
         return CommandResult.fail(command.getId(),
-                "Not supported: TimerCommandHandler does not handle TimeoutCommand.");
+            "Not supported: TimerCommandHandler does not handle TimeoutCommand.");
     }
 }

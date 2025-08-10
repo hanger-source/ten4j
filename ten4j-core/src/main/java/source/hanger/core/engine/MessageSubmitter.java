@@ -1,5 +1,6 @@
 package source.hanger.core.engine;
 
+import source.hanger.core.connection.Connection;
 import source.hanger.core.message.Message;
 
 /**
@@ -11,8 +12,9 @@ public interface MessageSubmitter {
     /**
      * 向Engine提交消息（非阻塞）
      *
-     * @param message 要处理的消息
+     * @param message    要处理的消息
+     * @param connection 消息来源的连接，可以为 null
      * @return true如果成功提交，false如果队列已满
      */
-    boolean submitMessage(Message message);
+    boolean submitMessage(Message message, Connection connection);
 }

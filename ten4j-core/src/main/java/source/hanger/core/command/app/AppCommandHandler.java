@@ -1,9 +1,9 @@
 package source.hanger.core.command.app;
 
+import source.hanger.core.app.AppEnvImpl;
 import source.hanger.core.connection.Connection;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnvProxy;
-import source.hanger.core.app.AppEnvImpl;
 
 /**
  * `AppCommandHandler` 接口定义了处理 App 级别命令的契约。

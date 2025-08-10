@@ -30,7 +30,7 @@ public class NettyConnectionHandler extends ChannelInboundHandlerAdapter {
                 connectionId,
                 ctx.channel().remoteAddress(),
                 ctx.channel(),
-            app.getAppRunloop() // 将 App 的 Runloop 传递给 Connection
+                app.getAppRunloop() // 将 App 的 Runloop 传递给 Connection
         );
         log.info("NettyConnectionHandler: Channel {} 活跃，创建新的 NettyConnection: {}", ctx.channel().id().asShortText(),
                 connectionId);
@@ -58,6 +58,7 @@ public class NettyConnectionHandler extends ChannelInboundHandlerAdapter {
             log.info("NettyConnectionHandler: Channel {} 不活跃，关闭 NettyConnection: {}", ctx.channel().id().asShortText(),
                     connection.getConnectionId());
             connection.close(); // 触发 Connection 的清理逻辑
+            app.onConnectionClosed(connection); // 通知 App 连接已关闭
             ctx.channel().attr(NettyConnection.CONNECTION_ATTRIBUTE_KEY).set(null); // 移除属性
         } else {
             log.warn("NettyConnectionHandler: Channel {} 不活跃，但未找到对应的 NettyConnection 实例。",
@@ -74,6 +75,7 @@ public class NettyConnectionHandler extends ChannelInboundHandlerAdapter {
         NettyConnection connection = ctx.channel().attr(NettyConnection.CONNECTION_ATTRIBUTE_KEY).get();
         if (connection != null) {
             connection.close();
+            app.onConnectionClosed(connection); // 通知 App 连接已关闭
             ctx.channel().attr(NettyConnection.CONNECTION_ATTRIBUTE_KEY).set(null); // 移除属性
         }
         ctx.close(); // 关闭 Channel

@@ -228,7 +228,7 @@ public class PathTable {
             backtrackResult.setDestLocs(List.of(pathOut.getSourceLocation()));
             backtrackResult.setSrcLoc(pathOut.getDestinationLocation());
 
-            messageSubmitter.submitMessage(backtrackResult);
+            messageSubmitter.submitMessage(backtrackResult, null); // 传入 null 作为 connection 参数
             log.debug("PathTable: 命令结果已回溯: originalCommandId={}, parentCommandId={}",
                     commandResult.getId(), pathOut.getParentCommandId());
         }
