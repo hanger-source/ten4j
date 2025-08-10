@@ -1,0 +1,25 @@
+{
+  "graph_id": "",
+  "app_uri": "",
+  "graph_json": {
+    "graph_id": "test-websocket-echo-graph",
+    "nodes": [
+      {
+        "name": "client-connection-extension"
+      },
+      {
+        "name": "SimpleEcho",
+        "type": "com.tenframework.core.extension.SimpleEchoExtension"
+      }
+    ],
+    "connections": [
+      {
+        "source": "client-connection-extension",
+        "destinations": [
+          "SimpleEcho"
+        ],
+        "type": "data"
+      }
+    ]
+  }
+}

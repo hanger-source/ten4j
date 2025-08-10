@@ -1,0 +1,13 @@
+{
+  "graph_id": "000000",
+  "app_uri": "sys://app",
+  "graph_json": {
+    "graph_id": "000000",
+    "nodes": [
+      {
+        "name": "client-connection-extension",
+        "type": "com.tenframework.core.extension.system.ClientConnectionExtension"
+      }
+    ]
+  }
+}
