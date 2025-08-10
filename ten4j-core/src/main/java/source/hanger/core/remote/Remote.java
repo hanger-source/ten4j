@@ -1,66 +1,122 @@
 package source.hanger.core.remote;
 
-import source.hanger.core.engine.Engine;
-import source.hanger.core.message.Location;
-import source.hanger.core.message.Message;
-import lombok.Data;
+import java.util.concurrent.CompletableFuture;
+
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.app.MessageReceiver;
+import source.hanger.core.connection.Connection;
+import source.hanger.core.engine.Engine;
+import source.hanger.core.message.Message;
+import source.hanger.core.runloop.Runloop;
 
 /**
- * 远程 Engine 实例的抽象。
- * 负责管理与远程 Engine 的逻辑连接，并将本地 Engine 产生的发往远程的消息转发出去。
- * 对齐C/Python中的ten_remote_t结构体。
- * 不包含具体的网络传输细节（如 Netty）。
+ * Remote 代表 TEN Framework 中的一个远程实体（例如另一个 App 或客户端）。
+ * 它封装了与该远程实体通信所需的 Connection，并作为 Engine 与 Connection 之间的桥梁。
+ * 与 C 语言中的 ten_remote_t 结构体对齐。
  */
-@Data
 @Slf4j
-public abstract class Remote {
+public class Remote implements MessageReceiver {
 
-    // 远程 Engine 的唯一标识符，通常是其 appUri
-    private final String remoteId; // 对应 ten_remote_t 的 remote_id，或远程 appUri
+    @Getter // 添加 Getter
+    private final String uri;
+    @Getter // 添加 Getter
+    private final Connection connection;
+    private final Engine engine;
+    @Getter // 添加 Getter
+    private final Runloop runloop;
 
-    // 远程 Engine 的 Location，包含 appUri, graphId 等信息
-    private final Location remoteEngineLocation;
+    public Remote(String uri, Connection connection, Engine engine, Runloop runloop) {
+        this.uri = uri;
+        this.connection = connection;
+        this.engine = engine;
+        this.runloop = runloop;
+        log.info("Remote {}: 创建，关联连接 {}，关联引擎 {}", uri, connection.getConnectionId(),
+            engine.getGraphId());
 
-    // 本地 Engine 的引用，用于接收远程返回的消息
-    private final Engine localEngine;
-
-    // 标识 Remote 是否活跃（例如，是否有底层连接）
-    private volatile boolean active;
-
-    public Remote(String remoteId, Location remoteEngineLocation, Engine localEngine) {
-        this.remoteId = remoteId;
-        this.remoteEngineLocation = remoteEngineLocation;
-        this.localEngine = localEngine;
-        this.active = false; // 初始为不活跃
-        log.info("Remote {}: 创建，目标Engine Location: {}", remoteId, remoteEngineLocation.toString());
+        // 关键修改：在 Remote 构造时，就将 Connection 依附到自身
+        this.connection.attachToRemote(this);
     }
 
     /**
-     * 激活 Remote，建立底层连接。
-     * 这将是一个抽象方法，由具体实现（如 WebSocketRemote）负责建立实际连接。
+     * 接收来自其关联 Connection 的入站消息，并提交给关联的 Engine。
+     * 与 C 语言中 ten_remote_on_input 的逻辑对齐。
+     *
+     * @param message    接收到的消息。
+     * @param connection 消息来源的 Connection。
+     * @return 消息是否成功提交。
      */
-    public abstract void activate();
+    @Override // 覆盖 MessageReceiver 的方法
+    public boolean handleInboundMessage(Message message, Connection connection) { // 方法名改为 handleInboundMessage
+        if (message == null) {
+            log.warn("Remote {}: 尝试提交空消息。", uri);
+            return false;
+        }
+        // 确保消息源 URI 设置为 Remote 的 URI
+        // message.setSrcLoc(message.getSrcLoc().toBuilder().appUri(remoteUri).build());
+
+        // 确保消息的源 App URI 被设置为此 Remote 的 URI
+        if (message.getSrcLoc() != null && (message.getSrcLoc().getAppUri() == null || message.getSrcLoc().getAppUri()
+            .isEmpty())) {
+            message.getSrcLoc().setAppUri(this.uri);
+            log.debug("Remote {}: 设置入站消息 {} 的源 App URI 为 {}", uri, message.getId(), this.uri);
+        }
+
+        // 将消息提交给关联的 Engine
+        return engine.submitInboundMessage(message, this.connection); // 传递原始 Connection
+    }
 
     /**
-     * 将消息发送到远程 Engine。
-     * 这将是一个抽象方法，由具体实现负责消息的序列化和网络传输。
+     * 从 Engine 接收出站消息，并通过其持有的 Connection 发送出去。
+     * 与 C 语言中 ten_remote_send_msg 的逻辑对齐。
      *
-     * @param message 要发送的消息
+     * @param message 要发送的消息。
+     * @return 消息是否成功发送。
      */
-    public abstract void sendMessage(Message message);
+    public CompletableFuture<Void> sendOutboundMessage(Message message) { // 修正返回类型为 CompletableFuture<Void>
+        if (message == null) {
+            log.warn("Remote {}: 尝试发送空消息。", uri);
+            return CompletableFuture.completedFuture(null); // 返回一个已完成的 CompletableFuture
+        }
+
+        if (connection == null || !connection.getChannel().isActive()) {
+            log.warn("Remote {}: 关联连接不活跃或已关闭，无法发送消息。", uri);
+            return CompletableFuture.completedFuture(null); // 返回一个已完成的 CompletableFuture
+        }
+
+        // 对齐 C 语言中 ten_remote_send_msg 的逻辑：在发送前设置消息的源 URI 为 Remote 的 URI
+        // 只有当消息的源 URI 未被指定时才设置，防止覆盖上层已设置的源
+        if (message.getSrcLoc() != null && (message.getSrcLoc().getAppUri() == null || message.getSrcLoc().getAppUri()
+            .isEmpty())) {
+            message.getSrcLoc().setAppUri(this.uri);
+            log.debug("Remote {}: 设置出站消息 {} 的源 App URI 为 {}", uri, message.getId(), this.uri);
+        }
+
+        // 调用 Connection 的发送方法
+        return connection.sendOutboundMessage(message);
+    }
 
     /**
      * 关闭此 Remote 及其所有底层资源。
-     * 这将是一个抽象方法，由具体实现负责关闭实际连接和释放资源。
+     * 与 C 语言中 ten_remote_close 的逻辑对齐。
      */
-    public abstract void shutdown();
-
-    public boolean isActive() {
-        return active;
+    public void shutdown() {
+        log.info("Remote {}: 正在关闭...", uri);
+        if (connection != null) {
+            connection.close(); // 关闭关联的连接
+        }
+        // TODO: 其他资源清理，例如从 Engine 中移除自身
+        log.info("Remote {}: 已关闭。", uri);
     }
 
-    protected void setActive(boolean active) { // 允许子类设置活跃状态
-        this.active = active;
+    /**
+     * 当关联的 Connection 关闭时被调用。
+     *
+     * @param connection 已关闭的 Connection 实例。
+     */
+    public void onConnectionClosed(Connection connection) {
+        log.info("Remote {}: 关联连接 {} 已关闭，通知关联 Engine 移除此 Remote。");
+        // TODO: 通知 Engine 或 App 移除此 Remote
+        // 例如：engine.removeRemote(this); // 如果 Engine 管理 Remote 列表
     }
 }

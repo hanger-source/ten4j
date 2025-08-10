@@ -5,11 +5,6 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-import source.hanger.core.app.App;
-import source.hanger.server.handler.MessagePackDecoder;
-import source.hanger.server.handler.MessagePackEncoder;
-import source.hanger.server.handler.NettyConnectionHandler;
-import source.hanger.server.handler.WebSocketMessageDispatcher;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -26,6 +21,11 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.app.App;
+import source.hanger.server.handler.MessagePackDecoder;
+import source.hanger.server.handler.MessagePackEncoder;
+import source.hanger.server.handler.NettyConnectionHandler;
+import source.hanger.server.handler.WebSocketMessageDispatcher;
 
 /**
  * TenServer 类封装了 Netty 服务器的启动、停止和配置。
@@ -69,33 +69,33 @@ public class TenServer {
 
                 ServerBootstrap b = new ServerBootstrap();
                 b.group(bossGroup, workerGroup)
-                        .channel(NioServerSocketChannel.class)
-                        .handler(new LoggingHandler(LogLevel.INFO)) // 添加日志处理器
-                        .childHandler(new ChannelInitializer<SocketChannel>() {
-                            @Override
-                            protected void initChannel(SocketChannel ch) throws Exception {
-                                ch.pipeline().addLast(
-                                        new HttpServerCodec(), // HTTP 编解码器
-                                        new HttpObjectAggregator(65536), // HTTP 消息聚合器
-                                        new ChunkedWriteHandler(), // 处理大文件传输
-                                        // WebSocket 协议处理器，路径为 "/websocket"
-                                        // 在握手完成后，HTTP 请求会被替换为 WebSocket 帧
-                                        new WebSocketServerProtocolHandler("/websocket"),
-                                        new WebSocketFrameAggregator(8192), // 聚合 WebSocket 帧
-                                        // MsgPack 编解码器
-                                        new MessagePackDecoder(), // MsgPack 解码器
-                                        new MessagePackEncoder(), // MsgPack 编码器
-                                        new NettyConnectionHandler(app), // 负责 Connection 生命周期管理和消息转发给 App
-                                        // WebSocketMessageDispatcher 现在只处理核心消息分发
-                                        new WebSocketMessageDispatcher(app) // WebSocket 消息调度器，传入 App
-                                );
-                            }
-                        })
-                        .option(ChannelOption.SO_BACKLOG, 128) // TCP/IP 连接队列的最大长度
-                        .childOption(ChannelOption.SO_KEEPALIVE, true); // 启用 TCP Keep-Alive
+                    .channel(NioServerSocketChannel.class)
+                    .handler(new LoggingHandler(LogLevel.INFO)) // 添加日志处理器
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        protected void initChannel(SocketChannel ch) throws Exception {
+                            ch.pipeline().addLast(
+                                new HttpServerCodec(), // HTTP 编解码器
+                                new HttpObjectAggregator(65536), // HTTP 消息聚合器
+                                new ChunkedWriteHandler(), // 处理大文件传输
+                                // WebSocket 协议处理器，路径为 "/websocket"
+                                // 在握手完成后，HTTP 请求会被替换为 WebSocket 帧
+                                new WebSocketServerProtocolHandler("/websocket"),
+                                new WebSocketFrameAggregator(8192), // 聚合 WebSocket 帧
+                                // MsgPack 编解码器
+                                new MessagePackDecoder(), // MsgPack 解码器
+                                new MessagePackEncoder(), // MsgPack 编码器
+                                new NettyConnectionHandler(app), // 负责 Connection 生命周期管理和消息转发给 App
+                                // WebSocketMessageDispatcher 现在只处理核心消息分发
+                                new WebSocketMessageDispatcher() // WebSocket 消息调度器，传入 App
+                            );
+                        }
+                    })
+                    .option(ChannelOption.SO_BACKLOG, 128) // TCP/IP 连接队列的最大长度
+                    .childOption(ChannelOption.SO_KEEPALIVE, true); // 启用 TCP Keep-Alive
 
                 channelFuture = b.bind(currentPort).sync(); // 同步绑定端口
-                currentPort = ((InetSocketAddress) channelFuture.channel().localAddress()).getPort();
+                currentPort = ((InetSocketAddress)channelFuture.channel().localAddress()).getPort();
                 log.info("TenServer successfully started on port {}", currentPort);
                 serverStartFuture.complete(null);
                 return serverStartFuture;
@@ -103,14 +103,14 @@ public class TenServer {
             } catch (Exception e) {
                 if (e.getCause() instanceof BindException) {
                     log.warn("Port {} already in use on attempt {}/{}. Retrying with new port...",
-                            currentPort, attempt + 1, MAX_RETRY_ATTEMPTS);
+                        currentPort, attempt + 1, MAX_RETRY_ATTEMPTS);
                     currentPort = findAvailablePort(); // 重新查找可用端口
                     try {
                         TimeUnit.MILLISECONDS.sleep(RETRY_DELAY_MILLIS);
                     } catch (InterruptedException interruptedException) {
                         Thread.currentThread().interrupt();
                         serverStartFuture.completeExceptionally(new IllegalStateException(
-                                "Server startup interrupted during retry.", interruptedException));
+                            "Server startup interrupted during retry.", interruptedException));
                         return serverStartFuture;
                     }
                 } else {
@@ -120,7 +120,7 @@ public class TenServer {
             }
         }
         serverStartFuture.completeExceptionally(new RuntimeException(
-                "Failed to start TenServer after " + MAX_RETRY_ATTEMPTS + " attempts due to port binding issues."));
+            "Failed to start TenServer after " + MAX_RETRY_ATTEMPTS + " attempts due to port binding issues."));
         return serverStartFuture;
     }
 

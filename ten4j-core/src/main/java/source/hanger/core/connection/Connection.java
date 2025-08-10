@@ -3,12 +3,15 @@ package source.hanger.core.connection;
 import java.net.SocketAddress;
 import java.util.concurrent.CompletableFuture;
 
+import io.netty.channel.Channel;
+import source.hanger.core.app.App;
 import source.hanger.core.app.MessageReceiver;
 import source.hanger.core.message.ConnectionMigrationState;
 import source.hanger.core.message.Location;
 import source.hanger.core.message.Message;
+import source.hanger.core.remote.Remote;
 import source.hanger.core.runloop.Runloop;
-import io.netty.channel.Channel;
+import source.hanger.core.engine.Engine; // 新增：导入 Engine 类
 
 /**
  * Connection 接口定义了与外部客户端连接的核心行为。
@@ -27,13 +30,18 @@ public interface Connection {
 
     void setRemoteLocation(Location remoteLocation); // 新增：设置远程位置
 
+    String getUri(); // 新增：获取连接的 URI
+
+    void setUri(String uri); // 新增：设置连接的 URI
+
     ConnectionMigrationState getMigrationState();
 
     void setMigrationState(ConnectionMigrationState migrationState); // 新增：设置迁移状态
 
     // 移除 Protocol getProtocol();
 
-    Runloop getCurrentRunloop(); // 新增：获取当前 Connection 依附的 Runloop
+    // 移除：获取当前 Connection 依附的 Runloop
+    // Runloop getCurrentRunloop();
 
     void onMessageReceived(Message message);
 
@@ -51,7 +59,18 @@ public interface Connection {
 
     void setMessageReceiver(MessageReceiver messageReceiver); // 新增：设置消息接收器
 
-    // 移除 onProtocolMigrated() 和 onProtocolCleaned()，因为协议处理现在封装在 Netty 层。
-    // void onProtocolMigrated();
-    // void onProtocolCleaned();
+    // 新增：依附于 App
+    void attachToApp(App app);
+
+    // 新增：依附于 Engine
+    void attachToEngine(Engine engine);
+
+    // 新增：依附于 Remote
+    void attachToRemote(Remote remote);
+
+    // 新增：设置 Runloop
+    void setRunloop(Runloop runloop);
+
+    // 新增：获取依附状态
+    ConnectionAttachTo getAttachToState();
 }

@@ -44,7 +44,7 @@ import source.hanger.core.util.MessageUtils;
  */
 @Slf4j
 @Getter
-public class App implements Agent {
+public class App implements Agent, MessageReceiver { // 修正：添加 MessageReceiver 接口
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private final Map<String, Engine> engines; // 管理所有活跃的 Engine 实例，key 为 graphId
@@ -80,6 +80,11 @@ public class App implements Agent {
     // 新增：预定义图的映射，方便通过名称查找
     private Map<String, PredefinedGraphEntry> predefinedGraphsByName;
     // private final Map<String, Connection> activeConnections; // 此行将被删除
+
+    // 新增：提供 App 的 Runloop 访问方法
+    public Runloop getRunloop() {
+        return this.appRunloop;
+    }
 
     /**
      * App 的构造函数。
@@ -214,7 +219,7 @@ public class App implements Agent {
         engines.clear();
 
         // 关闭所有远程连接
-        remotes.values().forEach(Remote::shutdown);
+        remotes.values().forEach(remote -> remote.shutdown()); // 修正：使用 lambda 表达式
         remotes.clear();
 
         // 清理孤立连接
@@ -239,8 +244,10 @@ public class App implements Agent {
     public void onNewConnection(Connection connection) {
         log.info("App: 接收到新连接: {}", connection.getRemoteAddress());
         // 将新连接添加到孤立连接列表，等待 StartGraphCommand 来绑定到 Engine
-        // activeConnections.put(connection.getConnectionId(), connection); // 此行将被删除
         orphanConnections.add(connection);
+        // 使用新的 attachToApp 方法进行设置
+        connection.attachToApp(this); // <-- 关键修改点
+        connection.setRunloop(this.appRunloop); // 确保 Connection 关联到 App 的 Runloop
     }
 
     /**
@@ -307,7 +314,7 @@ public class App implements Agent {
                     }
                 } else {
                     log.debug("App: 路由消息 {} 到 Remote {}。", message.getId(), remoteId);
-                    targetRemote.sendMessage(message);
+                    targetRemote.sendOutboundMessage(message); // 修正：使用 sendOutboundMessage
                 }
             }
         }
@@ -359,20 +366,22 @@ public class App implements Agent {
      * @param message    传入的消息。
      * @param connection 消息来源的连接，可能为 null。
      */
-    public void submitInboundMessage(Message message, Connection connection) {
+    @Override // App 也实现了 MessageReceiver 接口
+    public boolean handleInboundMessage(Message message, Connection connection) { // 修正方法名为 handleInboundMessage
         if (message == null) {
             log.warn("App: 尝试提交空消息。");
-            return;
+            return false; // 返回 false 表示未成功提交
         }
 
         boolean success = inMsgs.offer(new QueuedMessage(message, connection));
         if (!success) {
             log.warn("App {}: 内部消息队列已满，消息 {} 被丢弃。", appUri, message.getId());
-            return;
+            return false;
         }
 
         // 异步通知 Runloop 线程处理队列中的消息
         appRunloop.wakeup();
+        return true; // 返回 true 表示成功提交
     }
 
     @Override
@@ -480,12 +489,12 @@ public class App implements Agent {
                 // 将 CompletableFuture 放入 commandFutures 映射
                 commandFutures.put(command.getId(), future);
                 // 提交命令到消息队列
-                submitInboundMessage(command, null); // 使用已有的 submitInboundMessage
+                handleInboundMessage(command, null); // 使用已有的 handleInboundMessage
             });
         } else {
             // 如果已经在 Runloop 线程，则直接执行
             commandFutures.put(command.getId(), future);
-            submitInboundMessage(command, null); // 使用已有的 submitInboundMessage
+            handleInboundMessage(command, null); // 使用已有的 handleInboundMessage
         }
         return future;
     }

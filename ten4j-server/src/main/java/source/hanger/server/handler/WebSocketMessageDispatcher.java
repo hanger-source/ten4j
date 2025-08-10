@@ -2,12 +2,11 @@ package source.hanger.server.handler;
 
 import java.util.HashMap;
 
-import source.hanger.core.app.App;
-import source.hanger.core.message.Message;
-import source.hanger.server.connection.NettyConnection;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.message.Message;
+import source.hanger.server.connection.NettyConnection;
 
 /**
  * WebSocketMessageDispatcher 负责从 WebSocket Channel 读取 Message，并将其分发到 App。
@@ -15,12 +14,6 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class WebSocketMessageDispatcher extends SimpleChannelInboundHandler<Message> {
-
-    private final App app;
-
-    public WebSocketMessageDispatcher(App app) {
-        this.app = app;
-    }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Message msg) {
@@ -38,8 +31,8 @@ public class WebSocketMessageDispatcher extends SimpleChannelInboundHandler<Mess
         // 修复：setSourceLocation 改为 setSrcLoc
         msg.setSrcLoc(connection.getRemoteLocation());
 
-        // 将消息分发给 App 处理
-        app.submitInboundMessage(msg, connection);
+        // 将消息分发给 Connection 处理，而不是直接给 App
+        connection.onMessageReceived(msg);
     }
 
     @Override
@@ -52,7 +45,7 @@ public class WebSocketMessageDispatcher extends SimpleChannelInboundHandler<Mess
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         log.error("WebSocketMessageDispatcher: Channel {} 发生异常: {}", ctx.channel().id().asShortText(),
-                cause.getMessage(), cause);
+            cause.getMessage(), cause);
         ctx.close(); // 关闭 Channel
     }
 }

@@ -1,5 +1,6 @@
 package source.hanger.core.app;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -8,6 +9,7 @@ import source.hanger.core.graph.GraphConfig;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
+import source.hanger.core.message.Message;
 import source.hanger.core.message.VideoFrameMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.runloop.Runloop;
@@ -15,8 +17,8 @@ import source.hanger.core.tenenv.TenEnv;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * `AppEnvImpl` 是 `App` 组件的 `TenEnv` 接口实现。
- * 它将 `TenEnv` 的操作委托给其持有的 `App` 实例。
+ * AppEnvImpl 是 App 级别的 TenEnv 实现。
+ * 它为 Extension 提供与 App 交互的接口。
  */
 @Slf4j
 public class AppEnvImpl implements TenEnv {
@@ -53,22 +55,22 @@ public class AppEnvImpl implements TenEnv {
 
     @Override
     public void sendData(DataMessage data) {
-        app.submitInboundMessage(data, null); // App 接收的消息通常是入站消息
+        app.handleInboundMessage(data, null); // 修正：使用 handleInboundMessage
     }
 
     @Override
     public void sendVideoFrame(VideoFrameMessage videoFrame) {
-        app.submitInboundMessage(videoFrame, null);
+        app.handleInboundMessage(videoFrame, null); // 修正：使用 handleInboundMessage
     }
 
     @Override
     public void sendAudioFrame(AudioFrameMessage audioFrame) {
-        app.submitInboundMessage(audioFrame, null);
+        app.handleInboundMessage(audioFrame, null); // 修正：使用 handleInboundMessage
     }
 
     @Override
-    public void sendMessage(source.hanger.core.message.Message message) { // Implement sendMessage
-        app.submitInboundMessage(message, null); // Delegate to app's submitInboundMessage
+    public void sendMessage(Message message) {
+        app.handleInboundMessage(message, null); // 修正：使用 handleInboundMessage
     }
 
     @Override

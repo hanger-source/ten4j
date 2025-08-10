@@ -100,11 +100,10 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
             return newThread;
         });
 
-        // 获取或创建 ExtensionGroup。此 Group 与上述 ExtensionThread 关联。
+        // 获取或创建 ExtensionGroup。
         ExtensionGroup extensionGroup = extensionGroups.computeIfAbsent(extensionGroupName, k -> {
             // 在创建 ExtensionGroup 时，为它创建一个 ExtensionGroupInfo 实例
             ExtensionGroupInfo groupInfo = new ExtensionGroupInfo(extensionGroupName, Collections.emptyMap());
-            // 移除 if (groupInfo == null) { ... } 因为现在总是会创建一个新的 ExtensionGroupInfo
 
             ExtensionGroup newGroup = new ExtensionGroup(extensionGroupName, groupInfo);
 
@@ -349,7 +348,7 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
         log.debug("ExtensionContext: Extension {} 提交消息 {} 到 Engine。", sourceExtensionName, message.getId());
         // 修改 srcLoc 以反映真实的来源 Extension
         message.getSrcLoc().setExtensionName(sourceExtensionName);
-        engineMessageSubmitter.submitMessage(message, null); // 传入 null 作为 connection 参数
+        engineMessageSubmitter.submitInboundMessage(message, null); // 传入 null 作为 connection 参数
     }
 
     // 实现 ExtensionCommandSubmitter 接口中新增的方法

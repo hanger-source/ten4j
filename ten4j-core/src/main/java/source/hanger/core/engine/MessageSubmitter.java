@@ -16,5 +16,5 @@ public interface MessageSubmitter {
      * @param connection 消息来源的连接，可以为 null
      * @return true如果成功提交，false如果队列已满
      */
-    boolean submitMessage(Message message, Connection connection);
+    boolean submitInboundMessage(Message message, Connection connection);
 }

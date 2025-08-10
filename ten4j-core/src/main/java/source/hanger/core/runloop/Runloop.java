@@ -28,8 +28,6 @@ import org.agrona.concurrent.ManyToOneConcurrentArrayQueue;
 public class Runloop {
 
     public static final int DEFAULT_INTERNAL_QUEUE_CAPACITY = 1024; // Ensure public static final
-    // private static final Logger log = LoggerFactory.getLogger(Runloop.class); //
-    // Explicitly declare log
     private static final int DEFAULT_INTERNAL_TASK_BATCH = 64;
 
     private final ManyToOneConcurrentArrayQueue<Runnable> taskQueue;
@@ -100,17 +98,17 @@ public class Runloop {
         shuttingDown.set(false); // 确保启动时不是关闭状态
 
         IdleStrategy idleStrategy = new BackoffIdleStrategy(
-                1, // maxSpins
-                1, // maxYields
-                TimeUnit.NANOSECONDS.toNanos(50), // minParkPeriodNs
-                TimeUnit.MICROSECONDS.toNanos(100) // maxParkPeriodNs
+            1, // maxSpins
+            1, // maxYields
+            TimeUnit.NANOSECONDS.toNanos(50), // minParkPeriodNs
+            TimeUnit.MICROSECONDS.toNanos(100) // maxParkPeriodNs
         );
 
         agentRunner = new AgentRunner(
-                idleStrategy,
-                (throwable) -> log.error("Runloop AgentRunner 未捕获异常", throwable),
-                null,
-                coreAgent);
+            idleStrategy,
+            (throwable) -> log.error("Runloop AgentRunner 未捕获异常", throwable),
+            null,
+            coreAgent);
 
         coreThread = useThread();
 
