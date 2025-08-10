@@ -43,7 +43,7 @@ public abstract class AbstractConnection implements Connection {
         this.currentRunloop = initialRunloop;
         this.migrationState = ConnectionMigrationState.INITIAL; // 初始状态
         this.attachToState = ConnectionAttachTo.INVALID; // 默认初始状态为 INVALID，对齐 C 语言
-        this.uri = connectionId; // 初始时将 connectionId 作为 uri
+        this.uri = "connection://%s".formatted(connectionId); // 初始时将 connectionId 作为 uri
         log.info("AbstractConnection {}: 新建连接 from {}", connectionId, remoteAddress);
     }
 
@@ -97,7 +97,7 @@ public abstract class AbstractConnection implements Connection {
     public void onMessageReceived(Message message) {
         // 对齐 C 语言中 ten_connection_on_input 的逻辑：如果 connection 的 URI 为空，则从消息中设置
         if (message.getSrcLoc() != null && message.getSrcLoc().getAppUri() != null
-                && !message.getSrcLoc().getAppUri().isEmpty() && (this.uri == null || this.uri.isEmpty())) {
+            && !message.getSrcLoc().getAppUri().isEmpty() && (this.uri == null || this.uri.isEmpty())) {
             this.setUri(message.getSrcLoc().getAppUri());
             log.info("Connection {}: 根据入站消息设置 Connection URI 为 {}", connectionId, this.uri);
         }
@@ -108,7 +108,7 @@ public abstract class AbstractConnection implements Connection {
         if (!(message instanceof Command) && !(message instanceof CommandResult)) { // 检查是否是非命令消息
             if (this.attachToState != ConnectionAttachTo.REMOTE) {
                 log.warn("Connection {}: 接收到非命令消息 {} (Type: {}) 但未依附于 Remote，消息被丢弃以对齐 C 端逻辑。",
-                        connectionId, message.getId(), message.getType());
+                    connectionId, message.getId(), message.getType());
                 return; // 直接丢弃消息
             }
         }
@@ -116,20 +116,20 @@ public abstract class AbstractConnection implements Connection {
         // 消息接收逻辑。如果当前 Runloop 存在，将消息提交到该 Runloop 进行处理。
         if (currentRunloop != null) {
             log.debug("Connection {}: 接收到消息，提交到当前 Runloop: type={}, id={}", connectionId, message.getType(),
-                    message.getId());
+                message.getId());
             currentRunloop.postTask(() -> {
                 // 在 Runloop 线程中，将消息传递给依附的 MessageReceiver
                 if (messageReceiver != null) {
                     messageReceiver.handleInboundMessage(message, this);
                 } else {
                     log.warn("Connection {}: 消息 {} 没有注册的 MessageReceiver，消息被丢弃。", connectionId,
-                            message.getId());
+                        message.getId());
                 }
             });
         } else {
             log.warn("Connection {}: 接收到消息但没有关联的 Runloop，消息将被丢弃: type={}, id={}", connectionId,
-                    message.getType(),
-                    message.getId());
+                message.getType(),
+                message.getId());
         }
     }
 
@@ -141,11 +141,11 @@ public abstract class AbstractConnection implements Connection {
         // 检查连接是否活跃再发送
         if (getChannel() != null && getChannel().isActive()) {
             log.debug("Connection {}: 发送消息到远程客户端: type={}, id={}", connectionId, message.getType(),
-                    message.getId());
+                message.getId());
             return sendOutboundMessageInternal(message);
         } else {
             log.warn("Connection {}: 连接不活跃，无法发送消息: type={}, id={}", connectionId, message.getType(),
-                    message.getId());
+                message.getId());
             return CompletableFuture.failedFuture(new IllegalStateException("Connection is not active."));
         }
     }
@@ -164,7 +164,7 @@ public abstract class AbstractConnection implements Connection {
         // 实现 C 语言中 ten_connection_migrate 的逻辑
         // 将 Connection 的所有权和后续处理任务提交到 targetExecutor
         if (migrationState == ConnectionMigrationState.FIRST_MSG
-                || migrationState == ConnectionMigrationState.INITIAL) {
+            || migrationState == ConnectionMigrationState.INITIAL) {
             this.migrationState = ConnectionMigrationState.MIGRATING;
             this.currentRunloop = targetRunloop; // 更新当前 Runloop
             this.remoteLocation = destinationLocation; // 更新目标 Location
@@ -235,9 +235,9 @@ public abstract class AbstractConnection implements Connection {
         this.currentRunloop = engine.getRunloop(); // Connection 依附于 Engine 的 Runloop
         this.messageReceiver = engine; // Engine 将接收 Connection 的入站消息
         log.info("Connection {}: 已依附于 Engine {}{}", connectionId, engine.getGraphId(),
-                engine.getRunloop().getCoreThread() != null
-                        ? "，Runloop: " + engine.getRunloop().getCoreThread().getName()
-                        : "");
+            engine.getRunloop().getCoreThread() != null
+                ? "，Runloop: " + engine.getRunloop().getCoreThread().getName()
+                : "");
     }
 
     // 新增：依附于 Remote （而不是直接 Engine）
@@ -246,9 +246,9 @@ public abstract class AbstractConnection implements Connection {
         this.currentRunloop = remote.getRunloop(); // Connection 依附于 Remote 的 Runloop
         this.messageReceiver = remote; // Remote 将接收 Connection 的入站消息
         log.info("AbstractConnection {}: 依附到 Remote {}{}", connectionId, remote.getUri(),
-                remote.getRunloop().getCoreThread() != null
-                        ? "，Runloop: " + remote.getRunloop().getCoreThread().getName()
-                        : "");
+            remote.getRunloop().getCoreThread() != null
+                ? "，Runloop: " + remote.getRunloop().getCoreThread().getName()
+                : "");
 
         // 设置当前 Runloop 为 Remote 的 Runloop
         setRunloop(remote.getRunloop());
