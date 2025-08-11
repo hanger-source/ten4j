@@ -1,11 +1,13 @@
 package source.hanger.core.extension;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import source.hanger.core.engine.EngineExtensionContext;
 import source.hanger.core.extension.submitter.ExtensionCommandSubmitter;
 import source.hanger.core.extension.submitter.ExtensionMessageSubmitter;
+import source.hanger.core.graph.ExtensionInfo;
 import source.hanger.core.graph.GraphConfig;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
@@ -32,18 +34,20 @@ public class ExtensionEnvImpl implements TenEnv {
     private final ExtensionMessageSubmitter messageSubmitter;
     private final Runloop extensionRunloop; // Extension 所在的 Runloop
     private final EngineExtensionContext extensionContext;
+    private final ExtensionInfo extensionInfo; // 新增：存储 ExtensionInfo
 
-    public ExtensionEnvImpl(String extensionId, Extension extension, String appUri, String graphId,
+    public ExtensionEnvImpl(Extension extension,
             ExtensionCommandSubmitter commandSubmitter, ExtensionMessageSubmitter messageSubmitter,
-            Runloop extensionRunloop, EngineExtensionContext extensionContext) {
-        this.extensionId = extensionId;
+            Runloop extensionRunloop, EngineExtensionContext extensionContext, ExtensionInfo extInfo) {
+        this.extensionId = extInfo.getLoc().getExtensionName(); // 从 ExtensionInfo 获取
         this.extension = extension;
-        this.appUri = appUri;
-        this.graphId = graphId;
+        this.appUri = extInfo.getLoc().getAppUri(); // 从 ExtensionInfo 获取
+        this.graphId = extInfo.getLoc().getGraphId(); // 从 ExtensionInfo 获取
         this.commandSubmitter = commandSubmitter;
         this.messageSubmitter = messageSubmitter;
         this.extensionRunloop = extensionRunloop;
         this.extensionContext = extensionContext;
+        this.extensionInfo = extInfo; // 存储 ExtensionInfo
         log.info("ExtensionEnvImpl created for Extension: {}", extensionId);
     }
 
@@ -63,7 +67,7 @@ public class ExtensionEnvImpl implements TenEnv {
             return commandSubmitter.submitCommandFromExtension(command, extensionId);
         } else {
             return CompletableFuture.failedFuture(new IllegalStateException(
-                    "ExtensionCommandSubmitter is null, cannot send command for Extension: %s".formatted(extensionId)));
+                    "ExtensionCommandSubmitter is null, cannot send command for Extension: {}".formatted(extensionId)));
         }
     }
 
@@ -122,87 +126,132 @@ public class ExtensionEnvImpl implements TenEnv {
 
     @Override
     public Optional<Object> getProperty(String path) {
-        return extension.getProperty(path);
+        if (extensionInfo == null || extensionInfo.getProperty() == null) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(extensionInfo.getProperty().get(path));
     }
 
     @Override
     public void setProperty(String path, Object value) {
-        extension.setProperty(path, value);
+        if (extensionInfo != null && extensionInfo.getProperty() != null) {
+            extensionInfo.getProperty().put(path, value);
+        }
     }
 
     @Override
     public boolean hasProperty(String path) {
-        return extension.hasProperty(path);
+        return extensionInfo != null && extensionInfo.getProperty() != null
+                && extensionInfo.getProperty().containsKey(path);
     }
 
     @Override
     public void deleteProperty(String path) {
-        extension.deleteProperty(path);
+        if (extensionInfo != null && extensionInfo.getProperty() != null) {
+            extensionInfo.getProperty().remove(path);
+        }
     }
 
     @Override
     public Optional<Integer> getPropertyInt(String path) {
-        return extension.getPropertyInt(path);
+        return getProperty(path).filter(Integer.class::isInstance).map(Integer.class::cast);
     }
 
     @Override
     public void setPropertyInt(String path, int value) {
-        extension.setPropertyInt(path, value);
+        setProperty(path, value);
     }
 
     @Override
     public Optional<Long> getPropertyLong(String path) {
-        return extension.getPropertyLong(path);
+        return getProperty(path).filter(Long.class::isInstance).map(Long.class::cast);
     }
 
     @Override
     public void setPropertyLong(String path, long value) {
-        extension.setPropertyLong(path, value);
+        setProperty(path, value);
     }
 
     @Override
     public Optional<String> getPropertyString(String path) {
-        return extension.getPropertyString(path);
+        return getProperty(path).filter(String.class::isInstance).map(String.class::cast);
     }
 
     @Override
     public void setPropertyString(String path, String value) {
-        extension.setPropertyString(path, value);
+        setProperty(path, value);
     }
 
     @Override
     public Optional<Boolean> getPropertyBool(String path) {
-        return extension.getPropertyBool(path);
+        return getProperty(path).filter(Boolean.class::isInstance).map(Boolean.class::cast);
     }
 
     @Override
     public void setPropertyBool(String path, boolean value) {
-        extension.setPropertyBool(path, value);
+        setProperty(path, value);
     }
 
     @Override
     public Optional<Double> getPropertyDouble(String path) {
-        return extension.getPropertyDouble(path);
+        return getProperty(path).filter(Double.class::isInstance).map(Double.class::cast);
     }
 
     @Override
     public void setPropertyDouble(String path, double value) {
-        extension.setPropertyDouble(path, value);
+        setProperty(path, value);
     }
 
     @Override
     public Optional<Float> getPropertyFloat(String path) {
-        return extension.getPropertyFloat(path);
+        return getProperty(path).filter(Float.class::isInstance).map(Float.class::cast);
     }
 
     @Override
     public void setPropertyFloat(String path, float value) {
-        extension.setPropertyFloat(path, value);
+        setProperty(path, value);
     }
 
     @Override
     public void initPropertyFromJson(String jsonStr) {
-        extension.initPropertyFromJson(jsonStr);
+        // 这个方法不再直接由外部调用，其功能被 onConfigure 取代
+        throw new UnsupportedOperationException("initPropertyFromJson is deprecated. Use onConfigure instead.");
+    }
+
+    // 新增：Extension 生命周期方法
+    public void onConfigure(Map<String, Object> properties) {
+        extensionRunloop.postTask(() -> {
+            log.debug("ExtensionEnvImpl {}: Calling onConfigure.", extensionId);
+            extension.onConfigure(this, properties);
+        });
+    }
+
+    public void onInit() {
+        extensionRunloop.postTask(() -> {
+            log.debug("ExtensionEnvImpl {}: Calling onInit.", extensionId);
+            extension.onInit(this);
+        });
+    }
+
+    public void onStart() {
+        extensionRunloop.postTask(() -> {
+            log.debug("ExtensionEnvImpl {}: Calling onStart.", extensionId);
+            extension.onStart(this);
+        });
+    }
+
+    public void onStop() {
+        extensionRunloop.postTask(() -> {
+            log.debug("ExtensionEnvImpl {}: Calling onStop.", extensionId);
+            extension.onStop(this);
+        });
+    }
+
+    public void onDeinit() {
+        extensionRunloop.postTask(() -> {
+            log.debug("ExtensionEnvImpl {}: Calling onDeinit.", extensionId);
+            extension.onDeinit(this);
+        });
     }
 
     @Override
@@ -231,8 +280,8 @@ public class ExtensionEnvImpl implements TenEnv {
 
     @Override
     public void close() {
+        onStop(); // 在关闭时调用 onStop
+        onDeinit(); // 在关闭时调用 onDeinit
         log.info("ExtensionEnvImpl {}: Close requested. Delegating to extension if applicable.", extensionId);
-        // Extension 本身没有 stop 方法，其生命周期由 Engine 协调
-        // 这里暂时不执行任何关闭操作，因为 close 应该由 Engine 来管理
     }
 }

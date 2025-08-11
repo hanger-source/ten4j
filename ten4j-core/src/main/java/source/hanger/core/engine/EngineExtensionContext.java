@@ -29,6 +29,7 @@ import source.hanger.core.message.command.Command;
 import source.hanger.core.path.PathTable;
 import source.hanger.core.util.MessageConverter;
 import source.hanger.core.util.ReflectionUtils;
+import com.tenframework.core.message.Location;
 
 /**
  * 管理 Engine 中 Extension 的生命周期和交互。
@@ -54,21 +55,20 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
     private final ConcurrentHashMap<String, ExtensionGroup> extensionGroups;
 
     // 存储 Extension 的 Method 映射，优化反射调用性能
-    private final ConcurrentHashMap<Class<? extends Extension>, Map<String, Method>> extensionMethodCache
-        = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Class<? extends Extension>, Map<String, Method>> extensionMethodCache = new ConcurrentHashMap<>();
 
     @Getter
     private final String roleName;
 
     public EngineExtensionContext(Engine engine, App app, PathTable pathTable, MessageSubmitter engineMessageSubmitter,
-        CommandSubmitter engineCommandSubmitter) {
+            CommandSubmitter engineCommandSubmitter) {
         this.engine = Objects.requireNonNull(engine, "Engine must not be null.");
         this.app = Objects.requireNonNull(app, "App must not be null.");
         this.pathTable = Objects.requireNonNull(pathTable, "PathTable must not be null.");
         this.engineMessageSubmitter = Objects.requireNonNull(engineMessageSubmitter,
-            "Engine message submitter must not be null.");
+                "Engine message submitter must not be null.");
         this.engineCommandSubmitter = Objects.requireNonNull(engineCommandSubmitter,
-            "Engine command submitter must not be null.");
+                "Engine command submitter must not be null.");
 
         extensionThreads = new ConcurrentHashMap<>();
         extensionGroups = new ConcurrentHashMap<>(); // 初始化 extensionGroups
@@ -87,12 +87,12 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
      * @return 加载的 Extension 实例。
      */
     public Extension loadExtension(String extensionId, String extensionType, GraphConfig config,
-        ExtensionInfo extInfo) {
+            ExtensionInfo extInfo) {
 
         // 从 ExtensionInfo 中获取 ExtensionGroup 名称，如果未指定，则默认使用 Graph ID
         String extensionGroupName = Optional.ofNullable(extInfo.getExtensionGroupName())
-            .filter(name -> !name.isEmpty())
-            .orElse(extInfo.getLoc().getGraphId());
+                .filter(name -> !name.isEmpty())
+                .orElse(extInfo.getLoc().getGraphId());
 
         // 获取或创建 ExtensionThread。每个 ExtensionGroup 将对应一个 ExtensionThread。
         ExtensionThread extensionThread = extensionThreads.computeIfAbsent(extensionGroupName, k -> {
@@ -102,7 +102,7 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
         });
 
         // 获取或创建 ExtensionGroup。
-        ExtensionGroup extensionGroup = extensionGroups.computeIfAbsent(extensionGroupName, k -> {
+        extensionGroups.computeIfAbsent(extensionGroupName, k -> {
             // 在创建 ExtensionGroup 时，为它创建一个 ExtensionGroupInfo 实例
             ExtensionGroupInfo groupInfo = new ExtensionGroupInfo(extensionGroupName, Collections.emptyMap());
 
@@ -113,15 +113,19 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
 
             // 为 ExtensionGroup 创建并设置 TenEnv，使用 ExtensionThread 的 Runloop
             ExtensionEnvImpl extensionGroupEnv = new ExtensionEnvImpl(
-                newGroup.getName(), // extensionId
-                null, // extension (ExtensionGroup 本身不是 Extension)
-                app.getAppUri(), // appUri: 从 EngineExtensionContext 的 app 字段获取
-                engine.getGraphId(), // graphId: 从 EngineExtensionContext 的 engine 字段获取
-                this, // commandSubmitter: EngineExtensionContext 自身
-                this, // messageSubmitter: EngineExtensionContext 自身
-                extensionThread.getRunloop(), // 传入 ExtensionThread 的 Runloop
-                this // <-- 传入 EngineExtensionContext
-            );
+                    null, // ExtensionGroup 本身不是 Extension
+                    this, // commandSubmitter
+                    this, // messageSubmitter
+                    extensionThread.getRunloop(), // runloop
+                    this, // extensionContext
+                    // 为 ExtensionGroup 创建一个 ExtensionInfo，并传递其名称作为 extensionName
+                    // 这样 ExtensionGroup 的 TenEnv 就可以获取到其所属的 groupName
+                    new ExtensionInfo(new Location(app.getAppUri(), engine.getGraphId(), extensionGroupName),
+                            extensionGroupName, // extensionAddonName 也使用 groupName
+                            extensionGroupName, // extensionGroupName 也使用 groupName
+                            Collections.emptyMap(), // 传入空的属性 Map
+                            Collections.emptyList() // 传入空的消息转换上下文列表
+            ));
             newGroup.setTenEnv(extensionGroupEnv);
 
             return newGroup;
@@ -130,27 +134,39 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
         // 1. 创建 Extension 实例
         Class<? extends Extension> extensionClass;
         try {
-            extensionClass = findExtensionClass(extensionType);
+            extensionClass = findExtensionClass(extInfo.getExtensionAddonName()); // 从 extInfo 获取 extensionType
         } catch (ClassNotFoundException e) {
-            log.error(String.format("Failed to find extension class %s: %s", extensionType, e.getMessage()), e);
-            throw new RuntimeException(String.format("Extension class not found: %s", extensionType), e);
+            log.error("Failed to find extension class {}: {}", extInfo.getExtensionAddonName(),
+                    e.getMessage(), e);
+            throw new RuntimeException("Extension class not found: %s".formatted(extInfo.getExtensionAddonName()),
+                    e);
         }
 
         Extension extension = ReflectionUtils.newInstance(extensionClass);
 
         // 创建 ExtensionEnvImpl 用于单个 Extension
         // 这个 ExtensionEnv 使用 EngineExtensionContext 作为其提交器，并使用 ExtensionThread 的
-        // Runloop。
+        // Run loop。
         ExtensionEnvImpl extensionEnv = new ExtensionEnvImpl(
-            extensionId, extension, app.getAppUri(),
-            engine.getGraphId(), this, this, extensionThread.getRunloop(), this); // <-- 传入 this
-        // (EngineExtensionContext)
+                extension, // 传入 Extension 实例
+                this, // commandSubmitter
+                this, // messageSubmitter
+                extensionThread.getRunloop(), // run loop
+                this, // extensionContext
+                extInfo // 传入 ExtensionInfo 对象
+        );
+
+        // 调用 Extension 的生命周期方法 (通过 ExtensionEnvImpl 调用)
+        extensionEnv.onConfigure(extInfo.getProperty()); // 传递属性
+        extensionEnv.onInit();
+        extensionEnv.onStart();
 
         // 将 Extension 添加到其所属的 ExtensionThread
         extensionThread.addExtension(extension, extensionEnv, extInfo);
 
-        log.info(String.format("Extension %s (Type: %s) loaded for Engine %s on ExtensionThread %s (Group: %s).",
-            extensionId, extensionType, engine.getGraphId(), extensionThread.getThreadName(), extensionGroupName));
+        log.info("Extension {} (Type: {}) loaded for Engine {} on ExtensionThread {} (Group: {}).",
+                extInfo.getLoc().getExtensionName(), extInfo.getExtensionAddonName(), engine.getGraphId(),
+                extensionThread.getThreadName(), extensionGroupName);
 
         return extension;
     }
@@ -183,7 +199,7 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
      * 卸载所有已加载的 Extension 实例。
      */
     public void unloadAllExtensions() {
-        log.info("ExtensionContext: Unloading all extensions for Engine {}.".formatted(engine.getGraphId()));
+        log.info("ExtensionContext: Unloading all extensions for Engine {}.", engine.getGraphId());
         // 创建一个副本以避免并发修改异常
         List<String> extensionThreadIds = new ArrayList<>(extensionThreads.keySet());
         for (String threadId : extensionThreadIds) {
@@ -196,7 +212,7 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
                 }
             }
         }
-        log.info("ExtensionContext: All extensions unloaded for Engine {}.".formatted(engine.getGraphId()));
+        log.info("ExtensionContext: All extensions unloaded for Engine {}.", engine.getGraphId());
     }
 
     /**
@@ -212,7 +228,7 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
         // Note: 更复杂的 Extension 发现机制，例如通过插件系统，是未来可考虑的增强。
         Class<?> clazz = Class.forName(extensionType);
         if (Extension.class.isAssignableFrom(clazz)) {
-            return (Class<? extends Extension>)clazz;
+            return (Class<? extends Extension>) clazz;
         } else {
             throw new IllegalArgumentException("Class %s is not an Extension.".formatted(extensionType));
         }
@@ -228,7 +244,7 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
     public void dispatchMessageToExtension(Message message, String extensionName) {
         if (extensionName == null || extensionName.isEmpty()) {
             log.warn("ExtensionContext: 目标 Extension ID 为空或 null，无法分发消息 {}.getId()。跳过分发。",
-                message.getId());
+                    message.getId());
             return;
         }
 
@@ -236,12 +252,12 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
         ExtensionThread extensionThread = findExtensionThreadForExtension(extensionName);
         if (extensionThread == null) {
             log.error("ExtensionContext: 未找到 ExtensionThread 来处理 Extension {} 的消息 {} (Type: {}).",
-                extensionName, message.getId(), message.getType());
+                    extensionName, message.getId(), message.getType());
             if (message instanceof Command command) {
                 routeCommandResultFromExtension(
-                    CommandResult.fail(command.getId(),
-                        "ExtensionThread for Extension not found: %s".formatted(extensionName)),
-                    "Engine");
+                        CommandResult.fail(command.getId(),
+                                "ExtensionThread for Extension not found: %s".formatted(extensionName)),
+                        "Engine");
             }
             return;
         }
@@ -277,7 +293,7 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
     public void dispatchCommandToExtension(Command command, String targetExtensionId) {
         if (targetExtensionId == null || targetExtensionId.isEmpty()) {
             log.warn("ExtensionContext: 目标 Extension ID 为空或 null，无法分发命令 {}.getId()。跳过分发。",
-                command.getId());
+                    command.getId());
             return;
         }
 
@@ -285,12 +301,12 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
         ExtensionThread extensionThread = findExtensionThreadForExtension(targetExtensionId);
         if (extensionThread == null) {
             log.error("ExtensionContext: 未找到 ExtensionThread 来处理 Extension {} 的命令 {} (Type: {}).",
-                targetExtensionId, command.getId(), command.getType());
+                    targetExtensionId, command.getId(), command.getType());
             if (command.getOriginalCommandId() != null) {
                 routeCommandResultFromExtension(
-                    CommandResult.fail(command.getId(),
-                        "ExtensionThread for Extension not found: %s".formatted(targetExtensionId)),
-                    "Engine"); // Engine 作为发送方
+                        CommandResult.fail(command.getId(),
+                                "ExtensionThread for Extension not found: %s".formatted(targetExtensionId)),
+                        "Engine"); // Engine 作为发送方
             }
             return;
         }
@@ -311,7 +327,7 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
         // --- 消息转换逻辑结束 ---
 
         // 将处理后的命令委托给 ExtensionThread 进行分发
-        Command finalProcessedCommand = (Command)processedCommand;
+        Command finalProcessedCommand = (Command) processedCommand;
         extensionThread.dispatchCommand(finalProcessedCommand, targetExtensionId);
     }
 
@@ -367,7 +383,7 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
     @Override
     public void routeCommandResultFromExtension(CommandResult commandResult, String sourceExtensionName) {
         log.debug("ExtensionContext: Extension {} 路由命令结果 {} 到 Engine。", sourceExtensionName,
-            commandResult.getId());
+                commandResult.getId());
         // 委托给 Engine 处理，Engine 知道如何路由结果
         // 这里需要 Engine 提供一个方法来路由来自 Extension 的命令结果
         engine.submitCommandResult(commandResult); // 修正：直接调用 submitCommandResult

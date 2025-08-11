@@ -40,6 +40,17 @@ public class SimpleEchoExtension extends BaseExtension {
     private long messageCount = 0;
 
     @Override
+    public void onConfigure(TenEnv env, Map<String, Object> properties) { // 修复：方法名和访问修饰符
+        super.onConfigure(env, properties); // 修复：调用父类方法
+        // 从配置中读取echo前缀
+        env.getPropertyString("echo.prefix") // 替换为getPropertyString
+                .ifPresent(prefix -> {
+                    this.echoPrefix = prefix; // 设置前缀
+                    log.info("Echo前缀配置: {}", prefix);
+                });
+    }
+
+    @Override
     public void onCmd(TenEnv env, Command command) { // 修复：方法名和访问修饰符
         // 开发者只需关注业务逻辑
         String commandName = command.getName();

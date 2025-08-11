@@ -51,6 +51,23 @@ public class ExtensionGroup {
         log.info("ExtensionGroup {}: onCreateExtensions called. Extensions are about to be created.", name);
         // 在这里，ExtensionGroup 可以执行与创建 Extension 相关的逻辑
         // 例如，验证配置，准备资源等
+
+        // 【新增】遍历并触发所有托管 Extension 的生命周期方法
+        extensions.forEach((extId, extEnv) -> {
+            try {
+                log.info("ExtensionGroup {}: Triggering lifecycle for Extension {}.", name, extId);
+                // 从 extEnv 获取 Extension 实例，并调用其生命周期方法
+                Extension extension = extEnv.getExtension(); // 这里已经通过 extEnv 获取到 Extension 实例
+                if (extension != null) {
+                    extension.onConfigure(extEnv, extEnv.getExtensionInfo().getProperty());
+                    extension.onInit(extEnv);
+                    extension.onStart(extEnv);
+                }
+            } catch (Exception e) {
+                log.error("ExtensionGroup {}: Error triggering Extension {} lifecycle: {}",
+                        name, extId, e.getMessage(), e);
+            }
+        });
     }
 
     // C 端 on_destroy_extensions
@@ -58,6 +75,27 @@ public class ExtensionGroup {
         log.info("ExtensionGroup {}: onDestroyExtensions called. Extensions are about to be destroyed.", name);
         // 在这里，ExtensionGroup 可以执行与销毁 Extension 相关的逻辑
         // 例如，清理共享资源，通知其他组件等
+
+        // 【新增】遍历并触发所有待销毁 Extension 的生命周期方法
+        for (Extension extension : extensionsToDestroy) {
+            // 通过 extensionId 从 managed extensions map 中获取 ExtensionEnvImpl
+            String extensionId = extension.getExtensionName(); // 直接从 Extension 获取名称
+            ExtensionEnvImpl extensionEnv = extensions.remove(extensionId);
+            if (extensionEnv != null) {
+                try {
+                    log.info("ExtensionGroup {}: Triggering de-lifecycle for Extension {}.", name, extensionId);
+                    extension.onStop(extensionEnv);
+                    extension.onDeinit(extensionEnv);
+                    extension.destroy(extensionEnv);
+                } catch (Exception e) {
+                    log.error("ExtensionGroup {}: Error triggering Extension {} de-lifecycle: {}",
+                            name, extensionId, e.getMessage(), e);
+                }
+            } else {
+                log.warn("ExtensionGroup {}: Extension {} not found in managed extensions for destruction.", name,
+                        extensionId);
+            }
+        }
     }
 
 }

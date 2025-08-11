@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * `Message` 是 Ten 框架中所有通信数据的基础抽象类。
@@ -115,4 +116,114 @@ public abstract class Message implements Cloneable { // 实现 Cloneable
         public Message clone() throws CloneNotSupportedException {
                 return (Message) super.clone();
         }
+        // endregion
+
+        // region 属性访问方法
+
+        public Optional<Object> getProperty(String path) {
+                // TODO: 实现对嵌套路径的支持
+                return Optional.ofNullable(properties.get(path));
+        }
+
+        public void setProperty(String path, Object value) {
+                // TODO: 实现对嵌套路径的支持
+                if (properties == null) {
+                        properties = new HashMap<>();
+                }
+                properties.put(path, value);
+        }
+
+        public boolean hasProperty(String path) {
+                return properties != null && properties.containsKey(path);
+        }
+
+        public void deleteProperty(String path) {
+                if (properties != null) {
+                        properties.remove(path);
+                }
+        }
+
+        public Optional<Integer> getPropertyInt(String path) {
+                Object value = properties.get(path);
+                if (value instanceof Integer) {
+                        return Optional.of((Integer) value);
+                }
+                return Optional.empty();
+        }
+
+        public void setPropertyInt(String path, int value) {
+                setProperty(path, value);
+        }
+
+        public Optional<Long> getPropertyLong(String path) {
+                Object value = properties.get(path);
+                if (value instanceof Long) {
+                        return Optional.of((Long) value);
+                } else if (value instanceof Integer) { // 兼容 Integer
+                        return Optional.of(((Integer) value).longValue());
+                }
+                return Optional.empty();
+        }
+
+        public void setPropertyLong(String path, long value) {
+                setProperty(path, value);
+        }
+
+        public Optional<String> getPropertyString(String path) {
+                Object value = properties.get(path);
+                if (value instanceof String) {
+                        return Optional.of((String) value);
+                }
+                return Optional.empty();
+        }
+
+        public void setPropertyString(String path, String value) {
+                setProperty(path, value);
+        }
+
+        public Optional<Boolean> getPropertyBool(String path) {
+                Object value = properties.get(path);
+                if (value instanceof Boolean) {
+                        return Optional.of((Boolean) value);
+                }
+                return Optional.empty();
+        }
+
+        public void setPropertyBool(String path, boolean value) {
+                setProperty(path, value);
+        }
+
+        public Optional<Double> getPropertyDouble(String path) {
+                Object value = properties.get(path);
+                if (value instanceof Double) {
+                        return Optional.of((Double) value);
+                } else if (value instanceof Float) { // 兼容 Float
+                        return Optional.of(((Float) value).doubleValue());
+                } else if (value instanceof Integer) { // 兼容 Integer
+                        return Optional.of(((Integer) value).doubleValue());
+                } else if (value instanceof Long) { // 兼容 Long
+                        return Optional.of(((Long) value).doubleValue());
+                }
+                return Optional.empty();
+        }
+
+        public void setPropertyDouble(String path, double value) {
+                setProperty(path, value);
+        }
+
+        public Optional<Float> getPropertyFloat(String path) {
+                Object value = properties.get(path);
+                if (value instanceof Float) {
+                        return Optional.of((Float) value);
+                } else if (value instanceof Double) { // 兼容 Double
+                        return Optional.of(((Double) value).floatValue());
+                }
+                return Optional.empty();
+        }
+
+        public void setPropertyFloat(String path, float value) {
+                setProperty(path, value);
+        }
+
+        // endregion
 }

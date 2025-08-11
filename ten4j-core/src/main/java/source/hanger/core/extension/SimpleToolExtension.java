@@ -62,25 +62,25 @@ public class SimpleToolExtension extends AbstractToolProvider {
 
     @Override
     public void onInit(TenEnv env) {
-        log.info("SimpleToolExtension: {} onInit called.", getExtensionName());
+        log.info("SimpleToolExtension: {} onInit called.", env.getExtensionName());
         // 可以在这里加载工具配置或进行其他初始化
     }
 
     @Override
     public void onStart(TenEnv env) {
-        log.info("SimpleToolExtension: {} onStart called.", getExtensionName());
+        log.info("SimpleToolExtension: {} onStart called.", env.getExtensionName());
         // 可以在这里启动工具服务
     }
 
     @Override
     public void onStop(TenEnv env) {
-        log.info("SimpleToolExtension: {} onStop called.", getExtensionName());
+        log.info("SimpleToolExtension: {} onStop called.", env.getExtensionName());
         // 可以在这里停止工具服务
     }
 
     @Override
     public void onDeinit(TenEnv env) {
-        log.info("SimpleToolExtension: {} onDeinit called.", getExtensionName());
+        log.info("SimpleToolExtension: {} onDeinit called.", env.getExtensionName());
         // 可以在这里释放工具资源
     }
 
@@ -124,8 +124,8 @@ public class SimpleToolExtension extends AbstractToolProvider {
         // 处理上游命令的结果
     }
 
-    @Override
-    public String getExtensionName() {
-        return "SimpleToolExtension";
-    }
+    // @Override // 移除 getExtensionName 方法，因为它已在 BaseExtension 中处理
+    // public String getExtensionName() {
+    // return "SimpleToolExtension";
+    // }
 }
