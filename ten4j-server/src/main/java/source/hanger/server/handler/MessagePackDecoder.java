@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.util.List;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import source.hanger.core.message.Message;
-import source.hanger.core.message.MessageConstants;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -16,6 +14,8 @@ import org.msgpack.core.MessagePack;
 import org.msgpack.core.MessageUnpacker;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
 import org.msgpack.value.ValueType;
+import source.hanger.core.message.Message;
+import source.hanger.core.message.MessageConstants;
 
 @Slf4j
 public class MessagePackDecoder extends ByteToMessageDecoder {
@@ -35,14 +35,7 @@ public class MessagePackDecoder extends ByteToMessageDecoder {
         if (!in.isReadable()) {
             return;
         }
-
-        // 复制 ByteBuf 到一个临时的 byte[] 供 MessageUnpacker 使用
-        // 这种方式比较简单，但如果消息非常大，可能会有内存拷贝的开销。
-        // 对于小消息，性能影响不大。
-        byte[] bytes = new byte[in.readableBytes()];
-        in.readBytes(bytes); // 读取所有可读字节，此时 in 的 readerIndex 已经移动到末尾
-
-        try (MessageUnpacker unpacker = MessagePack.newDefaultUnpacker(bytes)) {
+        try (MessageUnpacker unpacker = MessagePack.newDefaultUnpacker(in.nioBuffer())) {
             if (!unpacker.hasNext()) { // 如果没有下一个 MsgPack 元素，说明数据不完整或已读完
                 in.resetReaderIndex(); // 回滚读指针，等待更多数据
                 return;

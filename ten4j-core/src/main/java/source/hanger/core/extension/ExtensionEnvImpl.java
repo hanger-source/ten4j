@@ -26,7 +26,7 @@ import source.hanger.core.tenenv.TenEnv;
 @Slf4j
 public class ExtensionEnvImpl implements TenEnv {
 
-    private final String extensionId;
+    private final String extensionName;
     private final Extension extension;
     private final String appUri;
     private final String graphId;
@@ -40,7 +40,7 @@ public class ExtensionEnvImpl implements TenEnv {
     public ExtensionEnvImpl(Extension extension,
         ExtensionCommandSubmitter commandSubmitter, ExtensionMessageSubmitter messageSubmitter,
         Runloop extensionRunloop, EngineExtensionContext extensionContext, ExtensionInfo extInfo) {
-        this.extensionId = extInfo.getLoc().getExtensionName(); // 从 ExtensionInfo 获取
+        this.extensionName = extInfo.getLoc().getExtensionName(); // 从 ExtensionInfo 获取
         this.extension = extension;
         this.appUri = extInfo.getLoc().getAppUri(); // 从 ExtensionInfo 获取
         this.graphId = extInfo.getLoc().getGraphId(); // 从 ExtensionInfo 获取
@@ -49,7 +49,7 @@ public class ExtensionEnvImpl implements TenEnv {
         this.extensionRunloop = extensionRunloop;
         this.extensionContext = extensionContext;
         this.extensionInfo = extInfo; // 存储 ExtensionInfo
-        log.info("ExtensionEnvImpl created for Extension: {}", extensionId);
+        log.info("ExtensionEnvImpl created for Extension: {}", extensionName);
     }
 
     @Override
@@ -61,10 +61,10 @@ public class ExtensionEnvImpl implements TenEnv {
     public CompletableFuture<CommandResult> sendCmd(Command command) {
         // Extension 发送命令，通过 commandSubmitter 委托给 Engine 处理
         if (commandSubmitter != null) {
-            return commandSubmitter.submitCommandFromExtension(command, extensionId);
+            return commandSubmitter.submitCommandFromExtension(command, extensionName);
         } else {
             return CompletableFuture.failedFuture(new IllegalStateException(
-                "ExtensionCommandSubmitter is null, cannot send command for Extension: {}".formatted(extensionId)));
+                "ExtensionCommandSubmitter is null, cannot send command for Extension: {}".formatted(extensionName)));
         }
     }
 
@@ -72,52 +72,52 @@ public class ExtensionEnvImpl implements TenEnv {
     public void sendResult(CommandResult result) {
         // Extension 发送命令结果，通过 commandSubmitter 委托给 Engine 处理
         if (commandSubmitter != null) {
-            commandSubmitter.routeCommandResultFromExtension(result, extensionId);
+            commandSubmitter.routeCommandResultFromExtension(result, extensionName);
         } else {
             log.warn(
                 "ExtensionCommandSubmitter is null, cannot route command result for Extension: {}. Result dropped.",
-                extensionId);
+                extensionName);
         }
     }
 
     @Override
     public void sendData(DataMessage data) {
         if (messageSubmitter != null) {
-            messageSubmitter.submitMessageFromExtension(data, extensionId);
+            messageSubmitter.submitMessageFromExtension(data, extensionName);
         } else {
             log.warn("ExtensionMessageSubmitter is null, cannot send data for Extension: {}. Message dropped.",
-                extensionId);
+                extensionName);
         }
     }
 
     @Override
     public void sendVideoFrame(VideoFrameMessage videoFrame) {
         if (messageSubmitter != null) {
-            messageSubmitter.submitMessageFromExtension(videoFrame, extensionId);
+            messageSubmitter.submitMessageFromExtension(videoFrame, extensionName);
         } else {
             log.warn("ExtensionMessageSubmitter is null, cannot send video frame for Extension: {}. Message dropped.",
-                extensionId);
+                extensionName);
         }
     }
 
     @Override
     public void sendAudioFrame(AudioFrameMessage audioFrame) {
         if (messageSubmitter != null) {
-            messageSubmitter.submitMessageFromExtension(audioFrame, extensionId);
+            messageSubmitter.submitMessageFromExtension(audioFrame, extensionName);
         } else {
             log.warn("ExtensionMessageSubmitter is null, cannot send audio frame for Extension: {}. Message dropped.",
-                extensionId);
+                extensionName);
         }
     }
 
     @Override
     public void sendMessage(source.hanger.core.message.Message message) {
         if (messageSubmitter != null) {
-            messageSubmitter.submitMessageFromExtension(message, extensionId);
+            messageSubmitter.submitMessageFromExtension(message, extensionName);
         } else {
             log.warn(
                 "ExtensionMessageSubmitter is null, cannot send message of type {} for Extension: {}. Message dropped.",
-                message.getType(), extensionId);
+                message.getType(), extensionName);
         }
     }
 
@@ -218,35 +218,35 @@ public class ExtensionEnvImpl implements TenEnv {
     // 新增：Extension 生命周期方法
     public void onConfigure(Map<String, Object> properties) {
         extensionRunloop.postTask(() -> {
-            log.debug("ExtensionEnvImpl {}: Calling onConfigure.", extensionId);
+            log.debug("ExtensionEnvImpl {}: Calling onConfigure.", extensionName);
             extension.onConfigure(this, properties);
         });
     }
 
     public void onInit() {
         extensionRunloop.postTask(() -> {
-            log.debug("ExtensionEnvImpl {}: Calling onInit.", extensionId);
+            log.debug("ExtensionEnvImpl {}: Calling onInit.", extensionName);
             extension.onInit(this);
         });
     }
 
     public void onStart() {
         extensionRunloop.postTask(() -> {
-            log.debug("ExtensionEnvImpl {}: Calling onStart.", extensionId);
+            log.debug("ExtensionEnvImpl {}: Calling onStart.", extensionName);
             extension.onStart(this);
         });
     }
 
     public void onStop() {
         extensionRunloop.postTask(() -> {
-            log.debug("ExtensionEnvImpl {}: Calling onStop.", extensionId);
+            log.debug("ExtensionEnvImpl {}: Calling onStop.", extensionName);
             extension.onStop(this);
         });
     }
 
     public void onDeinit() {
         extensionRunloop.postTask(() -> {
-            log.debug("ExtensionEnvImpl {}: Calling onDeinit.", extensionId);
+            log.debug("ExtensionEnvImpl {}: Calling onDeinit.", extensionName);
             extension.onDeinit(this);
         });
     }
@@ -263,7 +263,7 @@ public class ExtensionEnvImpl implements TenEnv {
 
     @Override
     public String getExtensionName() {
-        return extensionId;
+        return extensionName;
     }
 
     @Override
@@ -289,6 +289,6 @@ public class ExtensionEnvImpl implements TenEnv {
     public void close() {
         onStop(); // 在关闭时调用 onStop
         onDeinit(); // 在关闭时调用 onDeinit
-        log.info("ExtensionEnvImpl {}: Close requested. Delegating to extension if applicable.", extensionId);
+        log.info("ExtensionEnvImpl {}: Close requested. Delegating to extension if applicable.", extensionName);
     }
 }

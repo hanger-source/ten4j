@@ -32,13 +32,12 @@ public enum MessageType {
     }
 
     @JsonCreator
-    public static MessageType fromValue(byte value) {
+    public static MessageType fromString(String name) {
         for (MessageType type : MessageType.values()) {
-            if (type.value == value) {
+            if (type.name().equalsIgnoreCase(name)) {
                 return type;
             }
         }
-        // 对于未知的字节值，返回INVALID
         return INVALID;
     }
 }
