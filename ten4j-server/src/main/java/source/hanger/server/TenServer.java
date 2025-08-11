@@ -22,9 +22,11 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.app.App;
+import source.hanger.server.handler.ByteBufToWebSocketFrameEncoder;
 import source.hanger.server.handler.MessagePackDecoder;
 import source.hanger.server.handler.MessagePackEncoder;
 import source.hanger.server.handler.NettyConnectionHandler;
+import source.hanger.server.handler.WebSocketFrameLogger;
 import source.hanger.server.handler.WebSocketFrameToByteBufDecoder;
 import source.hanger.server.handler.WebSocketMessageDispatcher;
 
@@ -79,15 +81,15 @@ public class TenServer {
                                 new ChunkedWriteHandler(), // 处理大文件传输
                                 // WebSocket 协议处理器，路径为 "/websocket"
                                 // 在握手完成后，HTTP 请求会被替换为 WebSocket 帧
-                                new WebSocketServerProtocolHandler("/websocket"),
+                                new WebSocketServerProtocolHandler("/websocket", null, true, 65536), // 明确设置
                                 new WebSocketFrameAggregator(8192), // 聚合 WebSocket 帧
                                 // MsgPack 编解码器
                                 new WebSocketFrameToByteBufDecoder(),
                                 new MessagePackDecoder(), // MsgPack 解码器
-                                new MessagePackEncoder(), // MsgPack 编码器
+                                new WebSocketMessageDispatcher(), // WebSocket 消息调度器，传入 App
                                 new NettyConnectionHandler(app), // 负责 Connection 生命周期管理和消息转发给 App
-                                // WebSocketMessageDispatcher 现在只处理核心消息分发
-                                new WebSocketMessageDispatcher() // WebSocket 消息调度器，传入 App
+                                new ByteBufToWebSocketFrameEncoder(), // ByteBuf 到 WebSocketFrame 编码器
+                                new MessagePackEncoder(), // MsgPack 编码器
                             );
                         }
                     })

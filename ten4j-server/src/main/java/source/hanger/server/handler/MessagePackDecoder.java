@@ -28,16 +28,22 @@ public class MessagePackDecoder extends ByteToMessageDecoder {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        // 标记读指针位置，以便在数据不足时回滚
-        in.markReaderIndex();
-
         // 确保有足够的数据来读取至少一个 MsgPack 头部 (最少 1 字节)
         if (!in.isReadable()) {
             return;
         }
-        try (MessageUnpacker unpacker = MessagePack.newDefaultUnpacker(in.nioBuffer())) {
+
+        // 读取所有可读字节到一个 byte 数组中
+        int readableBytes = in.readableBytes();
+        if (readableBytes == 0) {
+            return; // 没有可读数据
+        }
+        byte[] bytes = new byte[readableBytes];
+        in.readBytes(bytes); // 这会更新 ByteBuf 的 readerIndex
+
+        try (MessageUnpacker unpacker = MessagePack.newDefaultUnpacker(bytes)) {
             if (!unpacker.hasNext()) { // 如果没有下一个 MsgPack 元素，说明数据不完整或已读完
-                in.resetReaderIndex(); // 回滚读指针，等待更多数据
+                // 如果 byte[] 中没有足够数据，这里会返回 false
                 return;
             }
 
@@ -61,23 +67,15 @@ public class MessagePackDecoder extends ByteToMessageDecoder {
                     unpacker.skipValue(); // 跳过未知 EXT 负载
                 }
             } else {
-                // 如果不是 EXT 类型，并且我们期望所有 ten-framework 消息都是 EXT 类型，这可能是一个错误
-                // 但为了兼容性或调试，我们也可以尝试直接反序列化。
-                // 在此情境下，我们期望所有 Ten 框架消息都通过 EXT 类型封装。
-                // 如果收到非 EXT 类型，可能是其他数据或错误，此处不应尝试解码为 Message。
-                // 而是直接跳过，或者抛出异常。
                 log.warn("MsgPackDecoder: 收到非 EXT 类型消息，不进行处理。格式: {}", format);
                 unpacker.skipValue(); // 跳过这个未知值
             }
         } catch (IOException e) {
             // 如果是 IOException，很可能是数据不完整或格式错误
-            // 此时回滚读指针，等待更多数据或者让上游/后续处理器处理
-            in.resetReaderIndex();
             log.error("MsgPackDecoder: 解码消息 I/O 失败或数据不完整。", e);
-            // 不抛出异常，以便 ByteToMessageDecoder 能够再次尝试
+            throw e; // 确保异常被传播，以便 Netty 能够处理连接关闭
         } catch (Exception e) {
             // 其他运行时异常，直接抛出
-            in.resetReaderIndex(); // 发生其他异常时也回滚，防止读指针错位
             log.error("MsgPackDecoder: 解码消息失败。", e);
             throw e;
         }

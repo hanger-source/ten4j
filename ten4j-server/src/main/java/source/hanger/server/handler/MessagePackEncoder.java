@@ -1,8 +1,6 @@
 package source.hanger.server.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import source.hanger.core.message.Message;
-import source.hanger.core.message.MessageConstants;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -10,6 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.msgpack.core.MessageBufferPacker;
 import org.msgpack.core.MessagePack;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
+import source.hanger.core.message.Message;
+import source.hanger.core.message.MessageConstants;
 
 @Slf4j
 public class MessagePackEncoder extends MessageToByteEncoder<Message> {
