@@ -31,7 +31,7 @@ public class StartGraphCommandHandler implements AppCommandHandler {
             // 返回失败结果
             if (connection != null) {
                 CommandResult errorResult = CommandResult.fail(command.getId(),
-                        "Unexpected command type for StartGraphHandler.");
+                        command.getType(), command.getName(), "Unexpected command type for StartGraphHandler.");
                 connection.sendOutboundMessage(errorResult);
             }
             return null;
@@ -81,6 +81,7 @@ public class StartGraphCommandHandler implements AppCommandHandler {
                 log.error("StartGraphCommandHandler: 创建 GraphDefinition 失败: {}", e.getMessage(), e);
                 if (connection != null) {
                     CommandResult errorResult = CommandResult.fail(command.getId(),
+                            command.getType(), command.getName(),
                             "Failed to create GraphDefinition: %s".formatted(e.getMessage()));
                     connection.sendOutboundMessage(errorResult);
                 }
@@ -91,7 +92,7 @@ public class StartGraphCommandHandler implements AppCommandHandler {
         if (graphDefinition == null) {
             log.warn("StartGraphCommandHandler: 无法获取 Graph 定义，命令 {} 无法处理。", command.getId());
             if (connection != null) {
-                CommandResult errorResult = CommandResult.fail(command.getId(), "Graph definition not found.");
+                CommandResult errorResult = CommandResult.fail(command, "Graph definition not found.");
                 connection.sendOutboundMessage(errorResult);
             }
             return null;
@@ -102,7 +103,7 @@ public class StartGraphCommandHandler implements AppCommandHandler {
             log.warn("StartGraphCommandHandler: Engine {} 已经存在，不再重复启动。", graphId);
             if (connection != null) {
                 CommandResult errorResult = CommandResult.fail(command.getId(),
-                        "Engine already exists: %s".formatted(graphId));
+                        command.getType(), command.getName(), "Engine already exists: %s".formatted(graphId));
                 connection.sendOutboundMessage(errorResult);
             }
             return null;
@@ -132,7 +133,7 @@ public class StartGraphCommandHandler implements AppCommandHandler {
         log.info("StartGraphCommandHandler: Engine {} 启动成功。", graphId);
         if (connection != null) {
             CommandResult successResult = CommandResult.success(command.getId(),
-                    "Engine %s started successfully.".formatted(graphId));
+                    command.getType(), command.getName(), "Engine %s started successfully.".formatted(graphId));
             connection.sendOutboundMessage(successResult);
         }
         return null;

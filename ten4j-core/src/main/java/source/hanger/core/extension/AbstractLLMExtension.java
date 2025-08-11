@@ -237,14 +237,14 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
             onToolsUpdate(env, toolMetadata);
 
             // 发送成功结果
-            CommandResult result = CommandResult.success(command.getId(), "Tool registered successfully.");
+            CommandResult result = CommandResult.success(command, "Tool registered successfully.");
             env.sendResult(result);
 
             log.info("工具注册成功: extensionName={}, toolName={}",
                     env.getExtensionName(), toolMetadata.getName());
         } catch (Exception e) {
             log.error("工具注册失败: extensionName={}", env.getExtensionName(), e);
-            sendErrorResult(env, command, "工具注册失败: " + e.getMessage()); // Changed parameter type
+            sendErrorResult(env, command, "工具注册失败: " + e.getMessage()); // 确保这里传入的是 Command 对象
         }
     }
 
@@ -317,7 +317,7 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
      * 发送错误结果
      */
     protected void sendErrorResult(TenEnv env, Command command, String errorMessage) { // Changed
-        CommandResult errorResult = CommandResult.fail(command.getId(), errorMessage);
+        CommandResult errorResult = CommandResult.fail(command, errorMessage);
         env.sendResult(errorResult);
     }
 

@@ -26,7 +26,6 @@ import source.hanger.server.handler.ByteBufToWebSocketFrameEncoder;
 import source.hanger.server.handler.MessagePackDecoder;
 import source.hanger.server.handler.MessagePackEncoder;
 import source.hanger.server.handler.NettyConnectionHandler;
-import source.hanger.server.handler.WebSocketFrameLogger;
 import source.hanger.server.handler.WebSocketFrameToByteBufDecoder;
 import source.hanger.server.handler.WebSocketMessageDispatcher;
 
@@ -89,7 +88,7 @@ public class TenServer {
                                 new WebSocketMessageDispatcher(), // WebSocket 消息调度器，传入 App
                                 new NettyConnectionHandler(app), // 负责 Connection 生命周期管理和消息转发给 App
                                 new ByteBufToWebSocketFrameEncoder(), // ByteBuf 到 WebSocketFrame 编码器
-                                new MessagePackEncoder(), // MsgPack 编码器
+                                new MessagePackEncoder() // MsgPack 编码器
                             );
                         }
                     })

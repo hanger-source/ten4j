@@ -254,9 +254,10 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
                     extensionName, message.getId(), message.getType());
             if (message instanceof Command command) {
                 routeCommandResultFromExtension(
-                        CommandResult.fail(command.getId(),
+                        CommandResult.fail(command,
                                 "ExtensionThread for Extension not found: %s".formatted(extensionName)),
-                        "Engine");
+                        command.getSrcLoc().getExtensionName() != null ? command.getSrcLoc().getExtensionName()
+                                : "Engine"); // 使用 command.getSrcLoc().getExtensionName() 作为 sourceExtensionName
             }
             return;
         }
@@ -303,9 +304,10 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
                     targetExtensionId, command.getId(), command.getType());
             if (command.getOriginalCommandId() != null) {
                 routeCommandResultFromExtension(
-                        CommandResult.fail(command.getId(),
+                        CommandResult.fail(command,
                                 "ExtensionThread for Extension not found: %s".formatted(targetExtensionId)),
-                        "Engine"); // Engine 作为发送方
+                        command.getSrcLoc().getExtensionName() != null ? command.getSrcLoc().getExtensionName()
+                                : "Engine"); // Engine 作为发送方
             }
             return;
         }

@@ -3,14 +3,16 @@ package source.hanger.core.message;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import source.hanger.core.util.MessageUtils;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
+import source.hanger.core.util.MessageUtils;
+import source.hanger.core.common.StatusCode; // 导入 StatusCode 枚举
+import source.hanger.core.message.command.Command; // 导入 Command 类
 
 @EqualsAndHashCode(callSuper = true)
 @Data
@@ -19,21 +21,17 @@ import lombok.experimental.Accessors;
 public class CommandResult extends Message implements Cloneable { // 实现 Cloneable
 
     // Getters for specific properties
-    @Getter
     @JsonProperty("original_cmd_id")
     private String originalCommandId;
 
-    @Getter
     @JsonProperty("original_cmd_type")
-    private int originalCmdType;
+    private MessageType originalCmdType; // 修改为 MessageType 类型
 
-    @Getter
     @JsonProperty("original_cmd_name")
     private String originalCmdName;
 
-    @Getter
     @JsonProperty("status_code")
-    private int statusCode;
+    private StatusCode statusCode; // 修改为 StatusCode 枚举类型
 
     @JsonProperty("is_final")
     private boolean isFinal;
@@ -45,7 +43,7 @@ public class CommandResult extends Message implements Cloneable { // 实现 Clon
     // 实际内部创建时使用自定义构造函数
     public CommandResult(String id, Location srcLoc, MessageType type, List<Location> destLocs,
             Map<String, Object> properties, long timestamp,
-            String originalCommandId, int originalCmdType, String originalCmdName, int statusCode,
+            String originalCommandId, MessageType originalCmdType, String originalCmdName, StatusCode statusCode, // 修改类型
             boolean isFinal, boolean isCompleted) {
         super(id, type, srcLoc, destLocs, null, properties, timestamp); // 传入 null 作为 name
         this.originalCommandId = originalCommandId;
@@ -57,15 +55,20 @@ public class CommandResult extends Message implements Cloneable { // 实现 Clon
     }
 
     // 用于内部创建的简化构造函数，匹配新的 Message 基类构造
-    public CommandResult(Location srcLoc, List<Location> destLocs, String originalCommandId, int statusCode,
-            String detail) {
-        super(MessageUtils.generateUniqueId(), MessageType.CMD_RESULT, srcLoc, destLocs); // 自动生成 id
+    // 此构造函数将不再对外直接暴露，而是通过静态工厂方法调用
+    private CommandResult(String originalCommandId, MessageType originalCmdType, String originalCmdName,
+            StatusCode statusCode, String detail) {
+        super(MessageUtils.generateUniqueId(), MessageType.CMD_RESULT, new Location(), Collections.emptyList()); // 自动生成
+                                                                                                                 // id，默认
+                                                                                                                 // srcLoc
+                                                                                                                 // 和
+                                                                                                                 // destLocs
         this.originalCommandId = originalCommandId;
-        originalCmdType = MessageType.CMD_RESULT.ordinal(); // 简化，实际可能需要原始命令的 type
-        originalCmdName = originalCommandId; // 原始命令的 ID 作为名称
+        this.originalCmdType = originalCmdType;
+        this.originalCmdName = originalCmdName;
         this.statusCode = statusCode;
-        isFinal = true; // 假设结果是最终的
-        isCompleted = true; // 假设结果是完成的
+        this.isFinal = true; // 假设结果是最终的
+        this.isCompleted = true; // 假设结果是完成的
 
         // detail 放入 properties map
         if (detail != null) {
@@ -73,19 +76,50 @@ public class CommandResult extends Message implements Cloneable { // 实现 Clon
         }
     }
 
-    public static CommandResult success(String originalCommandId, String detail) {
-        // 使用 MessageUtils.generateUniqueId() 生成 id，并提供默认的 srcLoc 和 destLocs
-        return new CommandResult(new Location(), Collections.emptyList(), originalCommandId, 0, detail);
+    /**
+     * 从一个原始命令创建 CommandResult 的基础工厂方法。
+     * 用于内部简化其他静态方法的调用。
+     *
+     * @param originalCommand 原始命令对象。
+     * @param statusCode      结果状态码。
+     * @param detailOrError   详细信息或错误消息。
+     * @return 新的 CommandResult 实例。
+     */
+    private static CommandResult fromCommand(Command originalCommand, StatusCode statusCode, String detailOrError) {
+        Objects.requireNonNull(originalCommand, "Original command cannot be null.");
+        return new CommandResult(
+                originalCommand.getId(),
+                originalCommand.getType(), // 原始命令的类型
+                originalCommand.getName(), // 原始命令的名称
+                statusCode,
+                detailOrError);
     }
 
-    public static CommandResult fail(String originalCommandId, String errorMessage) {
-        // 使用 MessageUtils.generateUniqueId() 生成 id，并提供默认的 srcLoc 和 destLocs
-        return new CommandResult(new Location(), Collections.emptyList(), originalCommandId, -1, errorMessage);
+    public static CommandResult success(String originalCommandId, MessageType originalCmdType, String originalCmdName,
+            String detail) {
+        return new CommandResult(originalCommandId, originalCmdType, originalCmdName, StatusCode.OK, detail); // 使用
+                                                                                                              // StatusCode.OK
+    }
+
+    // 重载的 success 方法，从 Command 对象构建
+    public static CommandResult success(Command originalCommand, String detail) {
+        return fromCommand(originalCommand, StatusCode.OK, detail); // 使用 StatusCode.OK
+    }
+
+    public static CommandResult fail(String originalCommandId, MessageType originalCmdType, String originalCmdName,
+            String errorMessage) {
+        return new CommandResult(originalCommandId, originalCmdType, originalCmdName, StatusCode.ERROR, errorMessage); // 使用
+                                                                                                                       // StatusCode.ERROR
+    }
+
+    // 重载的 fail 方法，从 Command 对象构建
+    public static CommandResult fail(Command originalCommand, String errorMessage) {
+        return fromCommand(originalCommand, StatusCode.ERROR, errorMessage); // 使用 StatusCode.ERROR
     }
 
     // 新增：判断命令是否成功
     public boolean isSuccess() {
-        return statusCode == 0;
+        return statusCode == StatusCode.OK; // 修改比较方式
     }
 
     // 新增：获取错误信息 (如果存在)
@@ -110,15 +144,7 @@ public class CommandResult extends Message implements Cloneable { // 实现 Clon
         // 对于引用类型字段，如果需要深拷贝，则在此处进行
         // 例如：cloned.setSrcLoc(this.getSrcLoc().clone());
         // 如果 properties 需要深拷贝，也在此处处理
-        return (CommandResult)super.clone();
-    }
-
-    public boolean isFinal() {
-        return isFinal;
-    }
-
-    public boolean isCompleted() {
-        return isCompleted;
+        return (CommandResult) super.clone();
     }
 
     // 辅助方法：获取 detail (从 properties map 中获取)

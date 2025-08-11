@@ -6,7 +6,7 @@ import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
 import source.hanger.core.message.MessageType;
-import source.hanger.core.message.VideoFrameMessage;
+import source.hanger.core.message.VideoFrameMessage; // 重新导入 VideoFrameMessage
 import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
 import lombok.extern.slf4j.Slf4j;
@@ -151,7 +151,7 @@ public class EchoExtension extends BaseExtension { // Extend BaseExtension
                         put("message_count", messageCount);
                     }
                 });
-                CommandResult result = CommandResult.success(command.getId(), detailJson);
+                CommandResult result = CommandResult.success(command, detailJson);
                 result.setName("echo_result");
 
                 // 发送结果

@@ -72,7 +72,7 @@ public class SimpleEchoExtension extends BaseExtension {
             log.error("Failed to serialize command result detail: {}", e.getMessage(), e);
             detailJson = "Error: Failed to serialize result.";
         }
-        CommandResult result = CommandResult.success(command.getId(), detailJson);
+        CommandResult result = CommandResult.success(command, detailJson);
         // result.setSourceLocation(new Location(context.getAppUri(),
         // context.getGraphId(), context.getExtensionName())); // srcLoc 应该在构造时传入
         env.sendResult(result);

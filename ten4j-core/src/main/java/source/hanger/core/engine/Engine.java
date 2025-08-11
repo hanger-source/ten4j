@@ -34,6 +34,7 @@ import source.hanger.core.path.PathTableAttachedTo;
 import source.hanger.core.remote.Remote;
 import source.hanger.core.runloop.Runloop;
 import source.hanger.core.tenenv.TenEnvProxy;
+import source.hanger.core.common.StatusCode; // 导入 StatusCode 枚举
 
 import static source.hanger.core.message.MessageType.CMD_TIMEOUT;
 import static source.hanger.core.message.MessageType.CMD_TIMER;
@@ -253,7 +254,8 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
             // 如果是命令，返回失败结果
             if (message instanceof Command command) {
                 submitCommandResult(
-                        CommandResult.fail(command.getId(), "Engine not ready to handle messages."));
+                        CommandResult.fail(command.getId(), command.getType(), command.getName(),
+                                "Engine not ready to handle messages."));
             }
             return;
         }
@@ -354,13 +356,13 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
                     } catch (Exception e) {
                         log.error("Engine {}: 命令处理器处理命令 {} 失败: {}", graphId, command.getId(), e.getMessage(),
                                 e);
-                        submitCommandResult(CommandResult.fail(command.getId(),
+                        submitCommandResult(CommandResult.fail(command.getId(), command.getType(), command.getName(),
                                 "Engine command handling failed: %s".formatted(
                                         e.getMessage()))); // Changed to submitCommandResult
                     }
                 } else {
                     log.warn("Engine {}: 未知 Engine 级别命令类型或没有注册处理器: {}", graphId, command.getType());
-                    submitCommandResult(CommandResult.fail(command.getId(),
+                    submitCommandResult(CommandResult.fail(command.getId(), command.getType(), command.getName(),
                             "Unknown Engine command type or no handler registered: %s".formatted(
                                     command.getType()))); // Changed
                     // to
@@ -373,13 +375,12 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
                 routeMessageToRemote(command); // 修正：直接通过 Engine 路由到 Remote
             } else {
                 // 没有目的地，无法处理
-                submitCommandResult(CommandResult.fail(command.getId(), "Command has no destination.")); // Changed to
-                // submitCommandResult
+                submitCommandResult(CommandResult.fail(command, "Command has no destination.")); // Changed to
             }
         } else {
             // 没有目的地，无法处理
             log.warn("Engine {}: 命令 {} 没有目的地 Location，无法处理。", graphId, command.getId());
-            submitCommandResult(CommandResult.fail(command.getId(), "Command has no destination.")); // Changed to
+            submitCommandResult(CommandResult.fail(command, "Command has no destination.")); // Changed to
         }
     }
 
@@ -498,7 +499,7 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
         // 而不是固定为 CommandResult
         CompletableFuture<CommandResult> future = commandFutures.remove(Long.parseLong(originalCommandId));
         if (future != null) {
-            if (commandResult.getStatusCode() == 0) {
+            if (commandResult.getStatusCode() == StatusCode.OK) { // 修改比较方式
                 future.complete(commandResult);
             } else {
                 future.completeExceptionally(new RuntimeException(

@@ -12,6 +12,7 @@ import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.message.MessageType;
 
 /**
  * 抽象AI服务枢纽扩展，用于简化AI服务相关的扩展开发。
@@ -106,7 +107,8 @@ public abstract class AbstractAIServiceHub extends BaseExtension {
     protected abstract void handleAIServiceCommandResult(TenEnv context, CommandResult commandResult);
 
     protected void sendCommandResult(String commandId, Object result, String errorMessage) {
-        CommandResult commandResult = CommandResult.fail(commandId, errorMessage); // 使用 CommandResult.fail
+        CommandResult commandResult = CommandResult.fail(commandId, MessageType.CMD, MessageType.CMD.name(),
+                errorMessage); // 使用重载的 fail 方法，并传入默认的 Command Type 和 Name
         // 根据需要将 result 添加到 properties 中
         if (result != null) {
             commandResult.getProperties().put("result_data", result); // 示例：将结果数据放入properties

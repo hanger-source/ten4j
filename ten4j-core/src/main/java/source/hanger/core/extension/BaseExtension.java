@@ -92,7 +92,7 @@ public abstract class BaseExtension implements Extension {
         // Default implementation: return a failure result for unhandled commands
         // Ensure this is posted to the TenEnv's runloop
         env.postTask(() -> env
-                .sendResult(CommandResult.fail(command.getId(), "Extension does not support this command.")));
+                .sendResult(CommandResult.fail(command, "Extension does not support this command.")));
     }
 
     @Override

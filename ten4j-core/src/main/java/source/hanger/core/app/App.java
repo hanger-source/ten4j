@@ -331,7 +331,9 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
                     // 暂时发送回源连接，表示无法路由
                     if (sourceConnection != null) {
                         appEnvProxy.sendResult(CommandResult.fail(message.getId(),
-                                "Remote %s not found.".formatted(remoteId))); // 使用 appEnvProxy 发送错误结果
+                                message.getType(), message.getName(), "Remote %s not found.".formatted(remoteId))); // 使用
+                                                                                                                    // appEnvProxy
+                                                                                                                    // 发送错误结果
                     }
                 } else {
                     log.debug("App: 路由消息 {} 到 Remote {}。", message.getId(), remoteId);
@@ -373,7 +375,7 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
                     // 如果 remote 不存在，并且有 sourceConnection，通过 appEnvProxy 返回错误结果
                     if (sourceConnection != null) {
                         appEnvProxy.sendResult(CommandResult.fail(message.getId(),
-                                "Remote %s not found.".formatted(remoteAppUri)));
+                                message.getType(), message.getName(), "Remote %s not found.".formatted(remoteAppUri)));
                     }
                 }
             }
@@ -433,6 +435,7 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
                                 e);
                         if (connection != null) {
                             CommandResult errorResult = CommandResult.fail(command.getId(),
+                                    command.getType(), command.getName(),
                                     "App command handling failed: %s".formatted(e.getMessage()));
                             connection.sendOutboundMessage(errorResult);
                         }
@@ -442,6 +445,7 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
                             command.getType());
                     if (connection != null) {
                         CommandResult errorResult = CommandResult.fail(command.getId(),
+                                command.getType(), command.getName(),
                                 "Unknown App command type or no handler registered: %s".formatted(command.getType()));
                         connection.sendOutboundMessage(errorResult);
                     }

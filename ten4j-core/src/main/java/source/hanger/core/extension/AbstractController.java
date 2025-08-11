@@ -205,7 +205,7 @@ public abstract class AbstractController extends BaseExtension {
      * 发送错误结果
      */
     protected void sendErrorResult(TenEnv context, Command command, String errorMessage) {
-        CommandResult errorResult = CommandResult.fail(command.getId(), errorMessage);
+        CommandResult errorResult = CommandResult.fail(command, errorMessage);
         context.sendResult(errorResult);
     }
 
@@ -213,7 +213,7 @@ public abstract class AbstractController extends BaseExtension {
      * 发送成功结果
      */
     protected void sendSuccessResult(TenEnv context, Command command, Object result) {
-        CommandResult successResult = CommandResult.success(command.getId(),
+        CommandResult successResult = CommandResult.success(command,
                 result != null ? result.toString() : "");
         context.sendResult(successResult);
     }

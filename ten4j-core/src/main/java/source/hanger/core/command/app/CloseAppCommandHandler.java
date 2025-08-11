@@ -19,7 +19,7 @@ public class CloseAppCommandHandler implements AppCommandHandler {
         appEnvProxy.targetEnv().close(); // 通过代理获取 App 实例并调用 close
         // 返回成功结果
         if (connection != null) {
-            CommandResult successResult = CommandResult.success(command.getId(), "App closed successfully.");
+            CommandResult successResult = CommandResult.success(command, "App closed successfully.");
             connection.sendOutboundMessage(successResult);
         }
         return null; // App 级别命令通常不直接返回结果，而是通过 Connection.sendOutboundMessage 发送

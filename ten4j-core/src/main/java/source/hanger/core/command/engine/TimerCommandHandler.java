@@ -20,15 +20,15 @@ public class TimerCommandHandler implements EngineCommandHandler {
         if (!(command instanceof TimerCommand)) {
             log.warn("TimerCommandHandler 收到非 TimerCommand 命令: {}", command.getType());
             // 返回失败结果
-            return CommandResult.fail(command.getId(), "Unexpected command type for TimerHandler.");
+            return CommandResult.fail(command, "Unexpected command type for TimerHandler.");
         }
-        return handleTimerCommand(engineEnv, (TimerCommand)command);
+        return handleTimerCommand(engineEnv, (TimerCommand) command);
     }
 
     @Override
     public Object handleTimerCommand(TenEnv engineEnv, TimerCommand command) {
         log.debug("TimerCommand received for timerId: {}, timeoutUs: {}, times: {}",
-            command.getTimerId(), command.getTimeoutUs(), command.getTimes());
+                command.getTimerId(), command.getTimeoutUs(), command.getTimes());
         // TODO: Implement timer logic
         return "Timer %d handled.".formatted(command.getTimerId());
     }
@@ -37,7 +37,7 @@ public class TimerCommandHandler implements EngineCommandHandler {
     public Object handleTimeoutCommand(TenEnv engineEnv, TimeoutCommand command) {
         // TimerCommandHandler 不处理 TimeoutCommand
         log.warn("TimerCommandHandler 不支持 TimeoutCommand: {}", command.getId());
-        return CommandResult.fail(command.getId(),
-            "Not supported: TimerCommandHandler does not handle TimeoutCommand.");
+        return CommandResult.fail(command,
+                "Not supported: TimerCommandHandler does not handle TimeoutCommand.");
     }
 }
