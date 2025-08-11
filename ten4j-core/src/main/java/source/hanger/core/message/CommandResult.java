@@ -10,9 +10,9 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
+import source.hanger.core.common.StatusCode;
+import source.hanger.core.message.command.Command;
 import source.hanger.core.util.MessageUtils;
-import source.hanger.core.common.StatusCode; // 导入 StatusCode 枚举
-import source.hanger.core.message.command.Command; // 导入 Command 类
 
 @EqualsAndHashCode(callSuper = true)
 @Data
@@ -57,7 +57,7 @@ public class CommandResult extends Message implements Cloneable { // 实现 Clon
     // 用于内部创建的简化构造函数，匹配新的 Message 基类构造
     // 此构造函数将不再对外直接暴露，而是通过静态工厂方法调用
     private CommandResult(String originalCommandId, MessageType originalCmdType, String originalCmdName,
-            StatusCode statusCode, String detail) {
+            StatusCode statusCode, String detailOrError) {
         super(MessageUtils.generateUniqueId(), MessageType.CMD_RESULT, new Location(), Collections.emptyList()); // 自动生成
                                                                                                                  // id，默认
                                                                                                                  // srcLoc
@@ -70,9 +70,16 @@ public class CommandResult extends Message implements Cloneable { // 实现 Clon
         this.isFinal = true; // 假设结果是最终的
         this.isCompleted = true; // 假设结果是完成的
 
-        // detail 放入 properties map
-        if (detail != null) {
-            getProperties().put("detail", detail);
+        // 根据状态码，将 detailOrError 放入不同的 properties 键中
+        if (detailOrError != null) {
+            if (statusCode == StatusCode.OK) {
+                getProperties().put("detail", detailOrError);
+            } else if (statusCode == StatusCode.ERROR) {
+                getProperties().put("error_message", detailOrError); // 错误消息放入 error_message 键
+            } else {
+                // 对于其他状态码，默认放入 detail，或者根据需要处理
+                getProperties().put("detail", detailOrError);
+            }
         }
     }
 
@@ -108,8 +115,9 @@ public class CommandResult extends Message implements Cloneable { // 实现 Clon
 
     public static CommandResult fail(String originalCommandId, MessageType originalCmdType, String originalCmdName,
             String errorMessage) {
-        return new CommandResult(originalCommandId, originalCmdType, originalCmdName, StatusCode.ERROR, errorMessage); // 使用
-                                                                                                                       // StatusCode.ERROR
+        return new CommandResult(originalCommandId, originalCmdType, originalCmdName, StatusCode.ERROR,
+                errorMessage); // 使用
+        // StatusCode.ERROR
     }
 
     // 重载的 fail 方法，从 Command 对象构建
