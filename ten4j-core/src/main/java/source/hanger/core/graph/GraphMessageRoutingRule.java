@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 @Data
-public class RoutingRule {
+public class GraphMessageRoutingRule {
     /**
      * 要匹配的消息属性名称（例如 "name", "properties.someKey"）
      */

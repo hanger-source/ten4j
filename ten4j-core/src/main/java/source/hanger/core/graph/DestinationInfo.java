@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.experimental.Accessors;
+import source.hanger.core.message.MessageConversionContext;
 
 /**
  * 表示路由规则中的一个消息目的地。

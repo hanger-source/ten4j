@@ -1,7 +1,7 @@
 package source.hanger.core.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import source.hanger.core.graph.MessageConversionContext;
+import source.hanger.core.message.MessageConversionContext;
 import source.hanger.core.message.Message;
 import lombok.extern.slf4j.Slf4j;
 

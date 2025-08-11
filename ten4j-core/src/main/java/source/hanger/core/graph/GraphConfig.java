@@ -32,18 +32,4 @@ public class GraphConfig {
      */
     @JsonProperty("log")
     private LogConfig logConfig;
-
-    /**
-     * 图中的节点（扩展和扩展组）。
-     * 对应 property.json 中的 "nodes" 数组。
-     */
-    @JsonProperty("nodes")
-    private List<NodeConfig> nodes;
-
-    /**
-     * 图中的连接。
-     * 对应 property.json 中的 "connections" 数组。
-     */
-    @JsonProperty("connections")
-    private List<ConnectionConfig> connections;
 }

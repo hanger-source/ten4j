@@ -1,4 +1,4 @@
-package source.hanger.core.graph;
+package source.hanger.core.extension;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import source.hanger.core.message.Location;
@@ -8,7 +8,14 @@ import lombok.experimental.Accessors;
 
 import java.util.List;
 import java.util.Map;
+import source.hanger.core.message.MessageConversionContext;
+import source.hanger.core.graph.AllMessageDestInfo; // 引入 AllMessageDestInfo
 
+/**
+ * Represents runtime information for an Extension instance in the C layer.
+ * This class is part of the runtime model, not the static graph configuration.
+ * Corresponds to C's ten_extension_info_t structure.
+ */
 @Data
 @NoArgsConstructor
 @Accessors(chain = true)
@@ -20,15 +27,15 @@ public class ExtensionInfo {
     @JsonProperty("extension_group_name")
     private String extensionGroupName;
 
-    @JsonProperty("type") // 新增 type 字段
+    @JsonProperty("type") // Added type field, if it's used in C runtime info
     private String type;
 
     @JsonProperty("loc")
     private Location loc;
 
     /**
-     * 所有消息类型的目的地信息。
-     * 对应 C 层的 ten_all_msg_type_dest_info_t 结构。
+     * Destination information for all message types.
+     * Corresponds to C's ten_all_msg_type_dest_info_t structure.
      */
     @JsonProperty("msg_dest_info")
     private AllMessageDestInfo msgDestInfo;
@@ -36,8 +43,6 @@ public class ExtensionInfo {
     @JsonProperty("property")
     private Map<String, Object> property; // Corresponds to ten_value_t *property in C
 
-    // TODO: ten_list_t msg_conversion_contexts; 这个字段需要更复杂的映射
-    // 暂时用 List<Object> 来表示，后续可能需要独立的 DTO
     @JsonProperty("msg_conversion_contexts")
     private List<MessageConversionContext> msgConversionContexts;
 }

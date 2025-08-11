@@ -13,8 +13,15 @@ import source.hanger.core.message.command.StartGraphCommand;
 import source.hanger.core.remote.Remote;
 import source.hanger.core.tenenv.TenEnvProxy;
 import source.hanger.core.graph.GraphLoader;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import source.hanger.core.extension.ExtensionInfo;
+import source.hanger.core.extension.ExtensionGroupInfo;
+import source.hanger.core.graph.runtime.PredefinedGraphRuntimeInfo;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * `StartGraphCommandHandler` 处理 `StartGraphCommand` 命令，负责启动 Engine。
@@ -60,12 +67,17 @@ public class StartGraphCommandHandler implements AppCommandHandler {
         if (targetGraphId != null && app.getPredefinedGraphsByName().containsKey(targetGraphId)) {
             PredefinedGraphEntry entry = app.getPredefinedGraphsByName().get(targetGraphId);
             if (entry != null) {
-                // 从 PredefinedGraphEntry 获取原始 JSON 字符串，然后解析为 GraphDefinition
+                // 从 PredefinedGraphEntry 获取 GraphDefinition，然后序列化
+                GraphDefinition loadedDefinition = entry.getGraph(); // 直接获取 GraphDefinition
                 try {
-                    graphDefinition = GraphLoader.loadGraphDefinitionFromJson(entry.getGraphJsonContent());
+                    // 注意：这里需要一个 ObjectMapper 来序列化 loadedDefinition
+                    // StartGraphCommandHandler 缺乏 ObjectMapper 实例，可以考虑作为依赖注入或静态实例
+                    // 暂时使用新的 ObjectMapper 实例
+                    String graphJson = new ObjectMapper().writeValueAsString(loadedDefinition);
+                    graphDefinition = GraphLoader.loadGraphDefinitionFromJson(graphJson); // 重新加载以确保完整性
                     log.info("StartGraphCommandHandler: 找到预定义图 {}。", targetGraphId);
                 } catch (JsonProcessingException e) {
-                    log.error("StartGraphCommandHandler: 自动启动图 {} 时，解析预定义图的 JSON 失败: {}", entry.getName(),
+                    log.error("StartGraphCommandHandler: 自动启动图 {} 时，序列化/解析预定义图的 JSON 失败: {}", entry.getName(),
                             e.getMessage());
                     // 即使解析失败，也不应阻止后续尝试从 command 的 json 定义加载
                 }
@@ -132,8 +144,36 @@ public class StartGraphCommandHandler implements AppCommandHandler {
 
         log.info("StartGraphCommandHandler: Engine {} 启动成功。", graphId);
         if (connection != null) {
-            CommandResult successResult = CommandResult.success(command.getId(),
-                    command.getType(), command.getName(), "Engine %s started successfully.".formatted(graphId));
+            // 获取 Engine 中加载的 ExtensionInfo 和 ExtensionGroupInfo
+            List<ExtensionInfo> runtimeExtensionInfos = engine.getEngineExtensionContext().getAllExtensionInfos();
+            List<ExtensionGroupInfo> runtimeExtensionGroupInfos = engine.getEngineExtensionContext()
+                    .getAllExtensionGroupInfos();
+
+            // 构建 PredefinedGraphRuntimeInfo 实例
+            // 注意：PredefinedGraphEntry 中没有 singleton 字段，这里暂时默认为 false。
+            // 如果 singleton 应该从其他地方（例如 GraphDefinition）获取，需要进一步明确。
+            PredefinedGraphRuntimeInfo runtimeInfo = new PredefinedGraphRuntimeInfo(
+                    graphDefinition.getGraphName(), // 使用 graph name
+                    false, // auto_start 暂时默认为 false，因为这里是运行时信息，而非配置
+                    false, // singleton 暂时默认为 false
+                    runtimeExtensionInfos,
+                    runtimeExtensionGroupInfos);
+
+            // 将 PredefinedGraphRuntimeInfo 序列化为 JSON 字符串，添加到 CommandResult 的 properties 中
+            Map<String, Object> properties = new HashMap<>();
+            try {
+                properties.put("predefined_graph_runtime_info", new ObjectMapper().writeValueAsString(runtimeInfo));
+            } catch (JsonProcessingException e) {
+                log.error("StartGraphCommandHandler: 序列化 PredefinedGraphRuntimeInfo 失败: {}", e.getMessage());
+            }
+
+            CommandResult successResult = CommandResult.success(
+                    command.getId(),
+                    command.getType(),
+                    command.getName(),
+                    "Engine %s started successfully.".formatted(graphId),
+                    properties // 传递 properties
+            );
             connection.sendOutboundMessage(successResult);
         }
         return null;

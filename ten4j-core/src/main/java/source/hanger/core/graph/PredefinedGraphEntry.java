@@ -26,5 +26,5 @@ public class PredefinedGraphEntry {
      * 对应 property.json 中的 "graph" 字段。
      */
     @JsonProperty("graph")
-    private String graphJsonContent;
+    private GraphDefinition graph;
 }

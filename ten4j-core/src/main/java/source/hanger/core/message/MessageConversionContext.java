@@ -1,4 +1,4 @@
-package source.hanger.core.graph;
+package source.hanger.core.message;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;

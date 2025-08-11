@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.engine.EngineExtensionContext;
 import source.hanger.core.extension.submitter.ExtensionCommandSubmitter;
 import source.hanger.core.extension.submitter.ExtensionMessageSubmitter;
-import source.hanger.core.graph.ExtensionInfo;
+import source.hanger.core.extension.ExtensionInfo;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
@@ -38,8 +38,8 @@ public class ExtensionEnvImpl implements TenEnv {
     private final ExtensionInfo extensionInfo; // 新增：存储 ExtensionInfo
 
     public ExtensionEnvImpl(Extension extension,
-        ExtensionCommandSubmitter commandSubmitter, ExtensionMessageSubmitter messageSubmitter,
-        Runloop extensionRunloop, EngineExtensionContext extensionContext, ExtensionInfo extInfo) {
+            ExtensionCommandSubmitter commandSubmitter, ExtensionMessageSubmitter messageSubmitter,
+            Runloop extensionRunloop, EngineExtensionContext extensionContext, ExtensionInfo extInfo) {
         this.extensionName = extInfo.getLoc().getExtensionName(); // 从 ExtensionInfo 获取
         this.extension = extension;
         this.appUri = extInfo.getLoc().getAppUri(); // 从 ExtensionInfo 获取
@@ -64,7 +64,8 @@ public class ExtensionEnvImpl implements TenEnv {
             return commandSubmitter.submitCommandFromExtension(command, extensionName);
         } else {
             return CompletableFuture.failedFuture(new IllegalStateException(
-                "ExtensionCommandSubmitter is null, cannot send command for Extension: {}".formatted(extensionName)));
+                    "ExtensionCommandSubmitter is null, cannot send command for Extension: {}"
+                            .formatted(extensionName)));
         }
     }
 
@@ -75,8 +76,8 @@ public class ExtensionEnvImpl implements TenEnv {
             commandSubmitter.routeCommandResultFromExtension(result, extensionName);
         } else {
             log.warn(
-                "ExtensionCommandSubmitter is null, cannot route command result for Extension: {}. Result dropped.",
-                extensionName);
+                    "ExtensionCommandSubmitter is null, cannot route command result for Extension: {}. Result dropped.",
+                    extensionName);
         }
     }
 
@@ -86,7 +87,7 @@ public class ExtensionEnvImpl implements TenEnv {
             messageSubmitter.submitMessageFromExtension(data, extensionName);
         } else {
             log.warn("ExtensionMessageSubmitter is null, cannot send data for Extension: {}. Message dropped.",
-                extensionName);
+                    extensionName);
         }
     }
 
@@ -96,7 +97,7 @@ public class ExtensionEnvImpl implements TenEnv {
             messageSubmitter.submitMessageFromExtension(videoFrame, extensionName);
         } else {
             log.warn("ExtensionMessageSubmitter is null, cannot send video frame for Extension: {}. Message dropped.",
-                extensionName);
+                    extensionName);
         }
     }
 
@@ -106,7 +107,7 @@ public class ExtensionEnvImpl implements TenEnv {
             messageSubmitter.submitMessageFromExtension(audioFrame, extensionName);
         } else {
             log.warn("ExtensionMessageSubmitter is null, cannot send audio frame for Extension: {}. Message dropped.",
-                extensionName);
+                    extensionName);
         }
     }
 
@@ -116,8 +117,8 @@ public class ExtensionEnvImpl implements TenEnv {
             messageSubmitter.submitMessageFromExtension(message, extensionName);
         } else {
             log.warn(
-                "ExtensionMessageSubmitter is null, cannot send message of type {} for Extension: {}. Message dropped.",
-                message.getType(), extensionName);
+                    "ExtensionMessageSubmitter is null, cannot send message of type {} for Extension: {}. Message dropped.",
+                    message.getType(), extensionName);
         }
     }
 
@@ -139,7 +140,7 @@ public class ExtensionEnvImpl implements TenEnv {
     @Override
     public boolean hasProperty(String path) {
         return extensionInfo != null && extensionInfo.getProperty() != null
-            && extensionInfo.getProperty().containsKey(path);
+                && extensionInfo.getProperty().containsKey(path);
     }
 
     @Override

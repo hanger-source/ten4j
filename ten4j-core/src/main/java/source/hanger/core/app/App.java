@@ -1,8 +1,6 @@
 package source.hanger.core.app;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -12,6 +10,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -26,21 +25,22 @@ import source.hanger.core.engine.Engine;
 import source.hanger.core.extension.Extension;
 import source.hanger.core.graph.GraphConfig;
 import source.hanger.core.graph.GraphDefinition;
+import source.hanger.core.graph.GraphLoader;
 import source.hanger.core.graph.PredefinedGraphEntry;
+import source.hanger.core.graph.runtime.PredefinedGraphRuntimeInfo;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.Location;
 import source.hanger.core.message.Message;
 import source.hanger.core.message.MessageType;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.message.command.StartGraphCommand;
+import source.hanger.core.path.PathIn;
 import source.hanger.core.path.PathTable;
-import source.hanger.core.path.PathTableAttachedTo; // 导入 PathTableAttachedTo
-import source.hanger.core.path.PathIn; // 导入 PathIn
+import source.hanger.core.path.PathTableAttachedTo;
 import source.hanger.core.remote.Remote;
 import source.hanger.core.runloop.Runloop;
 import source.hanger.core.tenenv.TenEnvProxy;
 import source.hanger.core.util.MessageUtils;
-import com.fasterxml.jackson.core.JsonProcessingException;
 
 /**
  * App 类作为 Ten 框架的顶层容器和协调器。
@@ -81,15 +81,12 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
      */
     @Getter
     private final Map<String, CompletableFuture<CommandResult>> commandFutures; // App 自身的 CompletableFuture 映射
+    // 新增：存储运行时预定义图信息
+    private final Map<String, PredefinedGraphRuntimeInfo> predefinedGraphRuntimeInfos;
     private GraphConfig appConfig; // 新增：App 的整体配置，对应 property.json
     // 新增：预定义图的映射，方便通过名称查找
     private Map<String, PredefinedGraphEntry> predefinedGraphsByName;
     // private final Map<String, Connection> activeConnections; // 此行将被删除
-
-    // 新增：提供 App 的 Runloop 访问方法
-    public Runloop getRunloop() {
-        return this.appRunloop;
-    }
 
     /**
      * App 的构造函数。
@@ -128,6 +125,7 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
         // 初始化 App 自身的 TenEnvProxy 实例
         appEnvProxy = new TenEnvProxy<>(appRunloop, new AppEnvImpl(this, appRunloop, appConfig), "App-" + appUri);
         commandFutures = new ConcurrentHashMap<>(); // 初始化 commandFutures
+        this.predefinedGraphRuntimeInfos = new ConcurrentHashMap<>(); // 初始化 predefinedGraphRuntimeInfos
 
         this.pathTable = new PathTable(PathTableAttachedTo.APP, this, appEnvProxy); // <-- 将 this 替换为 appEnvProxy
 
@@ -136,20 +134,21 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
 
     // 私有静态方法：加载配置文件，返回 GraphConfig
     private static GraphConfig loadConfigInternal(String configFilePath) {
-        if (configFilePath != null && !configFilePath.isEmpty()) {
-            try {
-                String jsonContent = Files.readString(Paths.get(configFilePath));
-                GraphConfig config = OBJECT_MAPPER.readValue(jsonContent, GraphConfig.class);
-                log.info("App: 从 {} 加载配置成功。", configFilePath);
-                return config;
-            } catch (IOException e) {
-                log.error("App: 加载配置文件 {} 失败: {}", configFilePath, e.getMessage());
-                return new GraphConfig(); // 加载失败时使用空配置
-            }
-        } else {
-            log.warn("App: 未提供配置文件路径，使用默认空配置。");
-            return new GraphConfig(); // 创建一个空的默认配置
+        String targetPath = (configFilePath != null && !configFilePath.isEmpty())
+            ? configFilePath
+            : "graph/property.json";
+        try {
+            log.info("App: 尝试从 classpath 加载配置 '{}'.", targetPath);
+            return GraphLoader.loadGraphConfigFromClassPath(targetPath);
+        } catch (IOException e) {
+            log.error("App: 从 classpath 加载配置 '{}' 失败: {}", targetPath, e.getMessage());
+            return new GraphConfig(); // 加载失败时使用空配置
         }
+    }
+
+    // 新增：提供 App 的 Runloop 访问方法
+    public Runloop getRunloop() {
+        return this.appRunloop;
     }
 
     private void registerAppCommandHandlers() {
@@ -189,7 +188,7 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
 
         // 从配置中加载预定义图
         predefinedGraphsByName = appConfig.getPredefinedGraphs() != null ? appConfig.getPredefinedGraphs().stream()
-                .collect(Collectors.toMap(PredefinedGraphEntry::getName, entry -> entry)) : new ConcurrentHashMap<>();
+            .collect(Collectors.toMap(PredefinedGraphEntry::getName, entry -> entry)) : new ConcurrentHashMap<>();
 
         // 自动启动配置中标记为 auto_start 的预定义图
         if (appConfig.getPredefinedGraphs() != null) {
@@ -197,35 +196,38 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
             final ObjectMapper localObjectMapper = new ObjectMapper();
 
             appConfig.getPredefinedGraphs().stream()
-                    .filter(PredefinedGraphEntry::isAutoStart)
-                    .forEach(entry -> {
-                        log.info("App: 自动启动预定义图: {}", entry.getName());
-                        // 从 PredefinedGraphEntry 获取原始 JSON 字符串
-                        String graphJson = entry.getGraphJsonContent();
+                .filter(PredefinedGraphEntry::isAutoStart)
+                .forEach(entry -> {
+                    log.info("App: 自动启动预定义图: {}", entry.getName());
+                    // 从 PredefinedGraphEntry 获取 GraphDefinition 对象
+                    GraphDefinition graphDefinition = entry.getGraph(); // 直接获取 GraphDefinition
 
-                        // 尝试将 JSON 字符串解析为 GraphDefinition 对象，以便获取 graphId
-                        GraphDefinition loadedGraphDefinition = null;
-                        try {
-                            loadedGraphDefinition = localObjectMapper.readValue(graphJson, GraphDefinition.class);
-                        } catch (JsonProcessingException e) {
-                            log.error("App: 自动启动图 {} 时，解析 Graph JSON 失败: {}", entry.getName(), e.getMessage());
-                            return; // 跳过此图的启动
-                        }
+                    // 将 GraphDefinition 重新序列化为 JSON 字符串，因为 StartGraphCommand 期望接收一个图的 JSON 字符串
+                    String graphJson = null;
+                    try {
+                        graphJson = localObjectMapper.writeValueAsString(graphDefinition);
+                    } catch (JsonProcessingException e) {
+                        log.error("App: 自动启动图 {} 时，序列化 GraphDefinition 失败: {}", entry.getName(),
+                            e.getMessage());
+                        return; // 跳过此图的启动
+                    }
 
-                        Location srcLoc = new Location(appUri, null, null);
-                        // 使用解析后的 GraphDefinition 来获取 graphId
-                        Location destLoc = new Location(appUri, loadedGraphDefinition.getGraphId(), null);
-                        StartGraphCommand startCmd = new StartGraphCommand(
-                                MessageUtils.generateUniqueId(),
-                                srcLoc,
-                                Collections.singletonList(destLoc),
-                                "Auto-start predefined graph", // message
-                                graphJson, // 直接使用原始的 graphJson 字符串
-                                false // longRunningMode
-                        );
-                        // 提交命令到 App Runloop，然后由 App 的 handleInboundMessage 处理
-                        appEnvProxy.sendCmd(startCmd); // 使用 appEnvProxy 提交命令
-                    });
+                    Location srcLoc = new Location(appUri, null, null);
+                    // 注意：graphId 会在 Engine 启动时生成，这里不需要从 GraphDefinition 获取
+                    // destLoc 的 graphId 应该为 null，表示目标是 App 内部的 Engine 实例（由 StartGraphCommand 触发创建）
+                    Location destLoc = new Location(appUri, null, null);
+
+                    StartGraphCommand startCmd = new StartGraphCommand(
+                        MessageUtils.generateUniqueId(),
+                        srcLoc,
+                        Collections.singletonList(destLoc),
+                        "Auto-start predefined graph", // message
+                        graphJson, // 使用重新序列化后的图 JSON 字符串
+                        false // longRunningMode
+                    );
+                    // 提交命令到 App Runloop，然后由 App 的 handleInboundMessage 处理
+                    appEnvProxy.sendCmd(startCmd); // 使用 appEnvProxy 提交命令
+                });
         }
         log.info("App: 已启动。");
     }
@@ -327,13 +329,13 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
                 Remote targetRemote = remotes.get(remoteId);
                 if (targetRemote == null) {
                     log.warn("App: 目标 Remote {} (App URI) 不存在，消息 {} 无法路由。需要实现 Remote 的创建。", remoteId,
-                            message.getId());
+                        message.getId());
                     // 暂时发送回源连接，表示无法路由
                     if (sourceConnection != null) {
                         appEnvProxy.sendResult(CommandResult.fail(message.getId(),
-                                message.getType(), message.getName(), "Remote %s not found.".formatted(remoteId))); // 使用
-                                                                                                                    // appEnvProxy
-                                                                                                                    // 发送错误结果
+                            message.getType(), message.getName(), "Remote %s not found.".formatted(remoteId))); // 使用
+                        // appEnvProxy
+                        // 发送错误结果
                     }
                 } else {
                     log.debug("App: 路由消息 {} 到 Remote {}。", message.getId(), remoteId);
@@ -371,11 +373,11 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
                 Remote remote = remotes.get(remoteAppUri);
                 if (remote == null) {
                     log.warn("App: 目标远程 App URI {} 不存在 Remote 实例，消息 {} 无法路由。", remoteAppUri,
-                            message.getId());
+                        message.getId());
                     // 如果 remote 不存在，并且有 sourceConnection，通过 appEnvProxy 返回错误结果
                     if (sourceConnection != null) {
                         appEnvProxy.sendResult(CommandResult.fail(message.getId(),
-                                message.getType(), message.getName(), "Remote %s not found.".formatted(remoteAppUri)));
+                            message.getType(), message.getName(), "Remote %s not found.".formatted(remoteAppUri)));
                     }
                 }
             }
@@ -431,22 +433,22 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
                         handler.handle(appEnvProxy, command, connection);
                     } catch (Exception e) {
                         log.error("App {}: 命令处理器处理命令 {} 失败: {}", appUri, command.getId(),
-                                e.getMessage(),
-                                e);
+                            e.getMessage(),
+                            e);
                         if (connection != null) {
                             CommandResult errorResult = CommandResult.fail(command.getId(),
-                                    command.getType(), command.getName(),
-                                    "App command handling failed: %s".formatted(e.getMessage()));
+                                command.getType(), command.getName(),
+                                "App command handling failed: %s".formatted(e.getMessage()));
                             connection.sendOutboundMessage(errorResult);
                         }
                     }
                 } else {
                     log.warn("App {}: 未知 App 级别命令类型或没有注册处理器: {}", appUri,
-                            command.getType());
+                        command.getType());
                     if (connection != null) {
                         CommandResult errorResult = CommandResult.fail(command.getId(),
-                                command.getType(), command.getName(),
-                                "Unknown App command type or no handler registered: %s".formatted(command.getType()));
+                            command.getType(), command.getName(),
+                            "Unknown App command type or no handler registered: %s".formatted(command.getType()));
                         connection.sendOutboundMessage(errorResult);
                     }
                 }
@@ -460,14 +462,15 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
 
                         if (originalConnection != null) {
                             log.debug("App: 路由命令结果 {} 到原始连接 {}。", commandResult.getId(),
-                                    originalConnection.getConnectionId());
+                                originalConnection.getConnectionId());
                             originalConnection.sendOutboundMessage(commandResult);
                         } else {
                             log.warn("App: 原始连接为空，无法路由命令结果 {}。", commandResult.getId());
                         }
                         pathTable.removeInPath(commandResult.getOriginalCommandId()); // <-- 移除 PathIn
                     } else {
-                        log.warn("App: 未找到与命令结果 {} 对应的 PathIn。可能已超时或已被处理。", commandResult.getOriginalCommandId());
+                        log.warn("App: 未找到与命令结果 {} 对应的 PathIn。可能已超时或已被处理。",
+                            commandResult.getOriginalCommandId());
                         // 如果没有 PathIn，则尝试按照 destLocs 路由
                         if (commandResult.getDestLocs() != null && !commandResult.getDestLocs().isEmpty()) {
                             routeMessageToDestination(commandResult, connection); // 对于没有 PathIn 的结果，尝试按目的地路由

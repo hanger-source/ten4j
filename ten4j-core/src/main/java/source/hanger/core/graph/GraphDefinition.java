@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * 表示一个消息处理图的静态配置或蓝图。
  * 它不包含任何运行时状态，仅定义图的结构、Extension 配置和连接路由规则。
- * 对应C语言中的ten_graph_t结构体。
+ * 对应 property.json 中 "graph" 字段的内容，以及 Rust 中的 Graph 结构体。
  */
 @Data
 @NoArgsConstructor
@@ -20,27 +20,20 @@ import java.util.List;
 public class GraphDefinition {
 
     @JsonProperty("graph_id")
-    private String graphId; // 图的唯一标识符
+    private String graphId; // 图的唯一标识符，配置中可以指定
 
     @JsonProperty("app_uri")
-    private String appUri; // 关联的 App URI
+    private String appUri; // 关联的 App URI，配置中可以指定
 
     @JsonProperty("graph_name")
-    private String graphName; // 图的名称
+    private String graphName; // 图的名称，配置中可以指定
 
-    @JsonProperty("extension_groups_info")
-    private List<ExtensionGroupInfo> extensionGroupsInfo;
+    // 映射 property.json 中的 "nodes" 数组。
+    // 每个 NodeDefinition 可以是 Extension 类型或 ExtensionGroup 类型。
+    @JsonProperty("nodes")
+    private List<NodeDefinition> nodes;
 
-    @JsonProperty("extensions_info")
-    private List<ExtensionInfo> extensionsInfo;
-
+    // 映射 property.json 中的 "connections" 数组。
     @JsonProperty("connections")
-    private List<ConnectionConfig> connections;
-
-    // 移除旧的 JSON 解析和通用属性映射逻辑
-
-    // Add getter for extensionsInfo (renamed for consistency with error)
-    public List<ExtensionInfo> getExtensions() {
-        return extensionsInfo;
-    }
+    private List<ConnectionDefinition> connections;
 }

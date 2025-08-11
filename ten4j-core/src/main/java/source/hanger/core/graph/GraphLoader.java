@@ -11,7 +11,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 
 public class GraphLoader {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
-            .configure(SerializationFeature.INDENT_OUTPUT, true);
+        .configure(SerializationFeature.INDENT_OUTPUT, true);
 
     /**
      * 从JSON字符串加载图配置。
@@ -49,7 +49,7 @@ public class GraphLoader {
     public static GraphConfig loadGraphConfigFromClassPath(String classPath) throws IOException {
         InputStream inputStream = GraphLoader.class.getClassLoader().getResourceAsStream(classPath);
         if (inputStream == null) {
-            throw new FileNotFoundException("Graph config file not found: " + classPath);
+            throw new FileNotFoundException("Graph config file not found: %s".formatted(classPath));
         }
         return OBJECT_MAPPER.readValue(inputStream, GraphConfig.class);
     }

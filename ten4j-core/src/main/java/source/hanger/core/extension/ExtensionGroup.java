@@ -2,8 +2,8 @@ package source.hanger.core.extension;
 
 import java.util.List;
 
-import source.hanger.core.graph.ExtensionGroupInfo;
-import source.hanger.core.graph.ExtensionInfo;
+import source.hanger.core.extension.ExtensionGroupInfo;
+import source.hanger.core.extension.ExtensionInfo;
 import source.hanger.core.tenenv.TenEnv;
 import lombok.Getter;
 import lombok.Setter;
@@ -71,7 +71,8 @@ public class ExtensionGroup {
         // 例如，验证配置，准备资源等
         // 【修正】使用 this.tenEnv 而不是传入的 env
         if (this.tenEnv != null) {
-            this.tenEnv.postTask(() -> log.info("ExtensionGroup {}: onCreateExtensions task posted to its own TenEnv.", name));
+            this.tenEnv.postTask(
+                    () -> log.info("ExtensionGroup {}: onCreateExtensions task posted to its own TenEnv.", name));
         }
 
         // 【新增】遍历并触发所有托管 Extension 的生命周期方法
@@ -99,7 +100,8 @@ public class ExtensionGroup {
         // 例如，清理共享资源，通知其他组件等
         // 【修正】使用 this.tenEnv 而不是传入的 env
         if (this.tenEnv != null) {
-            this.tenEnv.postTask(() -> log.info("ExtensionGroup {}: onDestroyExtensions task posted to its own TenEnv.", name));
+            this.tenEnv.postTask(
+                    () -> log.info("ExtensionGroup {}: onDestroyExtensions task posted to its own TenEnv.", name));
         }
 
         // 【新增】遍历并触发所有待销毁 Extension 的生命周期方法
@@ -117,13 +119,15 @@ public class ExtensionGroup {
                             name, extensionName, e.getMessage(), e);
                 }
             } else {
-                log.warn("ExtensionGroup {}: Extension {} not found in managed extensions for destruction.", name, extensionName);
+                log.warn("ExtensionGroup {}: Extension {} not found in managed extensions for destruction.", name,
+                        extensionName);
             }
         }
     }
 
     // 【新增】管理 Extension 的方法
-    public void addManagedExtension(String extensionId, Extension extension, ExtensionEnvImpl extensionEnv, ExtensionInfo extInfo) {
+    public void addManagedExtension(String extensionId, Extension extension, ExtensionEnvImpl extensionEnv,
+            ExtensionInfo extInfo) {
         if (extensions.containsKey(extensionId)) {
             log.warn("ExtensionGroup {}: Extension {} already managed.", name, extensionId);
             return;

@@ -3,7 +3,7 @@ package source.hanger.core.extension;
 import java.util.concurrent.ConcurrentHashMap;
 
 import source.hanger.core.engine.EngineExtensionContext;
-import source.hanger.core.graph.ExtensionInfo;
+import source.hanger.core.extension.ExtensionInfo;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;

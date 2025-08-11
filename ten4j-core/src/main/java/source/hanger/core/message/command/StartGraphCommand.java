@@ -5,8 +5,8 @@ import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import source.hanger.core.graph.ExtensionGroupInfo;
-import source.hanger.core.graph.ExtensionInfo;
+import source.hanger.core.extension.ExtensionGroupInfo;
+import source.hanger.core.extension.ExtensionInfo;
 import source.hanger.core.message.Location;
 import source.hanger.core.message.MessageType;
 import lombok.Data;
@@ -42,7 +42,7 @@ public class StartGraphCommand extends Command {
             Boolean longRunningMode, String predefinedGraphName,
             List<ExtensionGroupInfo> extensionGroupsInfo, List<ExtensionInfo> extensionsInfo, String graphJson) {
         super(id, srcLoc, MessageType.CMD_START_GRAPH, destLocs, properties,
-            timestamp, MessageType.CMD_START_GRAPH.name());
+                timestamp, MessageType.CMD_START_GRAPH.name());
         this.longRunningMode = longRunningMode;
         this.predefinedGraphName = predefinedGraphName;
         this.extensionGroupsInfo = extensionGroupsInfo;
@@ -58,8 +58,8 @@ public class StartGraphCommand extends Command {
     public StartGraphCommand(String id, Location srcLoc, List<Location> destLocs, String graphJsonDefinition,
             boolean longRunningMode) {
         super(id, srcLoc, MessageType.CMD_START_GRAPH, destLocs,
-            Collections.emptyMap(), System.currentTimeMillis(),
-            MessageType.CMD_START_GRAPH.name()); // 修正为调用 Command 的构造函数
+                Collections.emptyMap(), System.currentTimeMillis(),
+                MessageType.CMD_START_GRAPH.name()); // 修正为调用 Command 的构造函数
         this.longRunningMode = longRunningMode;
         graphJson = graphJsonDefinition;
         // 其他属性可以根据需要设置，或在 Message 的 properties 中进行映射
@@ -70,8 +70,8 @@ public class StartGraphCommand extends Command {
             String graphJsonDefinition,
             boolean longRunningMode) {
         super(id, srcLoc, MessageType.CMD_START_GRAPH, destLocs,
-            Map.of("message", message), System.currentTimeMillis(),
-            MessageType.CMD_START_GRAPH.name()); // 修正为调用 Command 的构造函数
+                Map.of("message", message), System.currentTimeMillis(),
+                MessageType.CMD_START_GRAPH.name()); // 修正为调用 Command 的构造函数
         this.longRunningMode = longRunningMode;
         graphJson = graphJsonDefinition;
     }

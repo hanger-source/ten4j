@@ -59,10 +59,10 @@ public class CommandResult extends Message implements Cloneable { // 实现 Clon
     private CommandResult(String originalCommandId, MessageType originalCmdType, String originalCmdName,
             StatusCode statusCode, String detailOrError) {
         super(MessageUtils.generateUniqueId(), MessageType.CMD_RESULT, new Location(), Collections.emptyList()); // 自动生成
-                                                                                                                 // id，默认
-                                                                                                                 // srcLoc
-                                                                                                                 // 和
-                                                                                                                 // destLocs
+        // id，默认
+        // srcLoc
+        // 和
+        // destLocs
         this.originalCommandId = originalCommandId;
         this.originalCmdType = originalCmdType;
         this.originalCmdName = originalCmdName;
@@ -105,12 +105,32 @@ public class CommandResult extends Message implements Cloneable { // 实现 Clon
     public static CommandResult success(String originalCommandId, MessageType originalCmdType, String originalCmdName,
             String detail) {
         return new CommandResult(originalCommandId, originalCmdType, originalCmdName, StatusCode.OK, detail); // 使用
-                                                                                                              // StatusCode.OK
+        // StatusCode.OK
     }
 
     // 重载的 success 方法，从 Command 对象构建
     public static CommandResult success(Command originalCommand, String detail) {
         return fromCommand(originalCommand, StatusCode.OK, detail); // 使用 StatusCode.OK
+    }
+
+    // 新增：支持 properties 的 success 方法
+    public static CommandResult success(String originalCommandId, MessageType originalCmdType, String originalCmdName,
+            String detail, Map<String, Object> properties) {
+        CommandResult result = new CommandResult(originalCommandId, originalCmdType, originalCmdName, StatusCode.OK,
+                detail);
+        if (properties != null) {
+            result.getProperties().putAll(properties);
+        }
+        return result;
+    }
+
+    // 新增：支持 properties 的 success 方法，从 Command 对象构建
+    public static CommandResult success(Command originalCommand, String detail, Map<String, Object> properties) {
+        CommandResult result = fromCommand(originalCommand, StatusCode.OK, detail);
+        if (properties != null) {
+            result.getProperties().putAll(properties);
+        }
+        return result;
     }
 
     public static CommandResult fail(String originalCommandId, MessageType originalCmdType, String originalCmdName,
