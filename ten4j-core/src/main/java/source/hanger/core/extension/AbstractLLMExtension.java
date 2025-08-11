@@ -72,25 +72,25 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
     // }
 
     @Override
-    public void onConfigure(TenEnv env) { // Changed parameter type
-        super.onConfigure(env); // Call super method
+    public void onConfigure(TenEnv env, Map<String, Object> properties) { // Changed parameter type
+        super.onConfigure(env, properties); // Call super method
         // extensionName = env.getExtensionName(); // 从 TenEnv 获取 ExtensionName, but
         // already set in init
-        log.info("LLM扩展配置阶段: extensionName={}", extensionName);
+        log.info("LLM扩展配置阶段: extensionName={}", env.getExtensionName());
         onLLMConfigure(env); // Changed parameter type
     }
 
     @Override
     public void onInit(TenEnv env) { // Changed parameter type
         super.onInit(env); // Call super method
-        log.info("LLM扩展初始化阶段: extensionName={}", extensionName);
+        log.info("LLM扩展初始化阶段: extensionName={}", env.getExtensionName());
         onLLMInit(env); // Changed parameter type
     }
 
     @Override
     public void onStart(TenEnv env) { // Changed parameter type
         super.onStart(env); // Call super method
-        log.info("LLM扩展启动阶段: extensionName={}", extensionName);
+        log.info("LLM扩展启动阶段: extensionName={}", env.getExtensionName());
         isRunning = true;
         interrupted.set(false);
         onLLMStart(env); // Changed parameter type
@@ -99,7 +99,7 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
     @Override
     public void onStop(TenEnv env) { // Changed parameter type
         super.onStop(env); // Call super method
-        log.info("LLM扩展停止阶段: extensionName={}", extensionName);
+        log.info("LLM扩展停止阶段: extensionName={}", env.getExtensionName());
         isRunning = false;
         onLLMStop(env); // Changed parameter type
     }
@@ -107,7 +107,7 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
     @Override
     public void onDeinit(TenEnv env) { // Changed parameter type
         super.onDeinit(env); // Call super method
-        log.info("LLM扩展清理阶段: extensionName={}", extensionName);
+        log.info("LLM扩展清理阶段: extensionName={}", env.getExtensionName());
         onLLMDeinit(env); // Changed parameter type
     }
 
@@ -116,7 +116,7 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
         super.onCmd(env, command); // 调用父类的 onCmd
         if (!isRunning) {
             log.warn("LLM扩展未运行，忽略命令: extensionName={}, commandName={}",
-                    extensionName, command.getName());
+                    env.getExtensionName(), command.getName());
             return;
         }
 
@@ -126,7 +126,7 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
             long duration = System.currentTimeMillis() - startTime;
         } catch (Exception e) {
             log.error("LLM扩展命令处理异常: extensionName={}, commandName={}",
-                    extensionName, command.getName(), e);
+                    env.getExtensionName(), command.getName(), e);
             sendErrorResult(env, command, "LLM命令处理异常: " + e.getMessage()); // Changed parameter type
         }
     }
@@ -136,7 +136,7 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
         super.onDataMessage(env, data); // 调用父类的 onDataMessage
         if (!isRunning) {
             log.warn("LLM扩展未运行，忽略数据: extensionName={}, dataId={}",
-                    extensionName, data.getId());
+                    env.getExtensionName(), data.getId());
             return;
         }
 
@@ -146,18 +146,18 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
             env.postTask(() -> {
                 try {
                     if (interrupted.get()) {
-                        log.debug("LLM处理被中断，跳过当前项目: extensionName={}", extensionName);
+                        log.debug("LLM处理被中断，跳过当前项目: extensionName={}", env.getExtensionName());
                         return;
                     }
                     onDataChatCompletion(env, data); // Changed parameter type
                 } catch (Exception e) {
-                    log.error("LLM数据处理队列任务异常: extensionName={}, dataId={}", extensionName, data.getId(), e);
+                    log.error("LLM数据处理队列任务异常: extensionName={}, dataId={}", env.getExtensionName(), data.getId(), e);
                 }
             });
             long duration = System.currentTimeMillis() - startTime;
         } catch (Exception e) {
             log.error("LLM扩展数据提交异常: extensionName={}, dataId={}",
-                    extensionName, data.getId(), e);
+                    env.getExtensionName(), data.getId(), e);
         }
     }
 
@@ -166,12 +166,12 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
         super.onAudioFrame(env, audioFrame); // 调用父类的 onAudioFrame
         if (!isRunning) {
             log.warn("LLM扩展未运行，忽略音频帧: extensionName={}, frameId={}",
-                    extensionName, audioFrame.getId());
+                    env.getExtensionName(), audioFrame.getId());
             return;
         }
 
         log.debug("LLM扩展收到音频帧: extensionName={}, frameId={}",
-                extensionName, audioFrame.getId());
+                env.getExtensionName(), audioFrame.getId());
     }
 
     @Override
@@ -179,18 +179,18 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
         super.onVideoFrame(env, videoFrame); // 调用父类的 onVideoFrame
         if (!isRunning) {
             log.warn("LLM扩展未运行，忽略视频帧: extensionName={}, frameId={}",
-                    extensionName, videoFrame.getId());
+                    env.getExtensionName(), videoFrame.getId());
             return;
         }
 
         log.debug("LLM扩展收到视频帧: extensionName={}, frameId={}",
-                extensionName, videoFrame.getId());
+                env.getExtensionName(), videoFrame.getId());
     }
 
     @Override
     public void onCmdResult(TenEnv env, CommandResult commandResult) { // Changed parameter type
         super.onCmdResult(env, commandResult); // 调用父类的 onCmdResult
-        log.warn("LLM扩展收到未处理的 CommandResult: {}. OriginalCommandId: {}", extensionName,
+        log.warn("LLM扩展收到未处理的 CommandResult: {}. OriginalCommandId: {}", env.getExtensionName(),
                 commandResult.getId(), commandResult.getOriginalCommandId());
     }
 
@@ -212,7 +212,7 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
                 break;
             default:
                 log.warn("未知的LLM命令: extensionName={}, commandName={}",
-                        extensionName, commandName);
+                        env.getExtensionName(), commandName);
         }
     }
 
@@ -241,9 +241,9 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
             env.sendResult(result);
 
             log.info("工具注册成功: extensionName={}, toolName={}",
-                    extensionName, toolMetadata.getName());
+                    env.getExtensionName(), toolMetadata.getName());
         } catch (Exception e) {
-            log.error("工具注册失败: extensionName={}", extensionName, e);
+            log.error("工具注册失败: extensionName={}", env.getExtensionName(), e);
             sendErrorResult(env, command, "工具注册失败: " + e.getMessage()); // Changed parameter type
         }
     }
@@ -264,7 +264,7 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
             onCallChatCompletion(env, args); // Changed parameter type
 
         } catch (Exception e) {
-            log.error("聊天完成调用处理失败: extensionName={}", extensionName, e);
+            log.error("聊天完成调用处理失败: extensionName={}", env.getExtensionName(), e);
             sendErrorResult(env, command, "聊天完成调用失败: " + e.getMessage()); // Changed parameter type
         }
     }
@@ -273,7 +273,7 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
      * 处理刷新命令
      */
     private void handleFlush(TenEnv env) { // Changed parameter type
-        log.info("LLM扩展收到刷新命令: extensionName={}", extensionName);
+        log.info("LLM扩展收到刷新命令: extensionName={}", env.getExtensionName());
 
         // 清空处理队列 (现在通过 TenEnv 的 postTask 清空)
         // 为了实现清空，可以考虑引入一个专门的 flush 命令或 TenEnv 的 API
@@ -284,7 +284,7 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
             interrupted.set(false); // 重置中断标志
         });
 
-        log.info("LLM扩展刷新完成: extensionName={}", extensionName);
+        log.info("LLM扩展刷新完成: extensionName={}", env.getExtensionName());
     }
 
     /**
@@ -296,20 +296,20 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
                     java.util.UUID.randomUUID().toString(), // id
                     MessageType.DATA, // type
                     new Location().setAppUri(env.getAppUri()).setGraphId(env.getGraphId())
-                            .setExtensionName(extensionName), // srcLoc
+                            .setExtensionName(env.getExtensionName()), // srcLoc
                     Collections.emptyList(), // destLocs
                     text.getBytes(StandardCharsets.UTF_8) // data
             );
             // 将 text 和 end_of_segment 放入 properties
             outputData.getProperties().put("text", text);
             outputData.getProperties().put("end_of_segment", endOfSegment);
-            outputData.getProperties().put("extension_name", extensionName);
+            outputData.getProperties().put("extension_name", env.getExtensionName());
 
             env.sendMessage(outputData);
             log.debug("LLM文本输出发送成功: extensionName={}, text={}, endOfSegment={}",
-                    extensionName, text, endOfSegment);
+                    env.getExtensionName(), text, endOfSegment);
         } catch (Exception e) {
-            log.error("LLM文本输出发送异常: extensionName={}", extensionName, e);
+            log.error("LLM文本输出发送异常: extensionName={}", env.getExtensionName(), e);
         }
     }
 

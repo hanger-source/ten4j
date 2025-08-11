@@ -1,5 +1,6 @@
 package source.hanger.core.extension;
 
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -29,8 +30,8 @@ public abstract class AbstractAIServiceHub extends BaseExtension {
     protected TenEnv asyncExtensionEnv;
 
     @Override
-    public void onConfigure(TenEnv env) {
-        super.onConfigure(env);
+    public void onConfigure(TenEnv env, Map<String, Object> properties) {
+        super.onConfigure(env, properties);
         asyncExtensionEnv = env;
     }
 
@@ -121,14 +122,5 @@ public abstract class AbstractAIServiceHub extends BaseExtension {
      */
     protected CompletableFuture<CommandResult> submitCommand(Command command) {
         return asyncExtensionEnv.sendCmd(command); // 通过 asyncExtensionEnv 发送命令
-    }
-
-    protected String generateCommandId() {
-        return UUID.randomUUID().toString(); // 生成 UUID 字符串
-    }
-
-    @Override
-    public String getAppUri() {
-        return asyncExtensionEnv != null ? asyncExtensionEnv.getAppUri() : "unknown";
     }
 }

@@ -18,29 +18,13 @@ import java.util.Optional;
  */
 public interface Extension {
 
-    String getExtensionId();
-
-    String getExtensionName();
-
-    String getAppUri(); // 保持此方法，因为它通过 envProxy 获取 AppUri
-
     /**
-     * Extension 的初始化方法。
+     * 当 Extension 配置完成时调用。接收配置属性。
      *
-     * @param extensionId Extension 的唯一 ID。
-     * @param properties  Extension 的配置属性。
-     * @param env         此 Extension 的 TenEnv 环境句柄。
+     * @param env        此 Extension 的 TenEnv 环境句柄。
+     * @param properties Extension 的配置属性。
      */
-    default void init(String extensionId, Map<String, Object> properties, TenEnv env) {
-        // Default implementation
-    }
-
-    /**
-     * 当 Extension 配置完成时调用。
-     *
-     * @param env 此 Extension 的 TenEnv 环境句柄。
-     */
-    default void onConfigure(TenEnv env) {
+    default void onConfigure(TenEnv env, Map<String, Object> properties) {
         // Default implementation
     }
 
@@ -92,8 +76,8 @@ public interface Extension {
     /**
      * 处理传入的命令。
      *
-     * @param command 传入的命令。
      * @param env     此 Extension 的 TenEnv 环境句柄。
+     * @param command 传入的命令。
      */
     default void onCmd(TenEnv env, Command command) {
         // Default implementation
@@ -102,8 +86,8 @@ public interface Extension {
     /**
      * 处理传入的命令结果。
      *
-     * @param commandResult 传入的命令结果。
      * @param env           此 Extension 的 TenEnv 环境句柄。
+     * @param commandResult 传入的命令结果。
      */
     default void onCmdResult(TenEnv env, CommandResult commandResult) {
         // Default implementation
@@ -112,65 +96,38 @@ public interface Extension {
     /**
      * 处理传入的数据消息。
      *
-     * @param dataMessage 传入的数据消息。
      * @param env         此 Extension 的 TenEnv 环境句柄。
+     * @param dataMessage 传入的数据消息。
      */
     default void onDataMessage(TenEnv env, DataMessage dataMessage) {
         // Default implementation
     }
 
     /**
-     * 处理传入的音频帧消息。
+     * 处理传入的音频帧。
      *
-     * @param audioFrame 传入的音频帧消息。
-     * @param env        此 Extension 的 TenEnv 环境句柄。
+     * @param env               此 Extension 的 TenEnv 环境句柄。
+     * @param audioFrameMessage 传入的音频帧消息。
      */
-    default void onAudioFrame(TenEnv env, AudioFrameMessage audioFrame) {
+    default void onAudioFrame(TenEnv env, AudioFrameMessage audioFrameMessage) {
         // Default implementation
     }
 
     /**
-     * 处理传入的视频帧消息。
+     * 处理传入的视频帧。
      *
-     * @param videoFrame 传入的视频帧消息。
-     * @param env        此 Extension 的 TenEnv 环境句柄。
+     * @param env               此 Extension 的 TenEnv 环境句柄。
+     * @param videoFrameMessage 传入的视频帧消息。
      */
-    default void onVideoFrame(TenEnv env, VideoFrameMessage videoFrame) {
+    default void onVideoFrame(TenEnv env, VideoFrameMessage videoFrameMessage) {
         // Default implementation
     }
 
-    // 新增属性访问方法
-    Optional<Object> getProperty(String path);
+    /**
+     * 获取 Extension 的名称。
+     *
+     * @return Extension 的名称。
+     */
+    String getExtensionName();
 
-    void setProperty(String path, Object value);
-
-    boolean hasProperty(String path);
-
-    void deleteProperty(String path);
-
-    Optional<Integer> getPropertyInt(String path);
-
-    void setPropertyInt(String path, int value);
-
-    Optional<Long> getPropertyLong(String path);
-
-    void setPropertyLong(String path, long value);
-
-    Optional<String> getPropertyString(String path);
-
-    void setPropertyString(String path, String value);
-
-    Optional<Boolean> getPropertyBool(String path);
-
-    void setPropertyBool(String path, boolean value);
-
-    Optional<Double> getPropertyDouble(String path);
-
-    void setPropertyDouble(String path, double value);
-
-    Optional<Float> getPropertyFloat(String path);
-
-    void setPropertyFloat(String path, float value);
-
-    void initPropertyFromJson(String jsonStr);
 }

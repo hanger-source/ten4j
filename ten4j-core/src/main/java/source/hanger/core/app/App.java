@@ -25,6 +25,7 @@ import source.hanger.core.connection.Connection;
 import source.hanger.core.engine.Engine;
 import source.hanger.core.extension.Extension;
 import source.hanger.core.graph.GraphConfig;
+import source.hanger.core.graph.GraphDefinition;
 import source.hanger.core.graph.PredefinedGraphEntry;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.Location;
@@ -39,6 +40,7 @@ import source.hanger.core.remote.Remote;
 import source.hanger.core.runloop.Runloop;
 import source.hanger.core.tenenv.TenEnvProxy;
 import source.hanger.core.util.MessageUtils;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 /**
  * App 类作为 Ten 框架的顶层容器和协调器。
@@ -116,7 +118,7 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
         remotes = new ConcurrentHashMap<>(); // 初始化远程连接映射
         availableExtensions = new ConcurrentHashMap<>(); // 初始化 Extension 注册表
 
-        this.appConfig = appConfig != null ? appConfig : new GraphConfig(new ConcurrentHashMap<>()); // 使用传入的配置或默认空配置
+        this.appConfig = appConfig != null ? appConfig : new GraphConfig(); // 使用传入的配置或默认空配置
         appRunloop = Runloop.createRunloopWithWorker("AppRunloop-%s".formatted(appUri), this);
 
         appCommandHandlers = new HashMap<>(); // 初始化 App 命令处理器映射
@@ -142,11 +144,11 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
                 return config;
             } catch (IOException e) {
                 log.error("App: 加载配置文件 {} 失败: {}", configFilePath, e.getMessage());
-                return new GraphConfig(new ConcurrentHashMap<>()); // 加载失败时使用空配置
+                return new GraphConfig(); // 加载失败时使用空配置
             }
         } else {
             log.warn("App: 未提供配置文件路径，使用默认空配置。");
-            return new GraphConfig(new ConcurrentHashMap<>()); // 创建一个空的默认配置
+            return new GraphConfig(); // 创建一个空的默认配置
         }
     }
 
@@ -191,19 +193,34 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
 
         // 自动启动配置中标记为 auto_start 的预定义图
         if (appConfig.getPredefinedGraphs() != null) {
+            // 在这里获取 ObjectMapper 实例，因为 App 类中可能没有直接的 ObjectMapper 实例了
+            final ObjectMapper localObjectMapper = new ObjectMapper();
+
             appConfig.getPredefinedGraphs().stream()
                     .filter(PredefinedGraphEntry::isAutoStart)
                     .forEach(entry -> {
                         log.info("App: 自动启动预定义图: {}", entry.getName());
-                        // 模拟发送 StartGraphCommand 来启动预定义图
+                        // 从 PredefinedGraphEntry 获取原始 JSON 字符串
+                        String graphJson = entry.getGraphJsonContent();
+
+                        // 尝试将 JSON 字符串解析为 GraphDefinition 对象，以便获取 graphId
+                        GraphDefinition loadedGraphDefinition = null;
+                        try {
+                            loadedGraphDefinition = localObjectMapper.readValue(graphJson, GraphDefinition.class);
+                        } catch (JsonProcessingException e) {
+                            log.error("App: 自动启动图 {} 时，解析 Graph JSON 失败: {}", entry.getName(), e.getMessage());
+                            return; // 跳过此图的启动
+                        }
+
                         Location srcLoc = new Location(appUri, null, null);
-                        Location destLoc = new Location(appUri, entry.getGraphDefinition().getGraphId(), null);
+                        // 使用解析后的 GraphDefinition 来获取 graphId
+                        Location destLoc = new Location(appUri, loadedGraphDefinition.getGraphId(), null);
                         StartGraphCommand startCmd = new StartGraphCommand(
                                 MessageUtils.generateUniqueId(),
                                 srcLoc,
                                 Collections.singletonList(destLoc),
                                 "Auto-start predefined graph", // message
-                                entry.getGraphDefinition().getJsonContent(), // graphJsonDefinition
+                                graphJson, // 直接使用原始的 graphJson 字符串
                                 false // longRunningMode
                         );
                         // 提交命令到 App Runloop，然后由 App 的 handleInboundMessage 处理

@@ -25,6 +25,17 @@ public class GraphLoader {
     }
 
     /**
+     * 从JSON字符串加载图定义。
+     *
+     * @param jsonString JSON格式的图定义字符串
+     * @return 解析后的GraphDefinition对象
+     * @throws JsonProcessingException 如果JSON解析失败
+     */
+    public static GraphDefinition loadGraphDefinitionFromJson(String jsonString) throws JsonProcessingException {
+        return OBJECT_MAPPER.readValue(jsonString, GraphDefinition.class);
+    }
+
+    /**
      * 从文件加载图配置。
      *
      * @param filePath 图配置文件的路径

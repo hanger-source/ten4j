@@ -22,25 +22,25 @@ public class SimpleLLMExtension extends AbstractAIServiceHub {
 
     @Override
     public void onInit(TenEnv env) {
-        log.info("SimpleLLMExtension: {} onInit called.", getExtensionName());
+        log.info("SimpleLLMExtension: {} onInit called.", env.getExtensionName());
         // 可以在这里加载LLM模型或进行其他初始化
     }
 
     @Override
     public void onStart(TenEnv env) {
-        log.info("SimpleLLMExtension: {} onStart called.", getExtensionName());
+        log.info("SimpleLLMExtension: {} onStart called.", env.getExtensionName());
         // 可以在这里启动LLM服务
     }
 
     @Override
     public void onStop(TenEnv env) {
-        log.info("SimpleLLMExtension: {} onStop called.", getExtensionName());
+        log.info("SimpleLLMExtension: {} onStop called.", env.getExtensionName());
         // 可以在这里停止LLM服务
     }
 
     @Override
     public void onDeinit(TenEnv env) {
-        log.info("SimpleLLMExtension: {} onDeinit called.", getExtensionName());
+        log.info("SimpleLLMExtension: {} onDeinit called.", env.getExtensionName());
         // 可以在这里释放LLM模型资源
     }
 
@@ -80,11 +80,6 @@ public class SimpleLLMExtension extends AbstractAIServiceHub {
     protected void handleAIServiceCommandResult(TenEnv env, CommandResult commandResult) {
         log.debug("LLM收到命令结果: {}", commandResult.getId());
         // 处理上游命令的结果
-    }
-
-    @Override
-    public String getExtensionName() {
-        return "SimpleLLMExtension";
     }
 
     // 示例：LLM可以发送一个命令到其他Extension

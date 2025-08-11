@@ -55,17 +55,17 @@ public abstract class AbstractToolProvider extends BaseExtension { // Extend Bas
     // }
 
     @Override
-    public void onConfigure(TenEnv env) { // Changed parameter type
-        super.onConfigure(env); // Call super method
+    public void onConfigure(TenEnv env, Map<String, Object> properties) { // Changed parameter type
+        super.onConfigure(env, properties); // Call super method
         // extensionName = env.getExtensionName(); // 从 TenEnv 获取
-        log.info("工具提供者配置阶段: extensionName={}", extensionName != null ? extensionName : "(未设置)");
+        log.info("工具提供者配置阶段: extensionName={}", env.getExtensionName());
         onToolProviderConfigure(env); // Changed parameter type
     }
 
     @Override
     public void onInit(TenEnv env) { // Changed parameter type
         super.onInit(env); // Call super method
-        log.info("工具提供者初始化阶段: extensionName={}", extensionName != null ? extensionName : "(未设置)");
+        log.info("工具提供者初始化阶段: extensionName={}", env.getExtensionName());
         availableTools = initializeTools();
         onToolProviderInit(env); // Changed parameter type
     }
@@ -73,7 +73,7 @@ public abstract class AbstractToolProvider extends BaseExtension { // Extend Bas
     @Override
     public void onStart(TenEnv env) { // Changed parameter type
         super.onStart(env); // Call super method
-        log.info("工具提供者启动阶段: extensionName={}", extensionName != null ? extensionName : "(未设置)");
+        log.info("工具提供者启动阶段: extensionName={}", env.getExtensionName());
         isRunning = true;
         onToolProviderStart(env); // Changed parameter type
     }
@@ -81,7 +81,7 @@ public abstract class AbstractToolProvider extends BaseExtension { // Extend Bas
     @Override
     public void onStop(TenEnv env) { // Changed parameter type
         super.onStop(env); // Call super method
-        log.info("工具提供者停止阶段: extensionName={}", extensionName != null ? extensionName : "(未设置)");
+        log.info("工具提供者停止阶段: extensionName={}", env.getExtensionName());
         isRunning = false;
         onToolProviderStop(env); // Changed parameter type
     }
@@ -89,7 +89,7 @@ public abstract class AbstractToolProvider extends BaseExtension { // Extend Bas
     @Override
     public void onDeinit(TenEnv env) { // Changed parameter type
         super.onDeinit(env); // Call super method
-        log.info("工具提供者清理阶段: extensionName={}", extensionName != null ? extensionName : "(未设置)");
+        log.info("工具提供者清理阶段: extensionName={}", env.getExtensionName());
         onToolProviderDeinit(env); // Changed parameter type
     }
 
@@ -98,19 +98,19 @@ public abstract class AbstractToolProvider extends BaseExtension { // Extend Bas
         super.onCmd(env, command); // 调用父类的 onCmd
         if (!isRunning) {
             log.warn("工具提供者未运行，忽略命令: extensionName={}, commandName={}",
-                    extensionName, command.getName());
+                    env.getExtensionName(), command.getName());
             return;
         }
 
         log.debug("工具提供者收到命令: extensionName={}, commandName={}",
-                extensionName, command.getName());
+                env.getExtensionName(), command.getName());
 
         // 直接处理工具命令，因为此方法已在 Runloop 线程上调用
         try {
             handleToolCommand(env, command);
         } catch (Exception e) {
             log.error("工具提供者命令处理异常: extensionName={}, commandName={}",
-                    extensionName, command.getName(), e);
+                    env.getExtensionName(), command.getName(), e);
             sendErrorResult(env, command, "工具执行异常: " + e.getMessage());
         }
     }
@@ -120,18 +120,18 @@ public abstract class AbstractToolProvider extends BaseExtension { // Extend Bas
         super.onDataMessage(env, data); // 调用父类的 onDataMessage
         if (!isRunning) {
             log.warn("工具提供者未运行，忽略数据: extensionName={}, dataId={}",
-                    extensionName, data.getId());
+                    env.getExtensionName(), data.getId());
             return;
         }
 
         log.debug("工具提供者收到数据: extensionName={}, dataId={}",
-                extensionName, data.getId());
+                env.getExtensionName(), data.getId());
         // 直接处理数据
         try {
             handleToolData(env, data);
         } catch (Exception e) {
             log.error("工具提供者数据处理异常: extensionName={}, dataId={}",
-                    extensionName, data.getId(), e);
+                    env.getExtensionName(), data.getId(), e);
         }
     }
 
@@ -140,18 +140,18 @@ public abstract class AbstractToolProvider extends BaseExtension { // Extend Bas
         super.onAudioFrame(env, audioFrame); // 调用父类的 onAudioFrame
         if (!isRunning) {
             log.warn("工具提供者未运行，忽略音频帧: extensionName={}, frameId={}",
-                    extensionName, audioFrame.getId());
+                    env.getExtensionName(), audioFrame.getId());
             return;
         }
 
         log.debug("工具提供者收到音频帧: extensionName={}, frameId={}",
-                extensionName, audioFrame.getId());
+                env.getExtensionName(), audioFrame.getId());
         // 直接处理音频帧
         try {
             handleToolAudioFrame(env, audioFrame);
         } catch (Exception e) {
             log.error("工具提供者音频帧处理异常: extensionName={}, frameId={}",
-                    extensionName, audioFrame.getId(), e);
+                    env.getExtensionName(), audioFrame.getId(), e);
         }
     }
 
@@ -160,25 +160,25 @@ public abstract class AbstractToolProvider extends BaseExtension { // Extend Bas
         super.onVideoFrame(env, videoFrame); // 调用父类的 onVideoFrame
         if (!isRunning) {
             log.warn("工具提供者未运行，忽略视频帧: extensionName={}, frameId={}",
-                    extensionName, videoFrame.getId());
+                    env.getExtensionName(), videoFrame.getId());
             return;
         }
 
         log.debug("工具提供者收到视频帧: extensionName={}, frameId={}",
-                extensionName, videoFrame.getId());
+                env.getExtensionName(), videoFrame.getId());
         // 直接处理视频帧
         try {
             handleToolVideoFrame(env, videoFrame);
         } catch (Exception e) {
             log.error("工具提供者视频帧处理异常: extensionName={}, videoFrameId={}",
-                    extensionName, videoFrame.getId(), e);
+                    env.getExtensionName(), videoFrame.getId(), e);
         }
     }
 
     @Override
     public void onCmdResult(TenEnv env, CommandResult commandResult) { // Changed parameter type
         super.onCmdResult(env, commandResult); // 调用父类的 onCmdResult
-        log.warn("Extension {} received unhandled CommandResult: {}. OriginalCommandId: {}", getExtensionName(),
+        log.warn("Extension {} received unhandled CommandResult: {}. OriginalCommandId: {}", env.getExtensionName(),
                 commandResult.getId(), commandResult.getOriginalCommandId());
     }
 

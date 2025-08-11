@@ -37,7 +37,6 @@ public class TenServer {
     private static final int MAX_RETRY_ATTEMPTS = 5;
     private static final long RETRY_DELAY_MILLIS = 500;
 
-    private final int initialPort;
     private final App app; // 将 Engine 替换为 App
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
@@ -46,7 +45,6 @@ public class TenServer {
     private int currentPort;
 
     public TenServer(int port, App app) { // 构造函数接收 App 实例
-        initialPort = port;
         this.app = app;
         currentPort = port;
     }

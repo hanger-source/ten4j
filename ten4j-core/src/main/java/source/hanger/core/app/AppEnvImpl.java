@@ -1,9 +1,10 @@
 package source.hanger.core.app;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.Extension;
 import source.hanger.core.graph.GraphConfig;
 import source.hanger.core.message.AudioFrameMessage;
@@ -14,7 +15,6 @@ import source.hanger.core.message.VideoFrameMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.runloop.Runloop;
 import source.hanger.core.tenenv.TenEnv;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * AppEnvImpl 是 App 级别的 TenEnv 实现。
@@ -23,8 +23,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class AppEnvImpl implements TenEnv {
 
+    @Getter
     private final App app;
     private final Runloop appRunloop;
+    // AppConfig 现在通过其明确的字段进行访问，不再支持通用的 property 访问
     private final GraphConfig appConfig;
 
     public AppEnvImpl(App app, Runloop appRunloop, GraphConfig appConfig) {
@@ -32,10 +34,6 @@ public class AppEnvImpl implements TenEnv {
         this.appRunloop = appRunloop;
         this.appConfig = appConfig;
         log.info("AppEnvImpl created for App: {}", app.getAppUri());
-    }
-
-    public App getApp() { // Added
-        return app;
     }
 
     @Override
@@ -50,112 +48,120 @@ public class AppEnvImpl implements TenEnv {
 
     @Override
     public void sendResult(CommandResult result) {
-        app.handleInboundMessage(result, null); // <-- 修正：通过 handleInboundMessage 提交命令结果
+        app.handleInboundMessage(result, null);
     }
 
     @Override
     public void sendData(DataMessage data) {
-        app.handleInboundMessage(data, null); // 修正：使用 handleInboundMessage
+        app.handleInboundMessage(data, null);
     }
 
     @Override
     public void sendVideoFrame(VideoFrameMessage videoFrame) {
-        app.handleInboundMessage(videoFrame, null); // 修正：使用 handleInboundMessage
+        app.handleInboundMessage(videoFrame, null);
     }
 
     @Override
     public void sendAudioFrame(AudioFrameMessage audioFrame) {
-        app.handleInboundMessage(audioFrame, null); // 修正：使用 handleInboundMessage
+        app.handleInboundMessage(audioFrame, null);
     }
 
     @Override
     public void sendMessage(Message message) {
-        app.handleInboundMessage(message, null); // 修正：使用 handleInboundMessage
+        app.handleInboundMessage(message, null);
     }
 
     @Override
     public Optional<Object> getProperty(String path) {
-        return appConfig.getProperty(path);
+        log.warn("AppEnvImpl: 通用属性访问已不再支持。请求路径: {}", path);
+        return Optional.empty();
     }
 
     @Override
     public void setProperty(String path, Object value) {
-        appConfig.setProperty(path, value);
+        throw new UnsupportedOperationException("AppEnvImpl: 通用属性设置已不再支持。");
     }
 
     @Override
     public boolean hasProperty(String path) {
-        return appConfig.hasProperty(path);
+        log.warn("AppEnvImpl: 通用属性检查已不再支持。请求路径: {}", path);
+        return false;
     }
 
     @Override
     public void deleteProperty(String path) {
-        appConfig.deleteProperty(path);
+        throw new UnsupportedOperationException("AppEnvImpl: 通用属性删除已不再支持。");
     }
 
     @Override
     public Optional<Integer> getPropertyInt(String path) {
-        return appConfig.getPropertyInt(path);
+        log.warn("AppEnvImpl: 通用属性访问 (int) 已不再支持。请求路径: {}", path);
+        return Optional.empty();
     }
 
     @Override
     public void setPropertyInt(String path, int value) {
-        appConfig.setPropertyInt(path, value);
+        throw new UnsupportedOperationException("AppEnvImpl: 通用属性设置 (int) 已不再支持。");
     }
 
     @Override
     public Optional<Long> getPropertyLong(String path) {
-        return appConfig.getPropertyLong(path);
+        log.warn("AppEnvImpl: 通用属性访问 (long) 已不再支持。请求路径: {}", path);
+        return Optional.empty();
     }
 
     @Override
     public void setPropertyLong(String path, long value) {
-        appConfig.setPropertyLong(path, value);
+        throw new UnsupportedOperationException("AppEnvImpl: 通用属性设置 (long) 已不再支持。");
     }
 
     @Override
     public Optional<String> getPropertyString(String path) {
-        return appConfig.getPropertyString(path);
+        log.warn("AppEnvImpl: 通用属性访问 (string) 已不再支持。请求路径: {}", path);
+        return Optional.empty();
     }
 
     @Override
     public void setPropertyString(String path, String value) {
-        appConfig.setPropertyString(path, value);
+        throw new UnsupportedOperationException("AppEnvImpl: 通用属性设置 (string) 已不再支持。");
     }
 
     @Override
     public Optional<Boolean> getPropertyBool(String path) {
-        return appConfig.getPropertyBool(path);
+        log.warn("AppEnvImpl: 通用属性访问 (boolean) 已不再支持。请求路径: {}", path);
+        return Optional.empty();
     }
 
     @Override
     public void setPropertyBool(String path, boolean value) {
-        appConfig.setPropertyBool(path, value);
+        throw new UnsupportedOperationException("AppEnvImpl: 通用属性设置 (boolean) 已不再支持。");
     }
 
     @Override
     public Optional<Double> getPropertyDouble(String path) {
-        return appConfig.getPropertyDouble(path);
+        log.warn("AppEnvImpl: 通用属性访问 (double) 已不再支持。请求路径: {}", path);
+        return Optional.empty();
     }
 
     @Override
     public void setPropertyDouble(String path, double value) {
-        appConfig.setPropertyDouble(path, value);
+        throw new UnsupportedOperationException("AppEnvImpl: 通用属性设置 (double) 已不再支持。");
     }
 
     @Override
     public Optional<Float> getPropertyFloat(String path) {
-        return appConfig.getPropertyFloat(path);
+        log.warn("AppEnvImpl: 通用属性访问 (float) 已不再支持。请求路径: {}", path);
+        return Optional.empty();
     }
 
     @Override
     public void setPropertyFloat(String path, float value) {
-        appConfig.setPropertyFloat(path, value);
+        throw new UnsupportedOperationException("AppEnvImpl: 通用属性设置 (float) 已不再支持。");
     }
 
     @Override
     public void initPropertyFromJson(String jsonStr) {
-        appConfig.initPropertyFromJson(jsonStr);
+        throw new UnsupportedOperationException("AppEnvImpl: 从 JSON 初始化属性已不再支持。");
     }
 
     @Override

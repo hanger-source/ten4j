@@ -1,14 +1,12 @@
 package source.hanger.core.engine;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import source.hanger.core.app.App;
+import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.Extension;
-import source.hanger.core.graph.GraphConfig;
+import source.hanger.core.graph.GraphDefinition;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
@@ -16,8 +14,8 @@ import source.hanger.core.message.Message;
 import source.hanger.core.message.VideoFrameMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.runloop.Runloop;
+import source.hanger.core.app.App;
 import source.hanger.core.tenenv.TenEnv;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * EngineEnvImpl 是 Engine 级别的 TenEnv 实现。
@@ -28,14 +26,14 @@ public class EngineEnvImpl implements TenEnv {
 
     private final Engine engine;
     private final Runloop engineRunloop;
-    private final Map<String, Object> properties; // Engine 的配置属性，来自 GraphDefinition
+    private final GraphDefinition graphDefinition; // 更改为 GraphDefinition 类型
     private final App app;
 
-    public EngineEnvImpl(Engine engine, Runloop engineRunloop, Map<String, Object> properties, App app) {
+    public EngineEnvImpl(Engine engine, Runloop engineRunloop, GraphDefinition graphDefinition, App app) {
         this.engine = engine;
         this.engineRunloop = engineRunloop;
-        this.properties = properties;
-        this.app = app; // Added
+        this.graphDefinition = graphDefinition;
+        this.app = app;
         log.info("EngineEnvImpl created for Engine: {}", engine.getGraphId());
     }
 
@@ -60,140 +58,116 @@ public class EngineEnvImpl implements TenEnv {
 
     @Override
     public void sendData(DataMessage data) {
-        engine.submitInboundMessage(data, null);
+        engine.submitInboundMessage(data, null); // Engine 接收消息
     }
 
     @Override
     public void sendVideoFrame(VideoFrameMessage videoFrame) {
-        engine.submitInboundMessage(videoFrame, null);
+        engine.submitInboundMessage(videoFrame, null); // Engine 接收消息
     }
 
     @Override
     public void sendAudioFrame(AudioFrameMessage audioFrame) {
-        engine.submitInboundMessage(audioFrame, null);
+        engine.submitInboundMessage(audioFrame, null); // Engine 接收消息
     }
 
     @Override
     public void sendMessage(Message message) {
-        engine.submitInboundMessage(message, null);
+        engine.submitInboundMessage(message, null); // Engine 接收消息
     }
 
     @Override
     public Optional<Object> getProperty(String path) {
-        return Optional.ofNullable(properties.get(path)); // <-- 使用 properties Map
+        // EngineEnvImpl 不直接支持通用属性访问，应通过 GraphDefinition 的明确字段获取
+        log.warn("EngineEnvImpl: 通用属性访问已不再支持。请求路径: {}", path);
+        return Optional.empty();
     }
 
     @Override
     public void setProperty(String path, Object value) {
-        properties.put(path, value); // <-- 使用 properties Map
+        throw new UnsupportedOperationException("EngineEnvImpl: 通用属性设置已不再支持。");
     }
 
     @Override
     public boolean hasProperty(String path) {
-        return properties.containsKey(path); // <-- 使用 properties Map
+        log.warn("EngineEnvImpl: 通用属性检查已不再支持。请求路径: {}", path);
+        return false;
     }
 
     @Override
     public void deleteProperty(String path) {
-        properties.remove(path); // <-- 使用 properties Map
+        throw new UnsupportedOperationException("EngineEnvImpl: 通用属性删除已不再支持。");
     }
 
     @Override
     public Optional<Integer> getPropertyInt(String path) {
-        Object value = properties.get(path); // <-- 使用 properties Map
-        if (value instanceof Integer) {
-            return Optional.of((Integer) value);
-        }
+        log.warn("EngineEnvImpl: 通用属性访问 (int) 已不再支持。请求路径: {}", path);
         return Optional.empty();
     }
 
     @Override
     public void setPropertyInt(String path, int value) {
-        properties.put(path, value); // <-- 使用 properties Map
+        throw new UnsupportedOperationException("EngineEnvImpl: 通用属性设置 (int) 已不再支持。");
     }
 
     @Override
     public Optional<Long> getPropertyLong(String path) {
-        Object value = properties.get(path); // <-- 使用 properties Map
-        if (value instanceof Long) {
-            return Optional.of((Long) value);
-        }
+        log.warn("EngineEnvImpl: 通用属性访问 (long) 已不再支持。请求路径: {}", path);
         return Optional.empty();
     }
 
     @Override
     public void setPropertyLong(String path, long value) {
-        properties.put(path, value); // <-- 使用 properties Map
+        throw new UnsupportedOperationException("EngineEnvImpl: 通用属性设置 (long) 已不再支持。");
     }
 
     @Override
     public Optional<String> getPropertyString(String path) {
-        Object value = properties.get(path); // <-- 使用 properties Map
-        if (value instanceof String) {
-            return Optional.of((String) value);
-        }
+        log.warn("EngineEnvImpl: 通用属性访问 (string) 已不再支持。请求路径: {}", path);
         return Optional.empty();
     }
 
     @Override
     public void setPropertyString(String path, String value) {
-        properties.put(path, value); // <-- 使用 properties Map
+        throw new UnsupportedOperationException("EngineEnvImpl: 通用属性设置 (string) 已不再支持。");
     }
 
     @Override
     public Optional<Boolean> getPropertyBool(String path) {
-        Object value = properties.get(path); // <-- 使用 properties Map
-        if (value instanceof Boolean) {
-            return Optional.of((Boolean) value);
-        }
+        log.warn("EngineEnvImpl: 通用属性访问 (boolean) 已不再支持。请求路径: {}", path);
         return Optional.empty();
     }
 
     @Override
     public void setPropertyBool(String path, boolean value) {
-        properties.put(path, value); // <-- 使用 properties Map
+        throw new UnsupportedOperationException("EngineEnvImpl: 通用属性设置 (boolean) 已不再支持。");
     }
 
     @Override
     public Optional<Double> getPropertyDouble(String path) {
-        Object value = properties.get(path); // <-- 使用 properties Map
-        if (value instanceof Double) {
-            return Optional.of((Double) value);
-        }
+        log.warn("EngineEnvImpl: 通用属性访问 (double) 已不再支持。请求路径: {}", path);
         return Optional.empty();
     }
 
     @Override
     public void setPropertyDouble(String path, double value) {
-        properties.put(path, value); // <-- 使用 properties Map
+        throw new UnsupportedOperationException("EngineEnvImpl: 通用属性设置 (double) 已不再支持。");
     }
 
     @Override
     public Optional<Float> getPropertyFloat(String path) {
-        Object value = properties.get(path); // <-- 使用 properties Map
-        if (value instanceof Float) {
-            return Optional.of((Float) value);
-        }
+        log.warn("EngineEnvImpl: 通用属性访问 (float) 已不再支持。请求路径: {}", path);
         return Optional.empty();
     }
 
     @Override
     public void setPropertyFloat(String path, float value) {
-        properties.put(path, value); // <-- 使用 properties Map
+        throw new UnsupportedOperationException("EngineEnvImpl: 通用属性设置 (float) 已不再支持。");
     }
 
     @Override
     public void initPropertyFromJson(String jsonStr) {
-        // 对于 Map<String, Object> 类型的 properties，需要手动解析 JSON
-        try {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> newProperties = new ObjectMapper().readValue(jsonStr, Map.class);
-            this.properties.clear();
-            this.properties.putAll(newProperties);
-            log.debug("EngineEnvImpl: 从 JSON 初始化属性成功。");
-        } catch (IOException e) {
-            log.error("EngineEnvImpl: 从 JSON 初始化属性失败: {}", e.getMessage(), e);
-        }
+        throw new UnsupportedOperationException("EngineEnvImpl: 从 JSON 初始化属性已不再支持。");
     }
 
     @Override
@@ -208,7 +182,7 @@ public class EngineEnvImpl implements TenEnv {
 
     @Override
     public String getExtensionName() {
-        return null; // EngineEnvImpl 不直接代表 Extension
+        return null; // EngineEnvImpl 不直接表示某个 Extension
     }
 
     @Override
@@ -218,7 +192,6 @@ public class EngineEnvImpl implements TenEnv {
 
     @Override
     public void close() {
-        // EngineEnvImpl 的 close 行为取决于 Engine 的停止，无需额外操作
-        log.info("EngineEnvImpl {} closed.", engine.getGraphId());
+        // EngineEnvImpl 的 close 行为由 Engine 负责管理
     }
 }

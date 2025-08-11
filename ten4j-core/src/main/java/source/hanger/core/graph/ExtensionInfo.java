@@ -26,10 +26,12 @@ public class ExtensionInfo {
     @JsonProperty("loc")
     private Location loc;
 
-    // TODO: ten_all_msg_type_dest_info_t msg_dest_info; 这个字段需要更复杂的映射
-    // 暂时用 Map<String, Object> 来表示，后续可能需要独立的 DTO
+    /**
+     * 所有消息类型的目的地信息。
+     * 对应 C 层的 ten_all_msg_type_dest_info_t 结构。
+     */
     @JsonProperty("msg_dest_info")
-    private Map<String, Object> msgDestInfo;
+    private AllMessageDestInfo msgDestInfo;
 
     @JsonProperty("property")
     private Map<String, Object> property; // Corresponds to ten_value_t *property in C
