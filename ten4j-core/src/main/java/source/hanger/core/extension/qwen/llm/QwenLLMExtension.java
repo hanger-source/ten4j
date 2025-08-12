@@ -11,6 +11,8 @@ import com.alibaba.dashscope.common.Message;
 import com.alibaba.dashscope.common.Role;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.system.llm.BaseLLMExtension;
 import source.hanger.core.message.DataMessage;
@@ -196,17 +198,18 @@ public class QwenLLMExtension extends BaseLLMExtension {
             @Override
             public void onTextReceived(String text) {
                 if (text != null && !text.isEmpty()) {
-                    List<String> sentences = parseSentences(sentenceFragment, text);
-                    for (String sentence : sentences) {
+                    SentenceParsingResult parsingResult = parseSentences(sentenceFragment, text);
+                    for (String sentence : parsingResult.getSentences()) {
                         sendTextOutput(env, sentence, false);
                     }
-                    sentenceFragment = sentences.isEmpty() ? sentenceFragment + text : "";
+                    sentenceFragment = parsingResult.getRemainingFragment();
                     accumulatedContent.append(text);
                 }
             }
 
             @Override
             public void onComplete(String totalContent) {
+                log.info("[qwen_llm] Stream chat completion received text final: {}", sentenceFragment);
                 if (!sentenceFragment.isEmpty()) {
                     sendTextOutput(env, sentenceFragment, true);
                 } else if (accumulatedContent.isEmpty()) {
@@ -246,7 +249,7 @@ public class QwenLLMExtension extends BaseLLMExtension {
      * 辅助方法：解析句子片段
      * 返回完整的句子列表和剩余的片段
      */
-    private List<String> parseSentences(String sentenceFragment, String content) {
+    private SentenceParsingResult parseSentences(String sentenceFragment, String content) {
         List<String> sentences = new ArrayList<>();
         StringBuilder currentSentence = new StringBuilder(sentenceFragment);
 
@@ -260,6 +263,13 @@ public class QwenLLMExtension extends BaseLLMExtension {
                 currentSentence = new StringBuilder();
             }
         }
-        return sentences;
+        return new SentenceParsingResult(sentences, currentSentence.toString());
+    }
+
+    @Data
+    @AllArgsConstructor
+    public static class SentenceParsingResult {
+        private List<String> sentences;
+        private String remainingFragment;
     }
 }

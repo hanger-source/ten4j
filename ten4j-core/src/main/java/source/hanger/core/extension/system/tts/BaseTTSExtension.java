@@ -139,8 +139,7 @@ public abstract class BaseTTSExtension extends BaseExtension {
             audioFrame.setNumberOfChannel(numberOfChannels); // 注意这里是 numberOfChannel
             audioFrame.setSamplesPerChannel(audioData.length / (bytesPerSample * numberOfChannels));
             audioFrame.setBuf(audioData); // 使用 setBuf
-            // audioFrame.setMessageType(MessageType.AUDIO_FRAME); //
-            // 移除此行，MessageType在构造函数中设置
+            audioFrame.setType(MessageType.AUDIO_FRAME); // 设置消息类型
 
             env.sendMessage(audioFrame);
             log.debug("TTS音频帧发送成功: extensionName={}, size={}", env.getExtensionName(), audioData.length);

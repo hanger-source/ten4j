@@ -65,7 +65,7 @@ public class QwenTtsClient {
             callback.onError(e);
         } catch (IllegalArgumentException e) {
             log.error("TTS语音名称无效: {}", voiceName, e);
-            callback.onError(new RuntimeException("无效的TTS语音名称: " + voiceName, e));
+            callback.onError(new RuntimeException("无效的TTS语音名称: %s".formatted(voiceName), e));
         } catch (Exception e) {
             log.error("DashScope TTS 流式调用未知异常: {}", e.getMessage(), e);
             callback.onError(e);
