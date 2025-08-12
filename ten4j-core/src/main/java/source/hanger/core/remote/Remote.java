@@ -58,7 +58,7 @@ public class Remote implements MessageReceiver {
         // 确保消息的源 App URI 被设置为此 Remote 的 URI
         if (message.getSrcLoc() != null && (message.getSrcLoc().getAppUri() == null || message.getSrcLoc().getAppUri()
             .isEmpty())) {
-            message.getSrcLoc().setAppUri(this.uri);
+            message.getSrcLoc().setAppUri(this.uri).setGraphId(engine.getGraphId());
             log.debug("Remote {}: 设置入站消息 {} 的源 App URI 为 {}", uri, message.getId(), this.uri);
         }
 
@@ -88,7 +88,7 @@ public class Remote implements MessageReceiver {
         // 只有当消息的源 URI 未被指定时才设置，防止覆盖上层已设置的源
         if (message.getSrcLoc() != null && (message.getSrcLoc().getAppUri() == null || message.getSrcLoc().getAppUri()
             .isEmpty())) {
-            message.getSrcLoc().setAppUri(this.uri);
+            message.getSrcLoc().setAppUri(this.uri).setGraphId(engine.getGraphId());
             log.debug("Remote {}: 设置出站消息 {} 的源 App URI 为 {}", uri, message.getId(), this.uri);
         }
 

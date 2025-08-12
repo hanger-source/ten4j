@@ -21,6 +21,7 @@ import source.hanger.core.command.app.CloseAppCommandHandler;
 import source.hanger.core.command.app.StartGraphCommandHandler;
 import source.hanger.core.command.app.StopGraphCommandHandler;
 import source.hanger.core.connection.Connection;
+import source.hanger.core.connection.ConnectionAttachTo;
 import source.hanger.core.engine.Engine;
 import source.hanger.core.extension.Extension;
 import source.hanger.core.graph.GraphConfig;
@@ -266,11 +267,13 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
      */
     public void onNewConnection(Connection connection) {
         log.info("App: 接收到新连接: {}", connection.getRemoteAddress());
-        // 将新连接添加到孤立连接列表，等待 StartGraphCommand 来绑定到 Engine
-        orphanConnections.add(connection);
-        // 使用新的 attachToApp 方法进行设置
-        connection.attachToApp(this); // <-- 关键修改点
-        connection.setRunloop(this.appRunloop); // 确保 Connection 关联到 App 的 Runloop
+        if (connection.getAttachToState() != ConnectionAttachTo.REMOTE) {
+            // 将新连接添加到孤立连接列表，等待 StartGraphCommand 来绑定到 Engine
+            orphanConnections.add(connection);
+            // 使用新的 attachToApp 方法进行设置
+            connection.attachToApp(this); // <-- 关键修改点
+            connection.setRunloop(this.appRunloop); // 确保 Connection 关联到 App 的 Runloop
+        }
     }
 
     /**

@@ -1,8 +1,10 @@
 package source.hanger.core.extension.system;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
+import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.BaseExtension;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
@@ -17,6 +19,7 @@ import static java.util.Collections.singletonList;
 /**
  * @author fuhangbo.hanger.uhfun
  **/
+@Slf4j
 public class ClientConnectionExtension extends BaseExtension {
 
     private String clientAppUri;
@@ -72,12 +75,18 @@ public class ClientConnectionExtension extends BaseExtension {
 
     @Override
     public void onDataMessage(TenEnv env, DataMessage dataMessage) {
-        // 默认空实现
-        if (dataMessage.getDestLocs() == null) {
-            dataMessage.setDestLocs(
-                singletonList(new Location(clientAppUri, env.getGraphId(), env.getExtensionName())));
-        } else {
+        Location srcLoc = dataMessage.getSrcLoc();
+        if (srcLoc == null || !env.getAppUri().equals(srcLoc.getAppUri())) {
+            // 入站消息
+            log.info("ClientConnectionExtension: 入站消息");
+            dataMessage.setSrcLoc(new Location(env.getAppUri(), env.getGraphId(), null));
             dataMessage.setDestLocs(new ArrayList<>());
+            if (srcLoc != null) {
+                this.clientAppUri = srcLoc.getAppUri();
+            }
+        } else {
+            log.info("ClientConnectionExtension: 出站消息");
+            dataMessage.setDestLocs(List.of(new Location(clientAppUri, null, null)));
         }
         env.sendData(dataMessage);
     }

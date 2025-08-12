@@ -137,6 +137,25 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
 
         Extension extension = ReflectionUtils.newInstance(extensionClass);
 
+        // 根据 GraphDefinition 过滤并构建 AllMessageDestInfo
+        AllMessageDestInfo messageDestInfo = new AllMessageDestInfo();
+        engine.getGraphDefinition().getConnections().stream()
+                .filter(conn -> conn.getExtension() != null && conn.getExtension().equals(extensionName))
+                .forEach(conn -> {
+                    if (conn.getCmd() != null) {
+                        messageDestInfo.setCommandRules(conn.getCmd());
+                    }
+                    if (conn.getData() != null) {
+                        messageDestInfo.setDataRules(conn.getData());
+                    }
+                    if (conn.getVideoFrame() != null) {
+                        messageDestInfo.setVideoFrameRules(conn.getVideoFrame());
+                    }
+                    if (conn.getAudioFrame() != null) {
+                        messageDestInfo.setAudioFrameRules(conn.getAudioFrame());
+                    }
+                });
+
         // 【新增】构建 ExtensionInfo 实例
         ExtensionInfo extInfo = new ExtensionInfo(
                 extensionAddonName, // addonName
@@ -149,7 +168,7 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
                 ),
                 property != null ? property : emptyMap(), // property
                 emptyList(), // msgConversionContexts (暂时为空，或从 property 解析)
-                new AllMessageDestInfo() // 传入 AllMessageDestInfo 实例
+                messageDestInfo // 传入填充好的 AllMessageDestInfo 实例
         );
 
         // 创建 ExtensionEnvImpl 用于单个 Extension
@@ -470,6 +489,26 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
             if (env != null) {
                 return env;
             }
+        }
+        return null;
+    }
+
+    /**
+     * 根据 Extension 名称获取 ExtensionInfo 实例。
+     * 此方法是为了方便外部（例如 DefaultExtensionMessageDispatcher）获取 Extension 的运行时信息。
+     *
+     * @param extensionName Extension 的名称。
+     * @return 对应的 ExtensionInfo 实例，如果未找到则返回 null。
+     */
+    public ExtensionInfo getExtensionInfo(String extensionName) {
+        // 首先找到 Extension 所在的 ExtensionGroup
+        ExtensionGroup targetGroup = extensionGroups.values().stream()
+                .filter(group -> group.getExtensionInfos().containsKey(extensionName))
+                .findFirst()
+                .orElse(null);
+
+        if (targetGroup != null) {
+            return targetGroup.getExtensionInfo(extensionName);
         }
         return null;
     }

@@ -1,15 +1,16 @@
 package source.hanger.core.message;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
-
-import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 
 /**
  * 数据消息，对齐C/Python中的TEN_MSG_TYPE_DATA。
@@ -52,7 +53,7 @@ public class DataMessage extends Message {
      * @param data       实际数据内容。
      */
     public DataMessage(String id, Location srcLoc, MessageType type, List<Location> destLocs,
-            Map<String, Object> properties, long timestamp, byte[] data) {
+        Map<String, Object> properties, long timestamp, byte[] data) {
         super(id, type, srcLoc, destLocs, null, properties, timestamp); // 传入 null 作为 name
         this.data = data;
     }
@@ -94,6 +95,7 @@ public class DataMessage extends Message {
     /**
      * 获取数据字节数组的拷贝。
      */
+    @JsonIgnore
     public byte[] getDataBytes() {
         return data != null ? data.clone() : new byte[0]; // 使用 clone 进行深拷贝
     }

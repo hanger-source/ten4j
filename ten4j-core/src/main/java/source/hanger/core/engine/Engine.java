@@ -305,7 +305,7 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
                 if (message.getDestLocs() != null && !message.getDestLocs().isEmpty()) {
                     Location firstDest = message.getDestLocs().getFirst();
                     if (graphId.equals(firstDest.getGraphId())) { // 目标是当前 Engine 内部的 Extension
-                        engineExtensionContext.dispatchMessageToExtension(message, firstDest.getExtensionName());
+                        messageDispatcher.dispatchMessage(message);
                     } else if (firstDest.getAppUri() != null && !firstDest.getAppUri().isEmpty()) { // 目标是其他 App/Remote
                         routeMessageToRemote(message);
                     } else {
@@ -325,21 +325,15 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
                 removeOrphanConnection(connection);
             }
 
+            Location firstDest = null;
             // 检查消息是否有目的地，并尝试路由
             if (message.getDestLocs() != null && !message.getDestLocs().isEmpty()) {
-                Location firstDest = message.getDestLocs().getFirst();
-                if (graphId.equals(firstDest.getGraphId())) { // 目标是当前 Engine 内部的 Extension
-                    // 修正：调用 dispatchMessageToExtension 处理非命令消息
-                    engineExtensionContext.dispatchMessageToExtension(message, firstDest.getExtensionName());
-                } else if (firstDest.getAppUri() != null && !firstDest.getAppUri().isEmpty()) { // 目标是其他 App/Remote
-                    routeMessageToRemote(message);
-                } else {
-                    log.warn("Engine {}: 消息 {} (Type: {}) 无法路由，目的地 Loc 无效。",
-                        graphId, message.getId(), message.getType());
-                }
+                firstDest = message.getDestLocs().getFirst();
+            }
+            if (firstDest == null || graphId.equals(firstDest.getGraphId())) {
+                messageDispatcher.dispatchMessage(message);
             } else {
-                log.warn("Engine {}: 消息 {} (Type: {}) 没有目的地，无法处理。",
-                    graphId, message.getId(), message.getType());
+                routeMessageToRemote(message);
             }
         }
     }
@@ -377,7 +371,7 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
                 }
             } else if (graphId.equals(destLoc.getGraphId())) {
                 // 目标是当前 Engine 内部的 Extension
-                engineExtensionContext.dispatchCommandToExtension(command, destLoc.getExtensionName());
+                messageDispatcher.dispatchMessage(command);
             } else if (destLoc.getAppUri() != null && !destLoc.getAppUri().isEmpty()) { // 目标是其他 App/Remote
                 routeMessageToRemote(command); // 修正：直接通过 Engine 路由到 Remote
             } else {
