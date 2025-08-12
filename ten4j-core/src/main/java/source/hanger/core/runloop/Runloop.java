@@ -31,19 +31,18 @@ public class Runloop {
 
     public static final int DEFAULT_INTERNAL_QUEUE_CAPACITY = 1024;
     private static final int DEFAULT_INTERNAL_TASK_BATCH = 64;
-
+    public final AtomicBoolean running = new AtomicBoolean(false);
+    public final AtomicBoolean shuttingDown = new AtomicBoolean(false);
     private final ManyToOneConcurrentArrayQueue<Runnable> taskQueue;
     private final Agent workAgent;
     private final LoopAgent coreAgent;
     private final int internalTaskBatchSize;
     private final ThreadLocal<Runloop> currentRunloopThreadLocal = new ThreadLocal<>();
-    public final AtomicBoolean running = new AtomicBoolean(false);
-    public final AtomicBoolean shuttingDown = new AtomicBoolean(false);
     /**
      * 单一虚拟线程 保证队列消费顺序
      */
     private final ExecutorService virtualThreadExecutor = Executors
-            .newSingleThreadExecutor(Thread.ofVirtual().name("runloop-virtual-thread", 0).factory());
+        .newSingleThreadExecutor(Thread.ofVirtual().name("Runloop-virtual-thread", 0).factory());
 
     private AgentRunner agentRunner;
     @Getter
@@ -77,15 +76,15 @@ public class Runloop {
         shuttingDown.set(false);
 
         IdleStrategy idleStrategy = new BackoffIdleStrategy(
-                1, 1,
-                TimeUnit.NANOSECONDS.toNanos(50),
-                TimeUnit.MICROSECONDS.toNanos(100));
+            1, 1,
+            TimeUnit.NANOSECONDS.toNanos(50),
+            TimeUnit.MICROSECONDS.toNanos(100));
 
         agentRunner = new AgentRunner(
-                idleStrategy,
-                ex -> log.error("Runloop uncaught error", ex),
-                null,
-                coreAgent);
+            idleStrategy,
+            ex -> log.error("Runloop uncaught error", ex),
+            null,
+            coreAgent);
 
         coreThread = createCoreThread(agentRunner);
         log.info("Runloop started on thread: {}", coreThread.getName());
@@ -107,8 +106,7 @@ public class Runloop {
 
     public void wakeup() {
         Thread t = coreThread;
-        if (t != null)
-            LockSupport.unpark(t);
+        if (t != null) {LockSupport.unpark(t);}
     }
 
     public void shutdown() {
@@ -210,8 +208,7 @@ public class Runloop {
             // 批量处理内部任务
             for (int i = 0; i < internalTaskBatchSize; i++) {
                 Runnable r = taskQueue.poll();
-                if (r == null)
-                    break;
+                if (r == null) {break;}
                 safeRun(r);
                 workDone++;
             }
@@ -229,15 +226,13 @@ public class Runloop {
         @Override
         public void onStart() {
             log.info("{} started", roleName());
-            if (workAgent != null)
-                safeRun(workAgent::onStart);
+            if (workAgent != null) {safeRun(workAgent::onStart);}
         }
 
         @Override
         public void onClose() {
             log.info("{} closed", roleName());
-            if (workAgent != null)
-                safeRun(workAgent::onClose);
+            if (workAgent != null) {safeRun(workAgent::onClose);}
         }
 
         private void safeRun(Runnable task) {

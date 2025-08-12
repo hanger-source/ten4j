@@ -501,12 +501,12 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
 
     @Override
     public void onStart() {
-        log.info("AppMessageDrainer for {} started.", appUri);
+        log.info("App for {} started.", appUri);
     }
 
     @Override
     public void onClose() {
-        log.info("AppMessageDrainer for {} closed.", appUri);
+        log.info("App for {} closed.", appUri);
     }
 
     @Override

@@ -39,8 +39,8 @@ public class ExtensionEnvImpl implements TenEnv {
     private final BaseExtensionRuntimeInfo runtimeInfo; // 更改类型为 BaseExtensionRuntimeInfo，并更名为 runtimeInfo
 
     public ExtensionEnvImpl(Extension extension,
-            ExtensionCommandSubmitter commandSubmitter, ExtensionMessageSubmitter messageSubmitter,
-            Runloop extensionRunloop, EngineExtensionContext extensionContext, BaseExtensionRuntimeInfo runtimeInfo) {
+        ExtensionCommandSubmitter commandSubmitter, ExtensionMessageSubmitter messageSubmitter,
+        Runloop extensionRunloop, EngineExtensionContext extensionContext, BaseExtensionRuntimeInfo runtimeInfo) {
         this.extensionName = runtimeInfo.getInstanceName(); // 从运行时信息获取
         this.extension = extension;
         this.appUri = runtimeInfo.getLoc().getAppUri(); // 从运行时信息获取
@@ -65,8 +65,8 @@ public class ExtensionEnvImpl implements TenEnv {
             return commandSubmitter.submitCommandFromExtension(command, extensionName);
         } else {
             return CompletableFuture.failedFuture(new IllegalStateException(
-                    "ExtensionCommandSubmitter is null, cannot send command for Extension: {}"
-                            .formatted(extensionName)));
+                "ExtensionCommandSubmitter is null, cannot send command for Extension: %s"
+                    .formatted(extensionName)));
         }
     }
 
@@ -77,8 +77,8 @@ public class ExtensionEnvImpl implements TenEnv {
             commandSubmitter.routeCommandResultFromExtension(result, extensionName);
         } else {
             log.warn(
-                    "ExtensionCommandSubmitter is null, cannot route command result for Extension: {}. Result dropped.",
-                    extensionName);
+                "ExtensionCommandSubmitter is null, cannot route command result for Extension: {}. Result dropped.",
+                extensionName);
         }
     }
 
@@ -88,7 +88,7 @@ public class ExtensionEnvImpl implements TenEnv {
             messageSubmitter.submitMessageFromExtension(data, extensionName);
         } else {
             log.warn("ExtensionMessageSubmitter is null, cannot send data for Extension: {}. Message dropped.",
-                    extensionName);
+                extensionName);
         }
     }
 
@@ -98,7 +98,7 @@ public class ExtensionEnvImpl implements TenEnv {
             messageSubmitter.submitMessageFromExtension(videoFrame, extensionName);
         } else {
             log.warn("ExtensionMessageSubmitter is null, cannot send video frame for Extension: {}. Message dropped.",
-                    extensionName);
+                extensionName);
         }
     }
 
@@ -108,7 +108,7 @@ public class ExtensionEnvImpl implements TenEnv {
             messageSubmitter.submitMessageFromExtension(audioFrame, extensionName);
         } else {
             log.warn("ExtensionMessageSubmitter is null, cannot send audio frame for Extension: {}. Message dropped.",
-                    extensionName);
+                extensionName);
         }
     }
 
@@ -118,8 +118,8 @@ public class ExtensionEnvImpl implements TenEnv {
             messageSubmitter.submitMessageFromExtension(message, extensionName);
         } else {
             log.warn(
-                    "ExtensionMessageSubmitter is null, cannot send message of type {} for Extension: {}. Message dropped.",
-                    message.getType(), extensionName);
+                "ExtensionMessageSubmitter is null, cannot send message of type {} for Extension: {}. Message dropped.",
+                message.getType(), extensionName);
         }
     }
 
@@ -141,7 +141,7 @@ public class ExtensionEnvImpl implements TenEnv {
     @Override
     public boolean hasProperty(String path) {
         return runtimeInfo != null && runtimeInfo.getProperty() != null
-                && runtimeInfo.getProperty().containsKey(path);
+            && runtimeInfo.getProperty().containsKey(path);
     }
 
     @Override
@@ -275,16 +275,6 @@ public class ExtensionEnvImpl implements TenEnv {
 
     public Runloop getAttachedRunloop() {
         return extensionRunloop;
-    }
-
-    // 【新增】提供获取 Extension 实例的方法
-    public Extension getExtension() {
-        return extension;
-    }
-
-    // 【更改】提供获取运行时信息实例的方法，现在返回 BaseExtensionRuntimeInfo
-    public BaseExtensionRuntimeInfo getRuntimeInfo() {
-        return runtimeInfo;
     }
 
     @Override
