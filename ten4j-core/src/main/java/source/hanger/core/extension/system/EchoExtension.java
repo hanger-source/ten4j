@@ -191,7 +191,8 @@ public class EchoExtension extends BaseExtension { // Extend BaseExtension
                 // 创建回显数据
                 DataMessage echoData = DataMessage.create("text_data");
                 echoData.setProperty("original_data_name", data.getName());
-                echoData.setProperty("text", "Echo%s: Hello ".formatted(data.getProperty("text")));
+                echoData.setProperty("role", "assistant");
+                echoData.setProperty("text", "Echo: Hello %s".formatted(data.getProperty("text")));
 
                 // 设置目标位置（如果有的话）
                 if (data.getDestLocs() != null && !data.getDestLocs().isEmpty()) { // 修正为 getDestLocs()

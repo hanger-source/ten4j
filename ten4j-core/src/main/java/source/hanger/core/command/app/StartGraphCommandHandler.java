@@ -38,7 +38,7 @@ public class StartGraphCommandHandler implements AppCommandHandler {
             // 返回失败结果
             if (connection != null) {
                 CommandResult errorResult = CommandResult.fail(command.getId(),
-                    command.getType(), command.getName(), "Unexpected command type for StartGraphHandler.");
+                        command.getType(), command.getName(), "Unexpected command type for StartGraphHandler.");
                 connection.sendOutboundMessage(errorResult);
             }
             return null;
@@ -54,7 +54,7 @@ public class StartGraphCommandHandler implements AppCommandHandler {
             // 如果提供了 JSON 定义，解析它来获取 graphId
             try {
                 GraphDefinition tempGraphDef = GraphLoader
-                    .loadGraphDefinitionFromJson(startCommand.getGraphJsonDefinition());
+                        .loadGraphDefinitionFromJson(startCommand.getGraphJsonDefinition());
                 targetGraphId = tempGraphDef.getGraphId();
             } catch (JsonProcessingException e) {
                 log.error("StartGraphCommandHandler: 解析 graphJsonDefinition 失败: {}", e.getMessage());
@@ -78,8 +78,8 @@ public class StartGraphCommandHandler implements AppCommandHandler {
                     log.info("StartGraphCommandHandler: 找到预定义图 {}。", targetGraphId);
                 } catch (JsonProcessingException e) {
                     log.error("StartGraphCommandHandler: 自动启动图 {} 时，序列化/解析预定义图的 JSON 失败: {}",
-                        entry.getName(),
-                        e.getMessage());
+                            entry.getName(),
+                            e.getMessage());
                     // 即使解析失败，也不应阻止后续尝试从 command 的 json 定义加载
                 }
             }
@@ -95,8 +95,8 @@ public class StartGraphCommandHandler implements AppCommandHandler {
                 log.error("StartGraphCommandHandler: 创建 GraphDefinition 失败: {}", e.getMessage(), e);
                 if (connection != null) {
                     CommandResult errorResult = CommandResult.fail(command.getId(),
-                        command.getType(), command.getName(),
-                        "Failed to create GraphDefinition: %s".formatted(e.getMessage()));
+                            command.getType(), command.getName(),
+                            "Failed to create GraphDefinition: %s".formatted(e.getMessage()));
                     connection.sendOutboundMessage(errorResult);
                 }
                 return null;
@@ -113,53 +113,48 @@ public class StartGraphCommandHandler implements AppCommandHandler {
         }
 
         String graphId = graphDefinition.getGraphId();
+        Engine engine;
+        boolean engineNewlyStarted = false; // 标记 Engine 是否是新启动的
+
         if (app.getEngines().containsKey(graphId)) { // 使用 app 实例
-            log.warn("StartGraphCommandHandler: Engine {} 已经存在，不再重复启动。", graphId);
-            if (connection != null) {
-                CommandResult errorResult = CommandResult.fail(command.getId(),
-                    command.getType(), command.getName(), "Engine already exists: %s".formatted(graphId));
-                connection.sendOutboundMessage(errorResult);
-            }
-            return null;
+            engine = app.getEngines().get(graphId);
+            log.warn("StartGraphCommandHandler: Engine {} 已经存在，不再重复启动，但将附加连接。", graphId);
+        } else {
+            // 创建并启动新的 Engine
+            engine = new Engine(graphId, graphDefinition, app, app.isHasOwnRunloopPerEngine()); // 使用 app 实例
+            app.getEngines().put(graphId, engine); // 使用 app 实例
+            engine.start(); // 启动 Engine
+            engineNewlyStarted = true;
+            log.info("StartGraphCommandHandler: Engine {} 启动成功。", graphId);
         }
-
-        // 创建并启动新的 Engine
-        Engine engine = new Engine(graphId, graphDefinition, app, app.isHasOwnRunloopPerEngine()); // 使用 app 实例
-        app.getEngines().put(graphId, engine); // 使用 app 实例
-
-        engine.start(); // 启动 Engine
 
         // 如果命令来源于一个孤立连接，那么该连接现在已绑定到 Engine，从孤立列表中移除它
         if (connection != null) {
             app.removeOrphanConnection(connection); // 从 App 的孤立连接列表中移除
 
-            // 关键：在创建 Remote 之前，先将 Connection 依附到 Engine
+            // 关键：将 Connection 依附到 Engine
             connection.attachToEngine(engine);
 
             // 获取或创建 Remote 实例，并将 Connection 依附到 Remote
-            // 修正：使用 connection.getUri() 作为 Remote 的唯一标识，而不是 app.getAppUri()
             Remote remote = engine.getOrCreateRemote(connection.getUri(), graphId, connection);
             if (remote == null) {
                 throw new IllegalStateException("无法创建或获取 Remote 实例");
             }
-        }
 
-        log.info("StartGraphCommandHandler: Engine {} 启动成功。", graphId);
-        if (connection != null) {
             // 获取 Engine 中加载的 ExtensionInfo 和 ExtensionGroupInfo
             List<ExtensionInfo> runtimeExtensionInfos = engine.getEngineExtensionContext().getAllExtensionInfos();
             List<ExtensionGroupInfo> runtimeExtensionGroupInfos = engine.getEngineExtensionContext()
-                .getAllExtensionGroupInfos();
+                    .getAllExtensionGroupInfos();
 
             // 构建 PredefinedGraphRuntimeInfo 实例
             // 注意：PredefinedGraphEntry 中没有 singleton 字段，这里暂时默认为 false。
             // 如果 singleton 应该从其他地方（例如 GraphDefinition）获取，需要进一步明确。
             PredefinedGraphRuntimeInfo runtimeInfo = new PredefinedGraphRuntimeInfo(
-                graphDefinition.getGraphName(), // 使用 graph name
-                false, // auto_start 暂时默认为 false，因为这里是运行时信息，而非配置
-                false, // singleton 暂时默认为 false
-                runtimeExtensionInfos,
-                runtimeExtensionGroupInfos);
+                    graphDefinition.getGraphName(), // 使用 graph name
+                    false, // auto_start 暂时默认为 false，因为这里是运行时信息，而非配置
+                    false, // singleton 暂时默认为 false
+                    runtimeExtensionInfos,
+                    runtimeExtensionGroupInfos);
 
             // 将 PredefinedGraphRuntimeInfo 序列化为 JSON 字符串，添加到 CommandResult 的 properties 中
             Map<String, Object> properties = new HashMap<>();
@@ -170,13 +165,24 @@ public class StartGraphCommandHandler implements AppCommandHandler {
                 log.error("StartGraphCommandHandler: 序列化 PredefinedGraphRuntimeInfo 失败: {}", e.getMessage());
             }
 
-            CommandResult successResult = CommandResult.success(
-                command.getId(),
-                command.getType(),
-                command.getName(),
-                "Engine %s started successfully.".formatted(graphId),
-                properties // 传递 properties
-            );
+            CommandResult successResult;
+            if (engineNewlyStarted) {
+                successResult = CommandResult.success(
+                        command.getId(),
+                        command.getType(),
+                        command.getName(),
+                        "Engine %s started successfully.".formatted(graphId),
+                        properties // 传递 properties
+                );
+            } else {
+                successResult = CommandResult.success(
+                        command.getId(),
+                        command.getType(),
+                        command.getName(),
+                        "Engine %s already running, connection attached.".formatted(graphId),
+                        properties // 传递 properties
+                );
+            }
             connection.sendOutboundMessage(successResult);
         }
         return null;
