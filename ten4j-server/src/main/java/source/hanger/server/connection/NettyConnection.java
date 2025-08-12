@@ -42,19 +42,22 @@ public class NettyConnection extends AbstractConnection {
             ChannelFuture writeFuture = channel.writeAndFlush(message);
             writeFuture.addListener(f -> {
                 if (f.isSuccess()) {
-                    log.debug("NettyConnection {}: 消息 {} (类型: {}) 发送成功。", getConnectionId(), message.getId(),
-                        message.getType());
+                    log.debug("NettyConnection {}: 消息 {} (类型: {} name: {}) 发送成功。", getConnectionId(),
+                        message.getId(),
+                        message.getType(), message.getName());
                     future.complete(null);
                 } else {
-                    log.error("NettyConnection {}: 消息 {} (类型: {}) 发送失败: {}", getConnectionId(), message.getId(),
-                        message.getType(), f.cause().getMessage());
+                    log.error("NettyConnection {}: 消息 {} (类型: {} name: {}) 发送失败: {}", getConnectionId(),
+                        message.getId(),
+                        message.getType(), message.getName(), f.cause().getMessage());
                     future.completeExceptionally(f.cause());
                 }
             });
         } else {
-            log.warn("NettyConnection {}: Channel 不活跃，消息 {} (类型: {}) 无法发送。", getConnectionId(),
+            log.warn("NettyConnection {}: Channel 不活跃，消息 {} (类型: {} name: {}) 无法发送。", getConnectionId(),
                 message.getId(),
-                message.getType());
+                message.getType(),
+                message.getName());
             future.completeExceptionally(new IllegalStateException("Channel is not active."));
         }
         return future;

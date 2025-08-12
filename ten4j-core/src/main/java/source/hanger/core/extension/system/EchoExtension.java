@@ -1,17 +1,16 @@
-package source.hanger.core.extension;
+package source.hanger.core.extension.system;
+
+import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import source.hanger.core.graph.GraphConfig;
+import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.extension.BaseExtension;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
-import source.hanger.core.message.MessageType;
-import source.hanger.core.message.VideoFrameMessage; // 重新导入 VideoFrameMessage
+import source.hanger.core.message.VideoFrameMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
-import lombok.extern.slf4j.Slf4j;
-
-import java.util.Map;
 
 /**
  * EchoExtension - 简单的回显扩展
@@ -82,7 +81,7 @@ public class EchoExtension extends BaseExtension { // Extend BaseExtension
 
         // 获取配置属性示例
         env.getPropertyString("echo.prefix") // 替换为getPropertyString
-                .ifPresent(prefix -> log.info("EchoExtension配置前缀: {}", prefix));
+            .ifPresent(prefix -> log.info("EchoExtension配置前缀: {}", prefix));
     }
 
     @Override
@@ -128,13 +127,13 @@ public class EchoExtension extends BaseExtension { // Extend BaseExtension
         // super.onCommand(command, env); // Removed direct call to super.onCommand
         if (!isRunning) {
             log.warn("EchoExtension未运行，忽略命令: extensionName={}, commandName={}",
-                    env.getExtensionName(), command.getName());
+                env.getExtensionName(), command.getName());
             return;
         }
 
         messageCount++;
         log.info("EchoExtension收到命令: extensionName={}, commandName={}, commandId={}",
-                env.getExtensionName(), command.getName(), command.getId()); // 修正为 getId()
+            env.getExtensionName(), command.getName(), command.getId()); // 修正为 getId()
 
         // 使用 TenEnv 提交异步任务（模拟异步操作）
         env.postTask(() -> {
@@ -157,15 +156,15 @@ public class EchoExtension extends BaseExtension { // Extend BaseExtension
                 // 发送结果
                 env.sendResult(result);
                 log.debug("EchoExtension命令处理完成: extensionName={}, commandName={}",
-                        env.getExtensionName(), command.getName());
+                    env.getExtensionName(), command.getName());
 
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 log.error("EchoExtension命令处理被中断: extensionName={}, commandName={}",
-                        env.getExtensionName(), command.getName());
+                    env.getExtensionName(), command.getName());
             } catch (Exception e) {
                 log.error("EchoExtension命令处理异常: extensionName={}, commandName={}",
-                        env.getExtensionName(), command.getName(), e);
+                    env.getExtensionName(), command.getName(), e);
             }
         });
     }
@@ -175,13 +174,13 @@ public class EchoExtension extends BaseExtension { // Extend BaseExtension
         // super.onDataMessage(data, env); // Removed direct call to super.onDataMessage
         if (!isRunning) {
             log.warn("EchoExtension未运行，忽略数据: extensionName={}, dataName={}",
-                    env.getExtensionName(), data.getName());
+                env.getExtensionName(), data.getName());
             return;
         }
 
         messageCount++;
-        log.info("EchoExtension收到数据: extensionName={}, dataName={}, dataSize={}",
-                env.getExtensionName(), data.getName(), data.getDataBytes().length);
+        log.info("EchoExtension收到数据: extensionName={}, dataName={}, properties={}",
+            env.getExtensionName(), data.getName(), data.getProperties());
 
         // 使用 TenEnv 提交异步任务
         env.postTask(() -> {
@@ -190,16 +189,9 @@ public class EchoExtension extends BaseExtension { // Extend BaseExtension
                 Thread.sleep(30);
 
                 // 创建回显数据
-                DataMessage echoData = new DataMessage(source.hanger.core.util.MessageUtils.generateUniqueId(),
-                        MessageType.DATA,
-                        data.getSrcLoc(), data.getDestLocs(), data.getDataBytes());
-                echoData.setProperties(new java.util.HashMap<>() {
-                    {
-                        put("original_data_name", data.getName());
-                        put("processed_by", env.getExtensionName());
-                        put("message_count", messageCount);
-                    }
-                });
+                DataMessage echoData = DataMessage.create("text_data");
+                echoData.setProperty("original_data_name", data.getName());
+                echoData.setProperty("text", "Echo%s: Hello ".formatted(data.getProperty("text")));
 
                 // 设置目标位置（如果有的话）
                 if (data.getDestLocs() != null && !data.getDestLocs().isEmpty()) { // 修正为 getDestLocs()
@@ -209,11 +201,11 @@ public class EchoExtension extends BaseExtension { // Extend BaseExtension
                 // 发送回显数据
                 env.sendMessage(echoData);
                 log.debug("EchoExtension数据处理完成: extensionName={}, dataName={}",
-                        env.getExtensionName(), data.getName());
+                    env.getExtensionName(), data.getName());
 
             } catch (Exception e) {
                 log.error("EchoExtension数据处理异常: extensionName={}, dataName={}",
-                        env.getExtensionName(), data.getName(), e);
+                    env.getExtensionName(), data.getName(), e);
             }
         });
     }
@@ -224,14 +216,14 @@ public class EchoExtension extends BaseExtension { // Extend BaseExtension
         // super.onAudioFrame
         if (!isRunning) {
             log.warn("EchoExtension未运行，忽略音频帧: extensionName={}, frameName={}",
-                    env.getExtensionName(), audioFrame.getName());
+                env.getExtensionName(), audioFrame.getName());
             return;
         }
 
         messageCount++;
         log.debug("EchoExtension收到音频帧: extensionName={}, frameName={}, frameSize={}, sampleRate={}, channels={}",
-                env.getExtensionName(), audioFrame.getName(), audioFrame.getDataBytes().length,
-                audioFrame.getSampleRate(), audioFrame.getNumberOfChannel()); // 修正为 getNumberOfChannel()
+            env.getExtensionName(), audioFrame.getName(), audioFrame.getDataBytes().length,
+            audioFrame.getSampleRate(), audioFrame.getNumberOfChannel()); // 修正为 getNumberOfChannel()
 
         // 音频帧通常不需要回显，只记录信息
         // 这里可以添加音频处理逻辑，如VAD检测等
@@ -243,14 +235,14 @@ public class EchoExtension extends BaseExtension { // Extend BaseExtension
         // super.onVideoFrame
         if (!isRunning) {
             log.warn("EchoExtension未运行，忽略视频帧: extensionName={}, frameName={}",
-                    env.getExtensionName(), videoFrame.getName());
+                env.getExtensionName(), videoFrame.getName());
             return;
         }
 
         messageCount++;
         log.debug("EchoExtension收到视频帧: extensionName={}, frameName={}, frameSize={}, width={}, height={}",
-                env.getExtensionName(), videoFrame.getName(), videoFrame.getDataBytes().length,
-                videoFrame.getWidth(), videoFrame.getHeight());
+            env.getExtensionName(), videoFrame.getName(), videoFrame.getDataBytes().length,
+            videoFrame.getWidth(), videoFrame.getHeight());
 
         // 视频帧通常不需要回显，只记录信息
         // 这里可以添加视频处理逻辑，如帧率控制等
@@ -261,6 +253,6 @@ public class EchoExtension extends BaseExtension { // Extend BaseExtension
         // super.onCommandResult(commandResult, env); // Removed direct call to
         // super.onCommandResult
         log.warn("EchoExtension收到未处理的 CommandResult: {}. OriginalCommandId: {}", env.getExtensionName(),
-                commandResult.getId(), commandResult.getOriginalCommandId());
+            commandResult.getId(), commandResult.getOriginalCommandId());
     }
 }

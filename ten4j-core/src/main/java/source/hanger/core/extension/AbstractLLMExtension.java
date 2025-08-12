@@ -1,8 +1,6 @@
 package source.hanger.core.extension;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -10,18 +8,15 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import source.hanger.core.graph.GraphConfig;
-import source.hanger.core.message.AudioFrameMessage;
-import source.hanger.core.message.CommandResult;
-import source.hanger.core.message.DataMessage;
-import source.hanger.core.message.Location;
-import source.hanger.core.message.MessageType;
-import source.hanger.core.message.VideoFrameMessage;
-import source.hanger.core.message.command.Command;
-import source.hanger.core.tenenv.TenEnv; // Changed from TenEnvProxy
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.message.AudioFrameMessage;
+import source.hanger.core.message.CommandResult;
+import source.hanger.core.message.DataMessage;
+import source.hanger.core.message.VideoFrameMessage;
+import source.hanger.core.message.command.Command;
+import source.hanger.core.tenenv.TenEnv;
 
 /**
  * LLM基础抽象类
@@ -116,7 +111,7 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
         super.onCmd(env, command); // 调用父类的 onCmd
         if (!isRunning) {
             log.warn("LLM扩展未运行，忽略命令: extensionName={}, commandName={}",
-                    env.getExtensionName(), command.getName());
+                env.getExtensionName(), command.getName());
             return;
         }
 
@@ -126,7 +121,7 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
             long duration = System.currentTimeMillis() - startTime;
         } catch (Exception e) {
             log.error("LLM扩展命令处理异常: extensionName={}, commandName={}",
-                    env.getExtensionName(), command.getName(), e);
+                env.getExtensionName(), command.getName(), e);
             sendErrorResult(env, command, "LLM命令处理异常: " + e.getMessage()); // Changed parameter type
         }
     }
@@ -136,7 +131,7 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
         super.onDataMessage(env, data); // 调用父类的 onDataMessage
         if (!isRunning) {
             log.warn("LLM扩展未运行，忽略数据: extensionName={}, dataId={}",
-                    env.getExtensionName(), data.getId());
+                env.getExtensionName(), data.getId());
             return;
         }
 
@@ -151,13 +146,14 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
                     }
                     onDataChatCompletion(env, data); // Changed parameter type
                 } catch (Exception e) {
-                    log.error("LLM数据处理队列任务异常: extensionName={}, dataId={}", env.getExtensionName(), data.getId(), e);
+                    log.error("LLM数据处理队列任务异常: extensionName={}, dataId={}", env.getExtensionName(),
+                        data.getId(), e);
                 }
             });
             long duration = System.currentTimeMillis() - startTime;
         } catch (Exception e) {
             log.error("LLM扩展数据提交异常: extensionName={}, dataId={}",
-                    env.getExtensionName(), data.getId(), e);
+                env.getExtensionName(), data.getId(), e);
         }
     }
 
@@ -166,12 +162,12 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
         super.onAudioFrame(env, audioFrame); // 调用父类的 onAudioFrame
         if (!isRunning) {
             log.warn("LLM扩展未运行，忽略音频帧: extensionName={}, frameId={}",
-                    env.getExtensionName(), audioFrame.getId());
+                env.getExtensionName(), audioFrame.getId());
             return;
         }
 
         log.debug("LLM扩展收到音频帧: extensionName={}, frameId={}",
-                env.getExtensionName(), audioFrame.getId());
+            env.getExtensionName(), audioFrame.getId());
     }
 
     @Override
@@ -179,19 +175,19 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
         super.onVideoFrame(env, videoFrame); // 调用父类的 onVideoFrame
         if (!isRunning) {
             log.warn("LLM扩展未运行，忽略视频帧: extensionName={}, frameId={}",
-                    env.getExtensionName(), videoFrame.getId());
+                env.getExtensionName(), videoFrame.getId());
             return;
         }
 
         log.debug("LLM扩展收到视频帧: extensionName={}, frameId={}",
-                env.getExtensionName(), videoFrame.getId());
+            env.getExtensionName(), videoFrame.getId());
     }
 
     @Override
     public void onCmdResult(TenEnv env, CommandResult commandResult) { // Changed parameter type
         super.onCmdResult(env, commandResult); // 调用父类的 onCmdResult
         log.warn("LLM扩展收到未处理的 CommandResult: {}. OriginalCommandId: {}", env.getExtensionName(),
-                commandResult.getId(), commandResult.getOriginalCommandId());
+            commandResult.getId(), commandResult.getOriginalCommandId());
     }
 
     /**
@@ -212,7 +208,7 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
                 break;
             default:
                 log.warn("未知的LLM命令: extensionName={}, commandName={}",
-                        env.getExtensionName(), commandName);
+                    env.getExtensionName(), commandName);
         }
     }
 
@@ -223,7 +219,7 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
         try {
             // 从 properties 中获取 tool_metadata
             // TODO: properties 应该通过 TenEnv 获取，这里暂时通过 command.getProperties() 获取
-            String toolMetadataJson = (String) command.getProperties().get("tool_metadata");
+            String toolMetadataJson = (String)command.getProperties().get("tool_metadata");
             if (toolMetadataJson == null) {
                 throw new IllegalArgumentException("缺少工具元数据");
             }
@@ -241,7 +237,7 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
             env.sendResult(result);
 
             log.info("工具注册成功: extensionName={}, toolName={}",
-                    env.getExtensionName(), toolMetadata.getName());
+                env.getExtensionName(), toolMetadata.getName());
         } catch (Exception e) {
             log.error("工具注册失败: extensionName={}", env.getExtensionName(), e);
             sendErrorResult(env, command, "工具注册失败: " + e.getMessage()); // 确保这里传入的是 Command 对象
@@ -255,7 +251,7 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
         try {
             // 从 properties 中获取 args
             // TODO: args 应该通过 TenEnv 获取，这里暂时通过 command.getProperties() 获取
-            Map<String, Object> args = (Map<String, Object>) command.getProperties().get("args");
+            Map<String, Object> args = (Map<String, Object>)command.getProperties().get("args");
             if (args == null) {
                 throw new IllegalArgumentException("缺少聊天完成参数");
             }
@@ -292,22 +288,15 @@ public abstract class AbstractLLMExtension extends BaseExtension { // Extends Ba
      */
     protected void sendTextOutput(TenEnv env, String text, boolean endOfSegment) { // Changed
         try {
-            DataMessage outputData = new DataMessage(
-                    java.util.UUID.randomUUID().toString(), // id
-                    MessageType.DATA, // type
-                    new Location().setAppUri(env.getAppUri()).setGraphId(env.getGraphId())
-                            .setExtensionName(env.getExtensionName()), // srcLoc
-                    Collections.emptyList(), // destLocs
-                    text.getBytes(StandardCharsets.UTF_8) // data
-            );
+            DataMessage outputData = DataMessage.create("text_data");
             // 将 text 和 end_of_segment 放入 properties
-            outputData.getProperties().put("text", text);
-            outputData.getProperties().put("end_of_segment", endOfSegment);
-            outputData.getProperties().put("extension_name", env.getExtensionName());
+            outputData.setProperty("text", text);
+            outputData.setProperty("end_of_segment", endOfSegment);
+            outputData.setProperty("extension_name", env.getExtensionName());
 
             env.sendMessage(outputData);
             log.debug("LLM文本输出发送成功: extensionName={}, text={}, endOfSegment={}",
-                    env.getExtensionName(), text, endOfSegment);
+                env.getExtensionName(), text, endOfSegment);
         } catch (Exception e) {
             log.error("LLM文本输出发送异常: extensionName={}", env.getExtensionName(), e);
         }

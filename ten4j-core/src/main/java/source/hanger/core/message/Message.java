@@ -115,9 +115,9 @@ public abstract class Message implements Cloneable { // 实现 Cloneable
     }
 
     // endregion
-    public Optional<Object> getProperty(String path) {
+    public Object getProperty(String path) {
         // TODO: 实现对嵌套路径的支持
-        return Optional.ofNullable(properties.get(path));
+        return properties.get(path);
     }
 
     public void setProperty(String path, Object value) {
