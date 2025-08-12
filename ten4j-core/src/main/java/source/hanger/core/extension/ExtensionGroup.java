@@ -1,15 +1,12 @@
 package source.hanger.core.extension;
 
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
-import source.hanger.core.extension.ExtensionGroupInfo;
-import source.hanger.core.extension.ExtensionInfo;
-import source.hanger.core.tenenv.TenEnv;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.concurrent.ConcurrentHashMap;
+import source.hanger.core.tenenv.TenEnv;
 
 /**
  * `ExtensionGroup` 模拟 C 端 `ten_extension_group_t`，
@@ -21,11 +18,10 @@ public class ExtensionGroup {
 
     private final String name;
     private final ExtensionGroupInfo extensionGroupInfo;
-    @Setter
-    private TenEnv tenEnv; // ExtensionGroup 自己的 TenEnv 实例
-
-    // 【新增】存储 Extension 的 Map，key 为 Extension ID，value 为 ExtensionEnvImpl
     private final ConcurrentHashMap<String, ExtensionEnvImpl> extensions = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ExtensionInfo> extensionInfos = new ConcurrentHashMap<>();
+    @Setter
+    private TenEnv tenEnv;
 
     public ExtensionGroup(String name, ExtensionGroupInfo extensionGroupInfo) {
         this.name = name;
@@ -82,7 +78,7 @@ public class ExtensionGroup {
                 // 从 extEnv 获取 Extension 实例，并调用其生命周期方法
                 Extension extension = extEnv.getExtension();
                 if (extension != null) {
-                    extension.onConfigure(extEnv, extEnv.getExtensionInfo().getProperty());
+                    extension.onConfigure(extEnv, extEnv.getRuntimeInfo().getProperty()); // 从 getRuntimeInfo 获取属性
                     extension.onInit(extEnv);
                     extension.onStart(extEnv);
                 }
@@ -110,7 +106,8 @@ public class ExtensionGroup {
             ExtensionEnvImpl extensionEnv = extensions.remove(extensionName);
             if (extensionEnv != null) {
                 try {
-                    log.info("ExtensionGroup {}: Triggering de-lifecycle for Extension {}.", name, extensionName);
+                    log.info("ExtensionGroup {}: Triggering de-lifecycle for Extension {}. 环境: {}", name, extensionName,
+                            extensionEnv.toString());
                     extension.onStop(extensionEnv);
                     extension.onDeinit(extensionEnv);
                     extension.destroy(extensionEnv);
@@ -119,24 +116,93 @@ public class ExtensionGroup {
                             name, extensionName, e.getMessage(), e);
                 }
             } else {
-                log.warn("ExtensionGroup {}: Extension {} not found in managed extensions for destruction.", name,
+                log.warn("ExtensionGroup {}: Extension {} not found in managed extensions for destruction. 已经通过其他方式移除。",
+                        name,
                         extensionName);
             }
         }
     }
 
-    // 【新增】管理 Extension 的方法
-    public void addManagedExtension(String extensionId, Extension extension, ExtensionEnvImpl extensionEnv,
+    public void addManagedExtension(String extensionName, Extension extension, ExtensionEnvImpl extensionEnv,
             ExtensionInfo extInfo) {
-        if (extensions.containsKey(extensionId)) {
-            log.warn("ExtensionGroup {}: Extension {} already managed.", name, extensionId);
+        if (extensions.containsKey(extensionName)) {
+            log.warn("ExtensionGroup {}: Extension {} already managed.", name, extensionName);
             return;
         }
-        extensions.put(extensionId, extensionEnv);
-        log.info("ExtensionGroup {}: Managing Extension {}.", name, extensionId);
+        extensions.put(extensionName, extensionEnv);
+        extensionInfos.put(extensionName, extInfo);
+        log.info("ExtensionGroup {}: Managing Extension {}. 实例环境: {}", name, extensionName, extensionEnv.toString());
     }
 
+    /**
+     * 获取 ExtensionGroup 中管理的指定 Extension 的 ExtensionEnvImpl 实例。
+     *
+     * @param extensionId Extension 的唯一 ID。
+     * @return 对应的 ExtensionEnvImpl 实例，如果不存在则返回 null。
+     */
     public ExtensionEnvImpl getManagedExtensionEnv(String extensionId) {
         return extensions.get(extensionId);
+    }
+
+    /**
+     * 获取 ExtensionGroup 中管理的指定 Extension 实例。
+     *
+     * @param extensionId Extension 的唯一 ID。
+     * @return 对应的 Extension 实例，如果不存在则返回 null。
+     */
+    public Extension getExtension(String extensionId) {
+        ExtensionEnvImpl env = getManagedExtensionEnv(extensionId);
+        return (env != null) ? env.getExtension() : null;
+    }
+
+    /**
+     * 获取 ExtensionGroup 中管理的指定 Extension 的 ExtensionInfo 实例。
+     *
+     * @param extensionId Extension 的唯一 ID。
+     * @return 对应的 ExtensionInfo 实例，如果不存在则返回 null。
+     */
+    public ExtensionInfo getExtensionInfo(String extensionId) {
+        ExtensionEnvImpl env = getManagedExtensionEnv(extensionId);
+        if (env != null && env.getRuntimeInfo() instanceof ExtensionInfo) {
+            return (ExtensionInfo) env.getRuntimeInfo();
+        }
+        return null;
+    }
+
+    /**
+     * 从 ExtensionGroup 中移除一个 Extension 实例，并触发其生命周期回调。
+     *
+     * @param extensionName 要移除的 Extension 的名称。
+     */
+    public void removeExtension(String extensionName) {
+        ExtensionEnvImpl extensionEnv = extensions.remove(extensionName);
+        ExtensionInfo extInfo = extensionInfos.remove(extensionName);
+
+        if (extensionEnv != null && extensionEnv.getExtension() != null) {
+            Extension extension = extensionEnv.getExtension();
+            log.info("ExtensionGroup {}: Removing Extension {} from management. 实例环境: {}", name, extensionName,
+                    extensionEnv.toString());
+            try {
+                // 调用生命周期回调
+                extension.onStop(extensionEnv);
+                extension.onDeinit(extensionEnv);
+                extension.destroy(extensionEnv); // 最终销毁
+
+                // 触发 ExtensionGroup 的 onDestroyExtensions 回调
+                if (tenEnv != null) {
+                    // 这里需要传递一个包含被销毁 Extension 的列表
+                    tenEnv.postTask(() -> {
+                        onDestroyExtensions(tenEnv, java.util.Collections.singletonList(extension));
+                    });
+                }
+                log.info("ExtensionGroup {}: Extension {} lifecycle (onStop/onDeinit/destroy) completed.",
+                        name, extensionName);
+            } catch (Exception e) {
+                log.error("ExtensionGroup {}: Error removing Extension {} or during lifecycle callbacks: {}",
+                        name, extensionName, e.getMessage(), e);
+            }
+        } else {
+            log.warn("ExtensionGroup {}: Extension {} not found for removal. 可能已被提前移除。", name, extensionName);
+        }
     }
 }

@@ -113,10 +113,8 @@ public abstract class Message implements Cloneable { // 实现 Cloneable
     public Message clone() throws CloneNotSupportedException {
         return (Message)super.clone();
     }
+
     // endregion
-
-    // region 属性访问方法
-
     public Optional<Object> getProperty(String path) {
         // TODO: 实现对嵌套路径的支持
         return Optional.ofNullable(properties.get(path));

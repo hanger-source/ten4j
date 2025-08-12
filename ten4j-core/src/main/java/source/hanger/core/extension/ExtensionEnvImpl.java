@@ -9,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.engine.EngineExtensionContext;
 import source.hanger.core.extension.submitter.ExtensionCommandSubmitter;
 import source.hanger.core.extension.submitter.ExtensionMessageSubmitter;
-import source.hanger.core.extension.ExtensionInfo;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
@@ -24,32 +23,34 @@ import source.hanger.core.tenenv.TenEnv;
  * 这是一个 Runloop 线程安全的类，因为所有操作都通过 `postTask` 提交到 Runloop。
  */
 @Slf4j
+@Getter
 public class ExtensionEnvImpl implements TenEnv {
 
     private final String extensionName;
+    // 【新增】提供获取 Extension 实例的方法
     private final Extension extension;
     private final String appUri;
     private final String graphId;
     private final ExtensionCommandSubmitter commandSubmitter;
     private final ExtensionMessageSubmitter messageSubmitter;
     private final Runloop extensionRunloop; // Extension 所在的 Runloop
-    @Getter
     private final EngineExtensionContext extensionContext;
-    private final ExtensionInfo extensionInfo; // 新增：存储 ExtensionInfo
+    // 【更改】提供获取运行时信息实例的方法，现在返回 BaseExtensionRuntimeInfo
+    private final BaseExtensionRuntimeInfo runtimeInfo; // 更改类型为 BaseExtensionRuntimeInfo，并更名为 runtimeInfo
 
     public ExtensionEnvImpl(Extension extension,
             ExtensionCommandSubmitter commandSubmitter, ExtensionMessageSubmitter messageSubmitter,
-            Runloop extensionRunloop, EngineExtensionContext extensionContext, ExtensionInfo extInfo) {
-        this.extensionName = extInfo.getLoc().getExtensionName(); // 从 ExtensionInfo 获取
+            Runloop extensionRunloop, EngineExtensionContext extensionContext, BaseExtensionRuntimeInfo runtimeInfo) {
+        this.extensionName = runtimeInfo.getInstanceName(); // 从运行时信息获取
         this.extension = extension;
-        this.appUri = extInfo.getLoc().getAppUri(); // 从 ExtensionInfo 获取
-        this.graphId = extInfo.getLoc().getGraphId(); // 从 ExtensionInfo 获取
+        this.appUri = runtimeInfo.getLoc().getAppUri(); // 从运行时信息获取
+        this.graphId = runtimeInfo.getLoc().getGraphId(); // 从运行时信息获取
         this.commandSubmitter = commandSubmitter;
         this.messageSubmitter = messageSubmitter;
         this.extensionRunloop = extensionRunloop;
         this.extensionContext = extensionContext;
-        this.extensionInfo = extInfo; // 存储 ExtensionInfo
-        log.info("ExtensionEnvImpl created for Extension: {}", extensionName);
+        this.runtimeInfo = runtimeInfo; // 存储运行时信息
+        log.info("ExtensionEnvImpl created for {}: {}", runtimeInfo.getClass().getSimpleName(), extensionName);
     }
 
     @Override
@@ -124,29 +125,29 @@ public class ExtensionEnvImpl implements TenEnv {
 
     @Override
     public Optional<Object> getProperty(String path) {
-        if (extensionInfo == null || extensionInfo.getProperty() == null) {
+        if (runtimeInfo == null || runtimeInfo.getProperty() == null) {
             return Optional.empty();
         }
-        return Optional.ofNullable(extensionInfo.getProperty().get(path));
+        return Optional.ofNullable(runtimeInfo.getProperty().get(path));
     }
 
     @Override
     public void setProperty(String path, Object value) {
-        if (extensionInfo != null && extensionInfo.getProperty() != null) {
-            extensionInfo.getProperty().put(path, value);
+        if (runtimeInfo != null && runtimeInfo.getProperty() != null) {
+            runtimeInfo.getProperty().put(path, value);
         }
     }
 
     @Override
     public boolean hasProperty(String path) {
-        return extensionInfo != null && extensionInfo.getProperty() != null
-                && extensionInfo.getProperty().containsKey(path);
+        return runtimeInfo != null && runtimeInfo.getProperty() != null
+                && runtimeInfo.getProperty().containsKey(path);
     }
 
     @Override
     public void deleteProperty(String path) {
-        if (extensionInfo != null && extensionInfo.getProperty() != null) {
-            extensionInfo.getProperty().remove(path);
+        if (runtimeInfo != null && runtimeInfo.getProperty() != null) {
+            runtimeInfo.getProperty().remove(path);
         }
     }
 
@@ -281,9 +282,9 @@ public class ExtensionEnvImpl implements TenEnv {
         return extension;
     }
 
-    // 【新增】提供获取 ExtensionInfo 实例的方法
-    public ExtensionInfo getExtensionInfo() {
-        return extensionInfo;
+    // 【更改】提供获取运行时信息实例的方法，现在返回 BaseExtensionRuntimeInfo
+    public BaseExtensionRuntimeInfo getRuntimeInfo() {
+        return runtimeInfo;
     }
 
     @Override

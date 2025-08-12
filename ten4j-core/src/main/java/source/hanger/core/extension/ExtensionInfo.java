@@ -19,10 +19,14 @@ import source.hanger.core.graph.AllMessageDestInfo; // 引入 AllMessageDestInfo
 @Data
 @NoArgsConstructor
 @Accessors(chain = true)
-public class ExtensionInfo {
+public class ExtensionInfo implements BaseExtensionRuntimeInfo {
 
     @JsonProperty("extension_addon_name")
     private String extensionAddonName;
+
+    // 新增：extensionInstanceName
+    @JsonProperty("extension_instance_name")
+    private String extensionInstanceName; // 对应 C 语言的 instance_name
 
     @JsonProperty("extension_group_name")
     private String extensionGroupName;
@@ -45,4 +49,31 @@ public class ExtensionInfo {
 
     @JsonProperty("msg_conversion_contexts")
     private List<MessageConversionContext> msgConversionContexts;
+
+    // 新增：全参数构造函数，以匹配 EngineExtensionContext 中的调用
+    public ExtensionInfo(String extensionAddonName, String extensionInstanceName,
+            String extensionGroupName, Location loc, Map<String, Object> property,
+            List<MessageConversionContext> msgConversionContexts,
+            AllMessageDestInfo msgDestInfo) { // 补充 msgDestInfo
+        this.extensionAddonName = extensionAddonName;
+        this.extensionInstanceName = extensionInstanceName; // 初始化 instanceName
+        this.extensionGroupName = extensionGroupName;
+        this.type = extensionInstanceName; // extensionInstanceName 作为 type
+        this.loc = loc;
+        this.property = property;
+        this.msgConversionContexts = msgConversionContexts;
+        this.msgDestInfo = msgDestInfo;
+    }
+
+    @Override
+    public String getInstanceName() {
+        return this.extensionInstanceName;
+    }
+
+    @Override
+    public String getAddonName() {
+        return this.extensionAddonName;
+    }
+
+    // getLoc 和 getProperty 已经由 @Data 生成，直接使用
 }

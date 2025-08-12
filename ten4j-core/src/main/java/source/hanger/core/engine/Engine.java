@@ -153,10 +153,8 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
                     engineExtensionContext.loadExtension(
                         node.getName(), // 使用 NodeDefinition 的 name
                         node.getAddonName(), // 使用 NodeDefinition 的 addonName
-                        node.getProperty(), // 传递 NodeDefinition 的 property
-                        // 这里不再直接传递 ExtensionInfo，因为 ExtensionInfo 应该在 loadExtension 内部根据 NodeDefinition
-                        // 构建
-                        null); // 最后一个参数 ExtInfo 暂时为 null，loadExtension 内部会创建
+                        node.getExtensionGroupName(),
+                        node.getProperty()); // 最后一个参数 ExtInfo 暂时为 null，loadExtension 内部会创建
                 } else if ("extension_group".equalsIgnoreCase(node.getType())) {
                     // 对于 ExtensionGroup 类型的节点，也需要加载对应的 ExtensionGroup
                     engineExtensionContext.loadExtensionGroup(

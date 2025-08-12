@@ -1,5 +1,6 @@
 package source.hanger.core.extension.system;
 
+import java.util.ArrayList;
 import java.util.Map;
 
 import source.hanger.core.extension.BaseExtension;
@@ -75,6 +76,8 @@ public class ClientConnectionExtension extends BaseExtension {
         if (dataMessage.getDestLocs() == null) {
             dataMessage.setDestLocs(
                 singletonList(new Location(clientAppUri, env.getGraphId(), env.getExtensionName())));
+        } else {
+            dataMessage.setDestLocs(new ArrayList<>());
         }
         env.sendData(dataMessage);
     }

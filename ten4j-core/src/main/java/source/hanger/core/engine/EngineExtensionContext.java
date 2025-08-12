@@ -2,11 +2,9 @@ package source.hanger.core.engine;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -21,13 +19,18 @@ import source.hanger.core.extension.ExtensionInfo;
 import source.hanger.core.extension.ExtensionThread;
 import source.hanger.core.extension.submitter.ExtensionCommandSubmitter;
 import source.hanger.core.extension.submitter.ExtensionMessageSubmitter;
+import source.hanger.core.graph.AllMessageDestInfo;
 import source.hanger.core.message.CommandResult;
+import source.hanger.core.message.Location;
 import source.hanger.core.message.Message;
 import source.hanger.core.message.MessageConversionContext;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.path.PathTable;
 import source.hanger.core.util.MessageConverter;
 import source.hanger.core.util.ReflectionUtils;
+
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 
 /**
  * 管理 Engine 中 Extension 的生命周期和交互。
@@ -78,19 +81,14 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
     /**
      * 加载并初始化一个 Extension 实例。
      *
-     * @param extensionId   Extension 的唯一 ID。
-     * @param extensionType Extension 的类型。
-     * @param config        Extension 的配置。
-     * @param extInfo       Extension 的详细信息，包含消息转换配置。
+     * @param extensionName      Extension 的唯一 ID。
+     * @param extensionAddonName Extension 的类型。
+     * @param extensionGroupName Extension 的分组。
+     * @param property           Extension 的配置。
      * @return 加载的 Extension 实例。
      */
-    public Extension loadExtension(String extensionId, String extensionType, Map<String, Object> config,
-            ExtensionInfo extInfo) {
-
-        // 从 ExtensionInfo 中获取 ExtensionGroup 名称，如果未指定，则默认使用 Graph ID
-        String extensionGroupName = Optional.ofNullable(extInfo.getExtensionGroupName())
-                .filter(name -> !name.isEmpty())
-                .orElse(extInfo.getLoc().getGraphId());
+    public Extension loadExtension(String extensionName, String extensionAddonName,
+            String extensionGroupName, Map<String, Object> property) {
 
         // 获取或创建 ExtensionThread。每个 ExtensionGroup 将对应一个 ExtensionThread。
         ExtensionThread extensionThread = extensionThreads.computeIfAbsent(extensionGroupName, k -> {
@@ -107,28 +105,20 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
                     // extensionGroupAddonName - 默认 ExtensionGroup 没有特定的 addon
                     "default_extension_group", // 或从配置中获取
                     extensionGroupName, // extensionGroupInstanceName
-                    new source.hanger.core.message.Location(null, null, null), // loc (可以为空或默认值)
-                    Collections.emptyMap() // property (可以为空 map)
+                    new Location(null, null, null),
+                    emptyMap() // property (可以为空 map)
             );
 
             ExtensionGroup newGroup = new ExtensionGroup(extensionGroupName, groupInfo);
-
-            // 将 ExtensionGroup 设置到 ExtensionThread
             extensionThread.setExtensionGroup(newGroup);
 
             // 为 ExtensionGroup 创建并设置 TenEnv，使用 ExtensionThread 的 Runloop
-            ExtensionEnvImpl extensionGroupEnv = new ExtensionEnvImpl(
-                    null, // ExtensionGroup 本身不是 Extension
-                    this, // commandSubmitter
-                    this, // messageSubmitter
-                    extensionThread.getRunloop(), // runloop
-                    this, // extensionContext
-                    null // 【修正】ExtensionGroup 本身没有对应的 ExtensionInfo，应为 null
-            );
+            ExtensionEnvImpl extensionGroupEnv = new ExtensionEnvImpl(null, this, this,
+                    extensionThread.getRunloop(), this, groupInfo);
             newGroup.setTenEnv(extensionGroupEnv);
 
             // 【新增】调用 ExtensionGroup 的 onConfigure 和 onInit 方法
-            extensionGroupEnv.onConfigure(Collections.emptyMap()); // ExtensionGroup 的 configure 阶段可以接收配置
+            extensionGroupEnv.onConfigure(emptyMap()); // ExtensionGroup 的 configure 阶段可以接收配置
             extensionGroupEnv.onInit();
 
             return newGroup;
@@ -137,15 +127,30 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
         // 1. 创建 Extension 实例
         Class<? extends Extension> extensionClass;
         try {
-            extensionClass = findExtensionClass(extInfo.getExtensionAddonName()); // 从 extInfo 获取 extensionType
+            extensionClass = findExtensionClass(extensionAddonName); // 从 extInfo 获取 extensionType
         } catch (ClassNotFoundException e) {
-            log.error("Failed to find extension class {}: {}", extInfo.getExtensionAddonName(),
+            log.error("Failed to find extension class {}: {}", extensionAddonName,
                     e.getMessage(), e);
-            throw new RuntimeException("Extension class not found: %s".formatted(extInfo.getExtensionAddonName()),
+            throw new RuntimeException("Extension class not found: %s".formatted(extensionAddonName),
                     e);
         }
 
         Extension extension = ReflectionUtils.newInstance(extensionClass);
+
+        // 【新增】构建 ExtensionInfo 实例
+        ExtensionInfo extInfo = new ExtensionInfo(
+                extensionAddonName, // addonName
+                extensionName, // extensionInstanceName
+                extensionGroupName, // extensionGroupName
+                new Location(
+                        app.getAppUri(), // appUri
+                        engine.getGraphId(), // graphId
+                        extensionName // extensionName
+                ),
+                property != null ? property : emptyMap(), // property
+                emptyList(), // msgConversionContexts (暂时为空，或从 property 解析)
+                new AllMessageDestInfo() // 传入 AllMessageDestInfo 实例
+        );
 
         // 创建 ExtensionEnvImpl 用于单个 Extension
         // 这个 ExtensionEnv 使用 EngineExtensionContext 作为其提交器，并使用 ExtensionThread 的
@@ -159,11 +164,22 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
                 extInfo // 传入 ExtensionInfo 对象
         ); // 调用 Extension 的生命周期方法 (通过 ExtensionEnvImpl 调用)
 
-        // 将 Extension 添加到其所属的 ExtensionThread
-        extensionThread.addExtension(extension, extensionEnv, extInfo);
+        // 将 Extension 添加到其所属的 ExtensionGroup (而不是 ExtensionThread)
+        ExtensionGroup targetGroup = extensionGroups.get(extensionGroupName);
+        if (targetGroup != null) {
+            targetGroup.addManagedExtension(extensionName, extension, extensionEnv, extInfo);
+            log.info("Extension {} successfully added to ExtensionGroup {}.", extensionName, extensionGroupName);
+            // 在 ExtensionGroup 成功添加 Extension 后，触发 ExtensionGroup 的 onCreateExtensions
+            // 此时，ExtensionGroup 会负责调用其内部 Extension 的生命周期方法
+            targetGroup.onCreateExtensions(targetGroup.getTenEnv());
+        } else {
+            log.error("ExtensionGroup {} not found for Extension {}. Cannot manage extension.", extensionGroupName,
+                    extensionName);
+            throw new RuntimeException("ExtensionGroup not found: " + extensionGroupName);
+        }
 
         log.info("Extension {} (Type: {}) loaded for Engine {} on ExtensionThread {} (Group: {}).",
-                extInfo.getLoc().getExtensionName(), extInfo.getExtensionAddonName(), engine.getGraphId(),
+                extensionName, extensionAddonName, engine.getGraphId(),
                 extensionThread.getThreadName(), extensionGroupName);
 
         return extension;
@@ -197,8 +213,8 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
         ExtensionGroupInfo groupInfo = new ExtensionGroupInfo(
                 extensionGroupAddonName,
                 extensionGroupName,
-                new source.hanger.core.message.Location(null, null, null), // loc (可以为空或默认值)
-                property != null ? property : Collections.emptyMap() // property (可以为空 map)
+                new Location(null, null, null), // loc (可以为空或默认值)
+                property != null ? property : emptyMap() // property (可以为空 map)
         );
 
         // 创建 ExtensionGroup 实例
@@ -214,7 +230,7 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
                 this, // messageSubmitter
                 extensionThread.getRunloop(), // runloop
                 this, // extensionContext
-                null // ExtensionGroup 本身没有对应的 ExtensionInfo，应为 null
+                groupInfo // 传入 ExtensionGroupInfo 实例
         );
         newGroup.setTenEnv(extensionGroupEnv);
 
@@ -236,22 +252,41 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
      * @param extensionName Extension 的唯一 ID。
      */
     public void unloadExtension(String extensionName) {
-        ExtensionThread extensionThread = extensionThreads.get(extensionName);
-        if (extensionThread == null) {
-            log.warn("ExtensionThread for ID {} not found. Cannot unload Extension {}.", extensionName, extensionName);
+        // 找到包含该 Extension 的 ExtensionGroup
+        ExtensionGroup targetGroup = extensionGroups.values().stream()
+                .filter(group -> group.getExtensions().containsKey(extensionName))
+                .findFirst()
+                .orElse(null);
+
+        if (targetGroup == null) {
+            log.warn("ExtensionGroup for Extension {} not found. Cannot unload Extension.", extensionName);
             return;
         }
 
-        extensionThread.removeExtension(extensionName);
-
-        // 如果该 ExtensionThread 不再管理任何 Extension，则关闭它
-        if (extensionThread.getExtensions().isEmpty()) {
-            extensionThreads.remove(extensionName);
-            extensionThread.close();
-            log.info("ExtensionThread {} closed as it has no more extensions.", extensionName);
+        // 获取关联的 ExtensionThread
+        ExtensionThread extensionThread = extensionThreads.get(targetGroup.getName());
+        if (extensionThread == null) {
+            log.error("Associated ExtensionThread for group {} not found. Cannot unload Extension {}.",
+                    targetGroup.getName(), extensionName);
+            return;
         }
 
-        log.info("Extension {} unloaded.", extensionName);
+        // 委托 ExtensionGroup 移除 Extension
+        extensionThread.getRunloop().postTask(() -> {
+            targetGroup.removeExtension(extensionName);
+            log.info("Extension {} removed from ExtensionGroup {}.", extensionName, targetGroup.getName());
+
+            // 如果 ExtensionGroup 不再管理任何 Extension，则关闭其关联的 ExtensionThread
+            if (targetGroup.getExtensions().isEmpty()) {
+                extensionGroups.remove(targetGroup.getName());
+                extensionThreads.remove(targetGroup.getName());
+                extensionThread.close();
+                log.info("ExtensionGroup {} is empty. Associated ExtensionThread {} closed.",
+                        targetGroup.getName(), extensionThread.getThreadName());
+            }
+        });
+
+        log.info("Extension {} unload request processed.", extensionName);
     }
 
     /**
@@ -260,12 +295,12 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
     public void unloadAllExtensions() {
         log.info("ExtensionContext: Unloading all extensions for Engine {}.", engine.getGraphId());
         // 创建一个副本以避免并发修改异常
-        List<String> extensionThreadIds = new ArrayList<>(extensionThreads.keySet());
-        for (String threadId : extensionThreadIds) {
-            ExtensionThread extensionThread = extensionThreads.get(threadId);
-            if (extensionThread != null) {
-                // 遍历 ExtensionThread 中所有的 Extension 并卸载它们
-                List<String> extensionNamesToUnload = new ArrayList<>(extensionThread.getExtensions().keySet());
+        List<String> extensionGroupNames = new ArrayList<>(extensionGroups.keySet());
+        for (String groupName : extensionGroupNames) {
+            ExtensionGroup extensionGroup = extensionGroups.get(groupName);
+            if (extensionGroup != null) {
+                // 遍历 ExtensionGroup 中所有的 Extension 并卸载它们
+                List<String> extensionNamesToUnload = new ArrayList<>(extensionGroup.getExtensions().keySet());
                 for (String extensionName : extensionNamesToUnload) {
                     unloadExtension(extensionName); // 调用单点卸载方法
                 }
@@ -324,8 +359,14 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
 
         // --- 消息转换逻辑开始 ---
         Message processedMessage = message;
-        // 从 ExtensionThread 中获取 ExtensionInfo 进行消息转换
-        ExtensionInfo targetExtInfo = extensionThread.getExtensionInfo(extensionName); // Pass extensionName
+        // 从 ExtensionGroup 中获取 ExtensionInfo 进行消息转换
+        ExtensionGroup targetGroup = extensionThread.getExtensionGroup();
+        if (targetGroup == null) {
+            log.warn("ExtensionContext: ExtensionThread {} 没有关联 ExtensionGroup，无法执行消息转换。忽略消息 {}.",
+                    extensionThread.getThreadName(), message.getId());
+            return;
+        }
+        ExtensionInfo targetExtInfo = targetGroup.getExtensionInfo(extensionName);
         if (targetExtInfo != null && targetExtInfo.getMsgConversionContexts() != null) {
             for (MessageConversionContext context : targetExtInfo.getMsgConversionContexts()) {
                 Message converted = MessageConverter.convertMessage(processedMessage, context);
@@ -374,8 +415,15 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
 
         // --- 消息转换逻辑开始 (对于入站命令) ---
         Message processedCommand = command;
-        // 从 ExtensionThread 中获取 ExtensionInfo 进行消息转换
-        ExtensionInfo targetExtInfo = extensionThread.getExtensionInfo(targetExtensionId); // Pass targetExtensionId
+        // 从 ExtensionGroup 中获取 ExtensionInfo 进行消息转换
+        ExtensionGroup targetGroup = extensionThread.getExtensionGroup(); // 获取 ExtensionThread 关联的 ExtensionGroup
+        if (targetGroup == null) {
+            log.warn("ExtensionContext: ExtensionThread {} 没有关联 ExtensionGroup，无法执行消息转换。忽略命令 {}.",
+                    extensionThread.getThreadName(), command.getId());
+            return;
+        }
+        // 从 ExtensionGroup 中获取 ExtensionInfo
+        ExtensionInfo targetExtInfo = targetGroup.getExtensionInfo(targetExtensionId);
         if (targetExtInfo != null && targetExtInfo.getMsgConversionContexts() != null) {
             for (MessageConversionContext context : targetExtInfo.getMsgConversionContexts()) {
                 Message converted = MessageConverter.convertMessage(processedCommand, context);
@@ -394,28 +442,34 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
 
     // 辅助方法：根据 ExtensionId 查找其所属的 ExtensionThread
     // Note: 目前假设一个 ExtensionThread 管理一个 Extension，后续可根据 ExtensionGroup 逻辑调整
-    private ExtensionThread findExtensionThreadForExtension(String extensionId) {
-        // 暂时假设 ExtensionId 直接对应 ExtensionThread 的键
-        // 实际场景可能需要一个映射表来确定哪个 Extension 属于哪个 ExtensionThread
-        // 如果一个 ExtensionGroup 对应一个 ExtensionThread，那么这里需要查找 Extension 所在的 Group，再找到
-        // Group 对应的 Thread
-        return extensionThreads.get(extensionId);
+    private ExtensionThread findExtensionThreadForExtension(String extensionName) {
+        return extensionGroups.values().stream()
+                .filter(extensionGroup -> extensionGroup.getExtensions().containsKey(extensionName))
+                .map(ExtensionGroup::getName)
+                .map(extensionThreads::get)
+                .findAny().orElse(null);
     }
 
-    // 获取 Extension 实例 (通过 ExtensionThread)
+    // 获取 Extension 实例 (通过 ExtensionGroup)
     public Extension getExtension(String extensionId) {
-        ExtensionThread thread = findExtensionThreadForExtension(extensionId);
-        if (thread != null) {
-            return thread.getExtension(extensionId);
+        // 遍历所有 ExtensionGroup 查找包含该 Extension 的组
+        for (ExtensionGroup group : extensionGroups.values()) {
+            Extension extension = group.getExtension(extensionId);
+            if (extension != null) {
+                return extension;
+            }
         }
         return null;
     }
 
-    // 辅助方法，用于在需要时从 ExtensionThread 获取 ExtensionEnvImpl
+    // 辅助方法，用于在需要时从 ExtensionGroup 获取 ExtensionEnvImpl
     public ExtensionEnvImpl getExtensionEnv(String extensionId) {
-        ExtensionThread thread = findExtensionThreadForExtension(extensionId);
-        if (thread != null) {
-            return thread.getExtensionEnv(extensionId); // <-- 通过 ExtensionThread 获取
+        // 遍历所有 ExtensionGroup 查找包含该 Extension 的组
+        for (ExtensionGroup group : extensionGroups.values()) {
+            ExtensionEnvImpl env = group.getManagedExtensionEnv(extensionId);
+            if (env != null) {
+                return env;
+            }
         }
         return null;
     }
@@ -453,14 +507,11 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
     // 新增：获取当前 EngineContext 中所有 Extension 的 ExtensionInfo 列表
     public List<ExtensionInfo> getAllExtensionInfos() {
         List<ExtensionInfo> allExtInfos = new ArrayList<>();
-        extensionThreads.values().forEach(thread -> thread.getExtensions().values().forEach(extEnv -> { // extEnv 实际上是
-            if (extEnv instanceof ExtensionEnvImpl) { // 确保是 ExtensionEnvImpl 类型
-                ExtensionEnvImpl extensionEnvImpl = (ExtensionEnvImpl) extEnv;
-                if (extensionEnvImpl.getExtensionInfo() != null) {
-                    allExtInfos.add(extensionEnvImpl.getExtensionInfo());
-                }
-            }
-        }));
+        extensionGroups.values().forEach(group -> {
+            group.getExtensionInfos().values().forEach(extInfo -> {
+                allExtInfos.add(extInfo);
+            });
+        });
         return allExtInfos;
     }
 
@@ -468,7 +519,7 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
     public List<ExtensionGroupInfo> getAllExtensionGroupInfos() {
         return new ArrayList<>(extensionGroups.values().stream()
                 .map(ExtensionGroup::getExtensionGroupInfo)
-                .filter(Objects::nonNull)
+                .filter(Objects::nonNull) // 过滤掉 null
                 .toList());
     }
 }

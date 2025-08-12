@@ -107,7 +107,7 @@ public abstract class AbstractConnection implements Connection {
         // 而这里 onMessageReceived 已经是一个消息的入口，所以直接在此处判断即可。
         if (!(message instanceof Command) && !(message instanceof CommandResult)) { // 检查是否是非命令消息
             if (this.attachToState != ConnectionAttachTo.REMOTE) {
-                log.warn("Connection {}: 接收到非命令消息 {} (Type: {}) 但未依附于 Remote，消息被丢弃以对齐 C 端逻辑。",
+                log.warn("Connection {}: 接收到非命令消息 {} (Type: {}) 但未依附于 Remote，消息被丢弃",
                     connectionId, message.getId(), message.getType());
                 return; // 直接丢弃消息
             }

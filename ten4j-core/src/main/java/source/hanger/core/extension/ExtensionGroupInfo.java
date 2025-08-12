@@ -18,7 +18,7 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 @Accessors(chain = true)
-public class ExtensionGroupInfo {
+public class ExtensionGroupInfo implements BaseExtensionRuntimeInfo {
 
     @JsonProperty("extension_group_addon_name")
     private String extensionGroupAddonName;
@@ -31,4 +31,16 @@ public class ExtensionGroupInfo {
 
     @JsonProperty("property")
     private Map<String, Object> property;
+
+    @Override
+    public String getInstanceName() {
+        return this.extensionGroupInstanceName;
+    }
+
+    @Override
+    public String getAddonName() {
+        return this.extensionGroupAddonName;
+    }
+
+    // getLoc 和 getProperty 已经由 @Data 生成，直接使用
 }
