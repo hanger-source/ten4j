@@ -1,4 +1,4 @@
-package source.hanger.core.extension.llm.qwen;
+package source.hanger.core.extension.qwen.llm;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -190,7 +190,7 @@ public class QwenLLMExtension extends BaseLLMExtension {
         log.info("[qwen_llm] Calling LLM with {} messages.", llmMessages.size());
 
         qwenLlmClient.streamChatCompletion(llmMessages, new QwenLlmStreamCallback() {
-            private StringBuilder accumulatedContent = new StringBuilder();
+            private final StringBuilder accumulatedContent = new StringBuilder();
             private String sentenceFragment = "";
 
             @Override
@@ -213,7 +213,7 @@ public class QwenLLMExtension extends BaseLLMExtension {
                     sendTextOutput(env, "", true);
                 }
                 log.info("[qwen_llm] Stream chat completion completed.");
-                if (accumulatedContent.length() > 0) {
+                if (!accumulatedContent.isEmpty()) {
                     onMsg("assistant", accumulatedContent.toString());
                 }
             }
@@ -221,7 +221,7 @@ public class QwenLLMExtension extends BaseLLMExtension {
             @Override
             public void onError(Throwable t) {
                 log.error("[qwen_llm] Stream chat completion failed: {}", t.getMessage(), t);
-                String errorMessage = "LLM流式调用失败: " + t.getMessage();
+                String errorMessage = "LLM流式调用失败: %s".formatted(t.getMessage());
                 if (originalCommand != null) {
                     sendErrorResult(env, originalCommand, errorMessage);
                 } else if (originalDataMessage != null) {

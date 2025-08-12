@@ -1,10 +1,7 @@
-package source.hanger.core.extension.llm.qwen;
+package source.hanger.core.extension.qwen.llm;
 
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.ArrayList;
-import java.util.HashMap;
 
 import com.alibaba.dashscope.aigc.generation.Generation;
 import com.alibaba.dashscope.aigc.generation.GenerationParam;
@@ -14,9 +11,9 @@ import com.alibaba.dashscope.exception.ApiException;
 import com.alibaba.dashscope.exception.InputRequiredException;
 import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.utils.JsonUtils;
+
 import io.reactivex.Flowable;
 import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.extension.llm.qwen.QwenLlmStreamCallback;
 
 /**
  * 阿里云通义千问 LLM 客户端。
@@ -49,12 +46,12 @@ public class QwenLlmClient {
      */
     public void streamChatCompletion(List<Message> messages, QwenLlmStreamCallback callback) {
         GenerationParam param = GenerationParam.builder()
-                .apiKey(apiKey)
-                .model(model)
-                .messages(messages)
-                .resultFormat(GenerationParam.ResultFormat.MESSAGE)
-                .incrementalOutput(true)
-                .build();
+            .apiKey(apiKey)
+            .model(model)
+            .messages(messages)
+            .resultFormat(GenerationParam.ResultFormat.MESSAGE)
+            .incrementalOutput(true)
+            .build();
 
         try {
             Flowable<GenerationResult> resultFlowable = generation.streamCall(param);
@@ -62,7 +59,7 @@ public class QwenLlmClient {
 
             resultFlowable.blockingForEach(message -> {
                 if (message != null && message.getOutput() != null && message.getOutput().getChoices() != null
-                        && !message.getOutput().getChoices().isEmpty()) {
+                    && !message.getOutput().getChoices().isEmpty()) {
                     GenerationResult result = message;
                     String content = result.getOutput().getChoices().get(0).getMessage().getContent();
                     if (content != null) {
@@ -74,12 +71,13 @@ public class QwenLlmClient {
                         callback.onComplete(accumulatedContent.toString());
                     }
                 } else {
-                    String errorMessage = String.format("DashScope流式调用返回不完整结果: 请求ID: %s, Usage: %s, Output: %s",
-                            message != null ? message.getRequestId() : "N/A",
-                            message != null && message.getUsage() != null ? JsonUtils.toJson(message.getUsage())
-                                    : "N/A",
-                            message != null && message.getOutput() != null ? JsonUtils.toJson(message.getOutput())
-                                    : "N/A");
+                    String errorMessage = String.format(
+                        "DashScope流式调用返回不完整结果: 请求ID: %s, Usage: %s, Output: %s",
+                        message != null ? message.getRequestId() : "N/A",
+                        message != null && message.getUsage() != null ? JsonUtils.toJson(message.getUsage())
+                            : "N/A",
+                        message != null && message.getOutput() != null ? JsonUtils.toJson(message.getOutput())
+                            : "N/A");
                     log.error(errorMessage);
                     callback.onError(new ApiException(new RuntimeException(errorMessage)));
                 }

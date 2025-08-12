@@ -2,10 +2,12 @@ package source.hanger.core.extension.system.llm;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.BaseExtension;
+import source.hanger.core.extension.system.LlmConstants;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
@@ -205,7 +207,7 @@ public abstract class BaseLLMExtension extends BaseExtension {
 
     protected void sendTextOutput(TenEnv env, String text, boolean endOfSegment) {
         try {
-            DataMessage outputData = DataMessage.create(LlmConstants.DATA_OUT_NAME);
+            DataMessage outputData = DataMessage.create(LlmConstants.LLM_DATA_OUT_NAME);
             outputData.setProperty(LlmConstants.DATA_OUT_PROPERTY_TEXT, text);
             outputData.setProperty("role", "assistant");
             outputData.setProperty(LlmConstants.DATA_OUT_PROPERTY_END_OF_SEGMENT, endOfSegment);
@@ -242,7 +244,7 @@ public abstract class BaseLLMExtension extends BaseExtension {
         log.info("Flushed LLM input items and reset processor: extensionName={}", env.getExtensionName());
     }
 
-    private java.util.function.Consumer<DataMessage> createDataMessageConsumer() {
+    private Consumer<DataMessage> createDataMessageConsumer() {
         return data -> {
             try {
                 if (getEnv() != null) {
@@ -251,7 +253,7 @@ public abstract class BaseLLMExtension extends BaseExtension {
                     log.error("LLM数据处理队列任务异常: TenEnv is null in consumer. DataId: {}", data.getId());
                 }
             } catch (Exception e) {
-                if (e instanceof InterruptedException || e.getCause() instanceof InterruptedException) {
+                if (e.getCause() instanceof InterruptedException) {
                     log.info("onDataChatCompletion task was interrupted: extensionName={}", getExtensionName());
                 } else {
                     log.error("LLM数据处理队列任务异常: extensionName={}, dataId={}", getExtensionName(), data.getId(),

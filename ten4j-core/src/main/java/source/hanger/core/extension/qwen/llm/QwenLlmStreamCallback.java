@@ -1,6 +1,4 @@
-package source.hanger.core.extension.llm.qwen;
-
-import java.util.List;
+package source.hanger.core.extension.qwen.llm;
 
 /**
  * 定义一个回调接口，用于处理流式输出的每个文本块。
