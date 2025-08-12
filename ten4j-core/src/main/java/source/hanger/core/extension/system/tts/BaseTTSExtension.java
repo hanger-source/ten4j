@@ -7,14 +7,14 @@ import java.util.function.Consumer;
 
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.BaseExtension;
-import source.hanger.core.extension.system.LlmConstants;
+import source.hanger.core.extension.system.ExtensionConstants;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
 import source.hanger.core.message.MessageType;
 import source.hanger.core.message.VideoFrameMessage;
 import source.hanger.core.message.command.Command;
-import source.hanger.core.message.command.OutFlushCommand;
+import source.hanger.core.message.command.GenericCommand;
 import source.hanger.core.tenenv.TenEnv;
 import source.hanger.core.util.MessageUtils;
 import source.hanger.core.util.QueueAgent;
@@ -150,7 +150,7 @@ public abstract class BaseTTSExtension extends BaseExtension {
 
     protected void sendTranscriptOutput(TenEnv env, String transcriptText, boolean isQuiet, String objectType) {
         try {
-            DataMessage transcriptData = DataMessage.create(LlmConstants.DATA_TRANSCRIPT_NAME);
+            DataMessage transcriptData = DataMessage.create(ExtensionConstants.DATA_TRANSCRIPT_NAME);
             // 根据 Python 的 AssistantTranscription 结构，构建 JSON 属性
             Map<String, Object> payload = new HashMap<>();
             payload.put("object", objectType); // "assistant.transcription"
@@ -202,7 +202,7 @@ public abstract class BaseTTSExtension extends BaseExtension {
             return;
         }
 
-        if (LlmConstants.DATA_TRANSCRIPT_NAME.equals(data.getName())) {
+        if (ExtensionConstants.DATA_TRANSCRIPT_NAME.equals(data.getName())) {
             dataMessageProcessor.offer(data);
             log.debug("TTS数据已加入队列: extensionName={}, dataId={}", env.getExtensionName(), data.getId());
         } else {
@@ -223,12 +223,13 @@ public abstract class BaseTTSExtension extends BaseExtension {
         long startTime = System.currentTimeMillis();
         try {
             String commandName = command.getName();
-            if (LlmConstants.CMD_IN_FLUSH.equals(commandName)) {
+            if (ExtensionConstants.CMD_IN_FLUSH.equals(commandName)) {
                 onCancelTTS(env);
                 flushInputItems(env);
 
                 // 发送 CMD_OUT_FLUSH 命令
-                Command outFlushCmd = new OutFlushCommand(command.getId(), command.getParentCommandId());
+                Command outFlushCmd = GenericCommand
+                    .create(ExtensionConstants.CMD_OUT_FLUSH, command.getId(), command.getType());
                 env.sendCmd(outFlushCmd);
                 log.debug("TTS命令处理完成: {}", commandName);
             } else {

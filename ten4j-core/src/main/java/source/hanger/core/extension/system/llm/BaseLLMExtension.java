@@ -7,7 +7,7 @@ import java.util.function.Consumer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.BaseExtension;
-import source.hanger.core.extension.system.LlmConstants;
+import source.hanger.core.extension.system.ExtensionConstants;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
@@ -37,7 +37,7 @@ public abstract class BaseLLMExtension extends BaseExtension {
 
     protected boolean isRunning = false;
 
-    private QueueAgent<DataMessage> dataMessageProcessor;
+    protected QueueAgent<DataMessage> dataMessageProcessor;
 
     public BaseLLMExtension() {
         super();
@@ -101,20 +101,20 @@ public abstract class BaseLLMExtension extends BaseExtension {
         try {
             String commandName = command.getName();
             switch (commandName) {
-                case LlmConstants.CMD_CHAT_COMPLETION_CALL:
+                case ExtensionConstants.CMD_CHAT_COMPLETION_CALL:
                     handleChatCompletionCall(env, command);
                     break;
-                case LlmConstants.CMD_IN_FLUSH:
+                case ExtensionConstants.CMD_IN_FLUSH:
                     flushInputItems(env);
                     CommandResult flushResult = CommandResult.success(command, "LLM input flushed.");
                     env.sendResult(flushResult);
                     break;
-                case LlmConstants.CMD_IN_ON_USER_JOINED:
+                case ExtensionConstants.CMD_IN_ON_USER_JOINED:
                     onUserJoined(env);
                     CommandResult userJoinedResult = CommandResult.success(command, "User joined.");
                     env.sendResult(userJoinedResult);
                     break;
-                case LlmConstants.CMD_IN_ON_USER_LEFT:
+                case ExtensionConstants.CMD_IN_ON_USER_LEFT:
                     onUserLeft(env);
                     CommandResult userLeftResult = CommandResult.success(command, "User left.");
                     env.sendResult(userLeftResult);
@@ -207,10 +207,10 @@ public abstract class BaseLLMExtension extends BaseExtension {
 
     protected void sendTextOutput(TenEnv env, String text, boolean endOfSegment) {
         try {
-            DataMessage outputData = DataMessage.create(LlmConstants.LLM_DATA_OUT_NAME);
-            outputData.setProperty(LlmConstants.DATA_OUT_PROPERTY_TEXT, text);
+            DataMessage outputData = DataMessage.create(ExtensionConstants.LLM_DATA_OUT_NAME);
+            outputData.setProperty(ExtensionConstants.DATA_OUT_PROPERTY_TEXT, text);
             outputData.setProperty("role", "assistant");
-            outputData.setProperty(LlmConstants.DATA_OUT_PROPERTY_END_OF_SEGMENT, endOfSegment);
+            outputData.setProperty(ExtensionConstants.DATA_OUT_PROPERTY_END_OF_SEGMENT, endOfSegment);
             outputData.setProperty("extension_name", env.getExtensionName());
 
             env.sendMessage(outputData);
@@ -244,7 +244,7 @@ public abstract class BaseLLMExtension extends BaseExtension {
         log.info("Flushed LLM input items and reset processor: extensionName={}", env.getExtensionName());
     }
 
-    private Consumer<DataMessage> createDataMessageConsumer() {
+    protected Consumer<DataMessage> createDataMessageConsumer() {
         return data -> {
             try {
                 if (getEnv() != null) {

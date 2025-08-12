@@ -1,13 +1,15 @@
 package source.hanger.core.extension.qwen.tts;
 
 import java.util.Map;
-// import java.util.regex.Pattern; // REMOVED: No longer needed for custom emoji regex
 
 import lombok.extern.slf4j.Slf4j;
-import net.fellbaum.jemoji.EmojiManager; // ADDED: Import EmojiManager
-import source.hanger.core.extension.system.LlmConstants;
+import net.fellbaum.jemoji.EmojiManager;
+import source.hanger.core.extension.system.ExtensionConstants;
 import source.hanger.core.extension.system.tts.BaseTTSExtension;
+import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
+import source.hanger.core.message.command.Command;
+import source.hanger.core.message.command.GenericCommand;
 import source.hanger.core.tenenv.TenEnv;
 
 /**
@@ -39,8 +41,8 @@ public class QwenTtsExtension extends BaseTTSExtension {
         super.onConfigure(env, properties);
         log.info("[qwen_tts] Extension configuring: {}", env.getExtensionName());
 
-        apiKey = (String) properties.get("api_key");
-        voiceName = (String) properties.get("voice_name"); // 从配置中获取语音名称
+        apiKey = (String)properties.get("api_key");
+        voiceName = (String)properties.get("voice_name"); // 从配置中获取语音名称
 
         if (apiKey == null || voiceName == null || apiKey.isEmpty() || voiceName.isEmpty()) {
             log.error("[qwen_tts] API Key or Voice Name is not set. Please configure in manifest.json/property.json.");
@@ -51,8 +53,8 @@ public class QwenTtsExtension extends BaseTTSExtension {
 
     @Override
     protected void onRequestTTS(TenEnv env, DataMessage data) {
-        String inputText = (String) data.getProperty(LlmConstants.DATA_OUT_PROPERTY_TEXT); // 假设文本属性名为 "text"
-        Boolean isQuiet = (Boolean) data.getProperty(LlmConstants.DATA_IN_PROPERTY_QUIET); // 假设 quiet 属性名为 "quiet"
+        String inputText = (String)data.getProperty(ExtensionConstants.DATA_OUT_PROPERTY_TEXT); // 假设文本属性名为 "text"
+        Boolean isQuiet = (Boolean)data.getProperty(ExtensionConstants.DATA_IN_PROPERTY_QUIET); // 假设 quiet 属性名为 "quiet"
         if (isQuiet == null) {
             isQuiet = false; // 默认不静音
         }
@@ -90,7 +92,7 @@ public class QwenTtsExtension extends BaseTTSExtension {
             public void onError(Throwable t) {
                 log.error("[qwen_tts] TTS stream failed for text: \"{}\": {}", inputText, t.getMessage(), t);
                 sendErrorResult(env, data.getId(), data.getType(), data.getName(),
-                        "TTS流式生成失败: %s".formatted(t.getMessage()));
+                    "TTS流式生成失败: %s".formatted(t.getMessage()));
             }
         });
     }
@@ -101,6 +103,45 @@ public class QwenTtsExtension extends BaseTTSExtension {
         // 在这里实现取消当前 TTS 生成的逻辑，如果 QwenTtsClient 支持取消
         // DashScope SDK 目前没有直接的取消方法，这里主要用于标记状态和清理
         interrupted.set(true);
+    }
+
+    @Override
+    public void onCmd(TenEnv env, Command command) {
+        super.onCmd(env, command);
+        String cmdName = command.getName();
+        log.info("[qwen_tts] Received command: {}", cmdName);
+
+        switch (cmdName) {
+            case ExtensionConstants.CMD_IN_FLUSH:
+                // 响应中断：调用父类的取消和清空队列逻辑
+                onCancelTTS(env);
+                super.flushInputItems(env);
+                log.info("[qwen_tts] Handled flush command, queue reset.");
+
+                // 发送 CMD_OUT_FLUSH 命令作为响应
+                Command outFlushCmd = GenericCommand.create(ExtensionConstants.CMD_IN_FLUSH, command.getId(),
+                    command.getType());
+                env.sendCmd(outFlushCmd);
+                log.debug("[qwen_tts] Sent CMD_OUT_FLUSH in response to CMD_IN_FLUSH.");
+
+                CommandResult cmdResult = CommandResult.success(command, "TTS input flushed.");
+                env.sendResult(cmdResult);
+                break;
+            case ExtensionConstants.CMD_IN_ON_USER_JOINED:
+                // 处理用户加入事件（如果需要）
+                CommandResult joinResult = CommandResult.success(command, "User joined.");
+                env.sendResult(joinResult);
+                break;
+            case ExtensionConstants.CMD_IN_ON_USER_LEFT:
+                // 处理用户离开事件（如果需要）
+                CommandResult leftResult = CommandResult.success(command, "User left.");
+                env.sendResult(leftResult);
+                break;
+            default:
+                // 将其他未处理的命令传递给父类
+                super.onCmd(env, command);
+                break;
+        }
     }
 
     @Override

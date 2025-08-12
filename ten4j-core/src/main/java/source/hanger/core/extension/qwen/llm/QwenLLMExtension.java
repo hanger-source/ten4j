@@ -14,11 +14,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.extension.system.ExtensionConstants;
 import source.hanger.core.extension.system.llm.BaseLLMExtension;
+import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
 import source.hanger.core.message.MessageType;
 import source.hanger.core.message.command.Command;
+import source.hanger.core.message.command.GenericCommand;
 import source.hanger.core.tenenv.TenEnv;
+import source.hanger.core.util.QueueAgent;
 
 /**
  * 简单的LLM扩展示例，用于演示如何处理不同类型的消息。
@@ -117,6 +121,59 @@ public class QwenLLMExtension extends BaseLLMExtension {
         } else {
             log.warn("[qwen_llm] No messages found in chat completion command arguments.");
             sendErrorResult(env, originalCommand, "No messages found in chat completion arguments.");
+        }
+    }
+
+    @Override
+    public void onCmd(TenEnv env, Command command) {
+        super.onCmd(env, command);
+        String cmdName = command.getName();
+        log.info("[qwen_llm] Received command: {}", cmdName);
+
+        switch (cmdName) {
+            case ExtensionConstants.CMD_IN_FLUSH:
+                // 响应中断：停止当前任务，清空队列
+                interrupted.set(true); // 假设 BaseExtension 提供了 interrupted 标志
+                dataMessageProcessor.shutdown();
+                this.dataMessageProcessor = QueueAgent.create();
+                this.dataMessageProcessor.subscribe(createDataMessageConsumer());
+                this.dataMessageProcessor.start();
+                log.info("[qwen_llm] Handled flush command, queue reset.");
+
+                // 发送 CMD_OUT_FLUSH 命令作为响应
+                Command flushCommand = GenericCommand.create(ExtensionConstants.CMD_IN_FLUSH, command.getId(),
+                    command.getType());
+                env.sendCmd(flushCommand);
+                log.debug("[qwen_llm] Sent CMD_OUT_FLUSH in response to CMD_IN_FLUSH.");
+
+                CommandResult cmdResult = CommandResult.success(command, "LLM input flushed.");
+                env.sendResult(cmdResult);
+                break;
+            case ExtensionConstants.CMD_IN_ON_USER_JOINED:
+                // 处理用户加入事件（如果需要）
+                // Python实现中这里会发送 greeting 消息，Java版本目前只返回OK
+                String greeting = (String)command.getProperty("greeting");
+                if (greeting != null && !greeting.isEmpty()) {
+                    try {
+                        onMsg("assistant", greeting);
+                        sendTextOutput(env, greeting, true);
+                        log.info("[qwen_llm] Greeting [{}] sent to user.", greeting);
+                    } catch (Exception e) {
+                        log.error("[qwen_llm] Failed to send greeting [{}], error: {}", greeting, e.getMessage(), e);
+                    }
+                }
+                CommandResult joinResult = CommandResult.success(command, "User joined.");
+                env.sendResult(joinResult);
+                break;
+            case ExtensionConstants.CMD_IN_ON_USER_LEFT:
+                // 处理用户离开事件（如果需要）
+                CommandResult leftResult = CommandResult.success(command, "User left.");
+                env.sendResult(leftResult);
+                break;
+            default:
+                // 将其他未处理的命令传递给父类
+                super.onCmd(env, command);
+                break;
         }
     }
 
