@@ -2,12 +2,10 @@ package source.hanger.core.extension.system.llm;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.BaseExtension;
-import source.hanger.core.extension.system.llm.LlmConstants;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
@@ -31,8 +29,8 @@ import source.hanger.core.util.QueueAgent;
 @Slf4j
 public abstract class BaseLLMExtension extends BaseExtension {
 
-    private final Map<String, Object> sessionState = new java.util.concurrent.ConcurrentHashMap<>();
     protected final AtomicBoolean interrupted = new AtomicBoolean(false);
+    private final Map<String, Object> sessionState = new java.util.concurrent.ConcurrentHashMap<>();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     protected boolean isRunning = false;
@@ -93,7 +91,7 @@ public abstract class BaseLLMExtension extends BaseExtension {
         super.onCmd(env, command);
         if (!isRunning) {
             log.warn("LLM扩展未运行，忽略命令: extensionName={}, commandName={}",
-                    env.getExtensionName(), command.getName());
+                env.getExtensionName(), command.getName());
             return;
         }
 
@@ -121,7 +119,7 @@ public abstract class BaseLLMExtension extends BaseExtension {
                     break;
                 default:
                     log.warn("未知的LLM命令: extensionName={}, commandName={}",
-                            env.getExtensionName(), command.getName());
+                        env.getExtensionName(), command.getName());
                     CommandResult result = CommandResult.success(command, "Unknown LLM command, ignored.");
                     env.sendResult(result);
                     break;
@@ -129,7 +127,7 @@ public abstract class BaseLLMExtension extends BaseExtension {
             long duration = System.currentTimeMillis() - startTime;
         } catch (Exception e) {
             log.error("LLM扩展命令处理异常: extensionName={}, commandName={}",
-                    env.getExtensionName(), command.getName(), e);
+                env.getExtensionName(), command.getName(), e);
             sendErrorResult(env, command, "LLM命令处理异常: " + e.getMessage());
         }
     }
@@ -139,7 +137,7 @@ public abstract class BaseLLMExtension extends BaseExtension {
         super.onDataMessage(env, data);
         if (!isRunning) {
             log.warn("LLM扩展未运行，忽略数据: extensionName={}, dataId={}",
-                    env.getExtensionName(), data.getId());
+                env.getExtensionName(), data.getId());
             return;
         }
 
@@ -152,12 +150,12 @@ public abstract class BaseLLMExtension extends BaseExtension {
         super.onAudioFrame(env, audioFrame);
         if (!isRunning) {
             log.warn("LLM扩展未运行，忽略音频帧: extensionName={}, frameId={}",
-                    env.getExtensionName(), audioFrame.getId());
+                env.getExtensionName(), audioFrame.getId());
             return;
         }
 
         log.debug("LLM扩展收到音频帧: extensionName={}, frameId={}",
-                env.getExtensionName(), audioFrame.getId());
+            env.getExtensionName(), audioFrame.getId());
     }
 
     @Override
@@ -165,24 +163,24 @@ public abstract class BaseLLMExtension extends BaseExtension {
         super.onVideoFrame(env, videoFrame);
         if (!isRunning) {
             log.warn("LLM扩展未运行，忽略视频帧: extensionName={}, frameId={}",
-                    env.getExtensionName(), videoFrame.getId());
+                env.getExtensionName(), videoFrame.getId());
             return;
         }
 
         log.debug("LLM扩展收到视频帧: extensionName={}, frameId={}",
-                env.getExtensionName(), videoFrame.getId());
+            env.getExtensionName(), videoFrame.getId());
     }
 
     @Override
     public void onCmdResult(TenEnv env, CommandResult commandResult) {
         super.onCmdResult(env, commandResult);
         log.warn("LLM扩展收到未处理的 CommandResult: {}. OriginalCommandId: {}", env.getExtensionName(),
-                commandResult.getId(), commandResult.getOriginalCommandId());
+            commandResult.getId(), commandResult.getOriginalCommandId());
     }
 
     private void handleChatCompletionCall(TenEnv env, Command command) {
         try {
-            Map<String, Object> args = (Map<String, Object>) command.getProperty("arguments");
+            Map<String, Object> args = (Map<String, Object>)command.getProperty("arguments");
             if (args == null) {
                 throw new IllegalArgumentException("缺少聊天完成参数");
             }
@@ -209,12 +207,13 @@ public abstract class BaseLLMExtension extends BaseExtension {
         try {
             DataMessage outputData = DataMessage.create(LlmConstants.DATA_OUT_NAME);
             outputData.setProperty(LlmConstants.DATA_OUT_PROPERTY_TEXT, text);
+            outputData.setProperty("role", "assistant");
             outputData.setProperty(LlmConstants.DATA_OUT_PROPERTY_END_OF_SEGMENT, endOfSegment);
             outputData.setProperty("extension_name", env.getExtensionName());
 
             env.sendMessage(outputData);
             log.debug("LLM文本输出发送成功: extensionName={}, text={}, endOfSegment={}",
-                    env.getExtensionName(), text, endOfSegment);
+                env.getExtensionName(), text, endOfSegment);
         } catch (Exception e) {
             log.error("LLM文本输出发送异常: extensionName={}", env.getExtensionName(), e);
         }
@@ -226,9 +225,9 @@ public abstract class BaseLLMExtension extends BaseExtension {
     }
 
     protected void sendErrorResult(TenEnv env, String messageId, MessageType messageType, String messageName,
-            String errorMessage) {
+        String errorMessage) {
         String finalMessageId = (messageId != null && !messageId.isEmpty()) ? messageId
-                : MessageUtils.generateUniqueId();
+            : MessageUtils.generateUniqueId();
         CommandResult errorResult = CommandResult.fail(finalMessageId, messageType, messageName, errorMessage);
         env.sendResult(errorResult);
     }
@@ -255,7 +254,8 @@ public abstract class BaseLLMExtension extends BaseExtension {
                 if (e instanceof InterruptedException || e.getCause() instanceof InterruptedException) {
                     log.info("onDataChatCompletion task was interrupted: extensionName={}", getExtensionName());
                 } else {
-                    log.error("LLM数据处理队列任务异常: extensionName={}, dataId={}", getExtensionName(), data.getId(), e);
+                    log.error("LLM数据处理队列任务异常: extensionName={}, dataId={}", getExtensionName(), data.getId(),
+                        e);
                 }
             }
         };
