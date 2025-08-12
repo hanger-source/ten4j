@@ -4,10 +4,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 
@@ -109,9 +111,9 @@ public class AudioFrameMessage extends Message {
      * 全参构造函数，用于创建音频帧消息。
      */
     public AudioFrameMessage(String id, Location srcLoc, MessageType type, List<Location> destLocs,
-            Map<String, Object> properties, long timestamp,
-            long frameTimestamp, int sampleRate, int bytesPerSample, int samplesPerChannel, int numberOfChannel,
-            long channelLayout, int dataFormat, byte[] buf, int lineSize, boolean isEof) {
+        Map<String, Object> properties, long timestamp,
+        long frameTimestamp, int sampleRate, int bytesPerSample, int samplesPerChannel, int numberOfChannel,
+        long channelLayout, int dataFormat, byte[] buf, int lineSize, boolean isEof) {
         super(id, type, srcLoc, destLocs, null, properties, timestamp); // 传入 null 作为 name
         this.frameTimestamp = frameTimestamp;
         this.sampleRate = sampleRate;
@@ -129,12 +131,13 @@ public class AudioFrameMessage extends Message {
      * 简化构造函数，用于内部创建。
      */
     public AudioFrameMessage(String id, Location srcLoc, List<Location> destLocs, long frameTimestamp, int sampleRate,
-            int bytesPerSample, int samplesPerChannel, int numberOfChannel,
-            long channelLayout, int dataFormat, byte[] buf, int lineSize, boolean isEof) {
-        super(id, MessageType.AUDIO_FRAME, srcLoc, destLocs, null, Collections.emptyMap(), System.currentTimeMillis()); // 传入
-                                                                                                                        // null
-                                                                                                                        // 作为
-                                                                                                                        // name
+        int bytesPerSample, int samplesPerChannel, int numberOfChannel,
+        long channelLayout, int dataFormat, byte[] buf, int lineSize, boolean isEof) {
+        super(id, MessageType.AUDIO_FRAME, srcLoc, destLocs, null, Collections.emptyMap(),
+            System.currentTimeMillis()); // 传入
+        // null
+        // 作为
+        // name
         this.frameTimestamp = frameTimestamp;
         this.sampleRate = sampleRate;
         this.bytesPerSample = bytesPerSample;
@@ -190,25 +193,8 @@ public class AudioFrameMessage extends Message {
             new byte[0], 0, true); // buf, lineSize, isEof
     }
 
-    /**
-     * 获取音频数据大小（字节数）。
-     */
-    public int getDataSize() {
-        return buf != null ? buf.length : 0;
-    }
-
-    /**
-     * 获取音频数据的字节数组拷贝。
-     */
-    public byte[] getDataBytes() {
-        return buf != null ? buf.clone() : new byte[0]; // 使用 clone 进行深拷贝
-    }
-
-    /**
-     * 设置音频数据（字节数组）。
-     */
-    public void setDataBytes(byte[] bytes) {
-        buf = bytes;
+    public static AudioFrameMessage create(String name) {
+        return (AudioFrameMessage)new AudioFrameMessage().setName(name);
     }
 
     /**
@@ -227,17 +213,19 @@ public class AudioFrameMessage extends Message {
     /**
      * 获取音频时长（毫秒）。
      */
+    @JsonIgnore
     public double getDurationMs() {
         int calculatedSamplesPerChannel = calculateSamplesPerChannel(); // 使用计算的每声道采样数
         if (calculatedSamplesPerChannel <= 0 || sampleRate <= 0) {
             return 0.0;
         }
-        return (double) calculatedSamplesPerChannel * 1000.0 / sampleRate;
+        return (double)calculatedSamplesPerChannel * 1000.0 / sampleRate;
     }
 
     /**
      * 获取每秒字节数（比特率）。
      */
+    @JsonProperty
     public int getBytesPerSecond() {
         if (sampleRate <= 0 || numberOfChannel <= 0 || bytesPerSample <= 0) {
             return 0;
@@ -248,6 +236,7 @@ public class AudioFrameMessage extends Message {
     /**
      * 检查是否有音频数据。
      */
+    @JsonProperty
     public boolean hasData() {
         return buf != null && buf.length > 0;
     }
@@ -255,6 +244,7 @@ public class AudioFrameMessage extends Message {
     /**
      * 检查是否为空音频帧。
      */
+    @JsonProperty
     public boolean isEmpty() {
         return !hasData();
     }
@@ -262,21 +252,20 @@ public class AudioFrameMessage extends Message {
     public boolean checkIntegrity() { // 移除 @Override
         // 假设Message基类有一个checkIntegrity方法，或者在这里实现完整逻辑
         return getId() != null && !getId().isEmpty() &&
-                validateAudioParameters();
+            validateAudioParameters();
     }
 
     /**
      * 验证音频参数。
      */
     private boolean validateAudioParameters() {
-        return buf != null && buf.length >= 0 &&
-                sampleRate > 0 &&
-                numberOfChannel > 0 &&
-                bytesPerSample > 0;
+        return buf != null && sampleRate > 0 && numberOfChannel > 0 && bytesPerSample > 0;
     }
 
+    @SneakyThrows
     @Override
     public AudioFrameMessage clone() {
+        AudioFrameMessage audioFrameMessage = (AudioFrameMessage)super.clone();
         // 实现深拷贝
         return new AudioFrameMessage(getId(), getSrcLoc(), getDestLocs(),
             frameTimestamp, sampleRate, bytesPerSample,

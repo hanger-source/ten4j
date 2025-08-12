@@ -10,6 +10,7 @@ import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
 import source.hanger.core.message.Location;
+import source.hanger.core.message.Message;
 import source.hanger.core.message.VideoFrameMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
@@ -75,28 +76,14 @@ public class ClientConnectionExtension extends BaseExtension {
 
     @Override
     public void onDataMessage(TenEnv env, DataMessage dataMessage) {
-        Location srcLoc = dataMessage.getSrcLoc();
-        if (srcLoc == null || !env.getAppUri().equals(srcLoc.getAppUri())) {
-            // 入站消息
-            log.info("ClientConnectionExtension: 入站消息");
-            dataMessage.setSrcLoc(new Location(env.getAppUri(), env.getGraphId(), null));
-            dataMessage.setDestLocs(new ArrayList<>());
-            if (srcLoc != null) {
-                this.clientAppUri = srcLoc.getAppUri();
-            }
-        } else {
-            log.info("ClientConnectionExtension: 出站消息");
-            dataMessage.setDestLocs(List.of(new Location(clientAppUri, null, null)));
-        }
+        routeLocation(env, dataMessage);
         env.sendData(dataMessage);
     }
 
     @Override
     public void onAudioFrame(TenEnv env, AudioFrameMessage audioFrame) {
         // 默认空实现
-        if (audioFrame.getDestLocs() == null) {
-            audioFrame.setDestLocs(singletonList(new Location(clientAppUri, env.getGraphId(), env.getExtensionName())));
-        }
+        routeLocation(env, audioFrame);
         env.sendAudioFrame(audioFrame);
     }
 
@@ -107,5 +94,21 @@ public class ClientConnectionExtension extends BaseExtension {
             videoFrame.setDestLocs(singletonList(new Location(clientAppUri, env.getGraphId(), env.getExtensionName())));
         }
         env.sendVideoFrame(videoFrame);
+    }
+
+    private void routeLocation(TenEnv env, Message message) {
+        Location srcLoc = message.getSrcLoc();
+        if (srcLoc == null || !env.getAppUri().equals(srcLoc.getAppUri())) {
+            // 入站消息
+            log.info("ClientConnectionExtension: 入站消息 type: {} name: {}", message.getType(), message.getName());
+            message.setSrcLoc(new Location(env.getAppUri(), env.getGraphId(), null));
+            message.setDestLocs(new ArrayList<>());
+            if (srcLoc != null) {
+                this.clientAppUri = srcLoc.getAppUri();
+            }
+        } else {
+            log.info("ClientConnectionExtension: 出站消息 type: {} name: {}", message.getType(), message.getName());
+            message.setDestLocs(List.of(new Location(clientAppUri, null, null)));
+        }
     }
 }

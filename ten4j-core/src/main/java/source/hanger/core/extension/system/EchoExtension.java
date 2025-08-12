@@ -222,8 +222,8 @@ public class EchoExtension extends BaseExtension { // Extend BaseExtension
         }
 
         messageCount++;
-        log.debug("EchoExtension收到音频帧: extensionName={}, frameName={}, frameSize={}, sampleRate={}, channels={}",
-            env.getExtensionName(), audioFrame.getName(), audioFrame.getDataBytes().length,
+        log.debug("EchoExtension收到音频帧: extensionName={}, frameName={}, sampleRate={}, channels={}",
+            env.getExtensionName(), audioFrame.getName(),
             audioFrame.getSampleRate(), audioFrame.getNumberOfChannel()); // 修正为 getNumberOfChannel()
 
         // 音频帧通常不需要回显，只记录信息

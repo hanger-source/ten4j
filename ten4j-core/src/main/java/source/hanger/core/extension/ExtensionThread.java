@@ -51,7 +51,7 @@ public class ExtensionThread implements Agent {
 
     @Override
     public String roleName() {
-        return "ExtensionThread-Agent-%s".formatted(threadName);
+        return "Agent-ex-%s".formatted(threadName);
     }
 
     @Override

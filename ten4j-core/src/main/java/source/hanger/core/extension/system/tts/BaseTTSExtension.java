@@ -102,7 +102,7 @@ public abstract class BaseTTSExtension extends BaseExtension {
                     log.info("onRequestTTS task was interrupted: extensionName={}", getExtensionName());
                 } else {
                     log.error("TTS数据处理队列任务异常: extensionName={}, dataId={}", getExtensionName(), data.getId(),
-                            e);
+                        e);
                 }
             }
         };
@@ -130,9 +130,9 @@ public abstract class BaseTTSExtension extends BaseExtension {
     // --- 辅助方法 ---
 
     protected void sendAudioOutput(TenEnv env, byte[] audioData, int sampleRate, int bytesPerSample,
-            int numberOfChannels) {
+        int numberOfChannels) {
         try {
-            AudioFrameMessage audioFrame = new AudioFrameMessage(); // 使用无参构造函数
+            AudioFrameMessage audioFrame = AudioFrameMessage.create("audio_frame");
             audioFrame.setId(MessageUtils.generateUniqueId()); // 设置ID
             audioFrame.setSampleRate(sampleRate);
             audioFrame.setBytesPerSample(bytesPerSample);
@@ -176,9 +176,9 @@ public abstract class BaseTTSExtension extends BaseExtension {
     }
 
     protected void sendErrorResult(TenEnv env, String messageId, MessageType messageType, String messageName,
-            String errorMessage) {
+        String errorMessage) {
         String finalMessageId = (messageId != null && !messageId.isEmpty()) ? messageId
-                : MessageUtils.generateUniqueId();
+            : MessageUtils.generateUniqueId();
         CommandResult errorResult = CommandResult.fail(finalMessageId, messageType, messageName, errorMessage);
         env.sendResult(errorResult);
     }
@@ -198,7 +198,7 @@ public abstract class BaseTTSExtension extends BaseExtension {
         super.onDataMessage(env, data);
         if (!isRunning) {
             log.warn("TTS扩展未运行，忽略数据: extensionName={}, dataId={}",
-                    env.getExtensionName(), data.getId());
+                env.getExtensionName(), data.getId());
             return;
         }
 
@@ -207,7 +207,7 @@ public abstract class BaseTTSExtension extends BaseExtension {
             log.debug("TTS数据已加入队列: extensionName={}, dataId={}", env.getExtensionName(), data.getId());
         } else {
             log.warn("TTS扩展收到未知数据类型，忽略: extensionName={}, dataName={}",
-                    env.getExtensionName(), data.getName());
+                env.getExtensionName(), data.getName());
         }
     }
 
@@ -216,7 +216,7 @@ public abstract class BaseTTSExtension extends BaseExtension {
         super.onCmd(env, command);
         if (!isRunning) {
             log.warn("TTS扩展未运行，忽略命令: extensionName={}, commandName={}",
-                    env.getExtensionName(), command.getName());
+                env.getExtensionName(), command.getName());
             return;
         }
 
@@ -238,7 +238,7 @@ public abstract class BaseTTSExtension extends BaseExtension {
             long duration = System.currentTimeMillis() - startTime;
         } catch (Exception e) {
             log.error("TTS扩展命令处理异常: extensionName={}, commandName={}",
-                    env.getExtensionName(), command.getName(), e);
+                env.getExtensionName(), command.getName(), e);
             sendErrorResult(env, command, "TTS命令处理异常: " + e.getMessage());
         }
     }
@@ -247,20 +247,20 @@ public abstract class BaseTTSExtension extends BaseExtension {
     public void onAudioFrame(TenEnv env, AudioFrameMessage audioFrame) {
         super.onAudioFrame(env, audioFrame);
         log.warn("TTS扩展不处理音频帧: extensionName={}, frameId={}",
-                env.getExtensionName(), audioFrame.getId());
+            env.getExtensionName(), audioFrame.getId());
     }
 
     @Override
     public void onVideoFrame(TenEnv env, VideoFrameMessage videoFrame) {
         super.onVideoFrame(env, videoFrame);
         log.warn("TTS扩展不处理视频帧: extensionName={}, frameId={}",
-                env.getExtensionName(), videoFrame.getId());
+            env.getExtensionName(), videoFrame.getId());
     }
 
     @Override
     public void onCmdResult(TenEnv env, CommandResult commandResult) {
         super.onCmdResult(env, commandResult);
         log.warn("TTS扩展收到未处理的 CommandResult: {}. OriginalCommandId: {}", env.getExtensionName(),
-                commandResult.getId(), commandResult.getOriginalCommandId());
+            commandResult.getId(), commandResult.getOriginalCommandId());
     }
 }

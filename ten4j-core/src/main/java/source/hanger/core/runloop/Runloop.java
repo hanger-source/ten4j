@@ -41,8 +41,7 @@ public class Runloop {
     /**
      * 单一虚拟线程 保证队列消费顺序
      */
-    private final ExecutorService virtualThreadExecutor = Executors
-        .newSingleThreadExecutor(Thread.ofVirtual().name("Runloop-virtual-thread", 0).factory());
+    private final ExecutorService virtualThreadExecutor;
 
     private AgentRunner agentRunner;
     @Getter
@@ -58,6 +57,8 @@ public class Runloop {
         this.internalTaskBatchSize = Math.max(1, batchSize);
         this.workAgent = workAgent;
         this.coreAgent = new LoopAgent(name);
+        this.virtualThreadExecutor = Executors
+            .newSingleThreadExecutor(Thread.ofVirtual().name("Runloop-%s-vt".formatted(name), 0).factory());
     }
 
     public static Runloop createRunloopWithWorker(String name, Agent workAgent) {

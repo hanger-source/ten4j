@@ -149,6 +149,13 @@
             <version>4.2.25</version> <!-- 请根据最新版本调整 -->
         </dependency>
 
+        <!-- JEmoji for Emoji processing -->
+        <dependency>
+            <groupId>net.fellbaum</groupId>
+            <artifactId>jemoji</artifactId>
+            <version>1.7.4</version>
+        </dependency>
+
     </dependencies>
 
     <build>
