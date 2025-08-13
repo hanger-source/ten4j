@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import io.reactivex.Flowable;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.processors.FlowableProcessor;
-import io.reactivex.processors.UnicastProcessor;
+import io.reactivex.processors.PublishProcessor;
 import io.reactivex.schedulers.Schedulers;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.BaseExtension;
@@ -29,7 +29,7 @@ public abstract class BaseFlushExtension<T> extends BaseExtension {
     protected final AtomicBoolean interrupted = new AtomicBoolean(false);
     protected boolean isRunning = false;
     // 统一的流发布器，所有流通过它排队并依次执行，保证顺序，toSerialized保证线程安全
-    protected FlowableProcessor<StreamPayload<T>> streamProcessor = UnicastProcessor.<StreamPayload<T>>create()
+    protected FlowableProcessor<StreamPayload<T>> streamProcessor = PublishProcessor.<StreamPayload<T>>create()
         .toSerialized();
     // 维护所有活跃流的 Disposable，支持取消
     protected Disposable disposable;
@@ -110,7 +110,7 @@ public abstract class BaseFlushExtension<T> extends BaseExtension {
         interrupted.set(true); // 先设置中断，切断当前流的处理
         disposeCurrent(env); // 取消订阅，释放资源
         // 重新创建流发布器（线程安全的）
-        streamProcessor = UnicastProcessor.<StreamPayload<T>>create().toSerialized();
+        streamProcessor = PublishProcessor.<StreamPayload<T>>create().toSerialized();
         interrupted.set(false); // 解除中断，准备处理新流
         disposable = generateDisposable(env); // 重新订阅新流
     }

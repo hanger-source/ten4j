@@ -148,6 +148,11 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
             return;
         }
 
+        if (interrupted.get()) {
+            log.warn("[{}] 当前扩展未运行或已中断，丢弃消息", env.getExtensionName());
+            return;
+        }
+
         log.debug("[{}] LLM扩展收到视频帧: frameId={}",
             env.getExtensionName(), videoFrame.getId());
     }

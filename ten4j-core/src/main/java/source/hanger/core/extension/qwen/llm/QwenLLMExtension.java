@@ -305,7 +305,9 @@ public class QwenLLMExtension extends BaseLLMExtension {
      * 辅助方法：判断字符是否是标点符号
      */
     private boolean isPunctuation(char c) {
-        return PUNCTUATION_PATTERN.matcher(String.valueOf(c)).matches();
+        // 优化：避免创建String对象和Matcher对象，直接进行字符比较
+        return c == ',' || c == '，' || c == ';' || c == '；' || c == ':' || c == '：' ||
+                c == '.' || c == '。' || c == '!' || c == '！' || c == '?' || c == '？';
     }
 
     /**
@@ -320,7 +322,8 @@ public class QwenLLMExtension extends BaseLLMExtension {
             currentSentence.append(c);
             if (isPunctuation(c)) {
                 String strippedSentence = currentSentence.toString().trim();
-                if (!strippedSentence.isEmpty() && strippedSentence.matches(".*[a-zA-Z0-9\\u4e00-\\u9fa5]+.*")) {
+                // 优化：直接检查是否为空，避免不必要的正则表达式匹配
+                if (!strippedSentence.isEmpty()) {
                     sentences.add(strippedSentence);
                 }
                 currentSentence = new StringBuilder();

@@ -62,6 +62,11 @@ public abstract class BaseTTSExtension extends BaseFlushExtension<byte[]> {
             return;
         }
 
+        if (interrupted.get()) {
+            log.warn("[{}] 当前扩展未运行或已中断，丢弃消息", env.getExtensionName());
+            return;
+        }
+
         Flowable<byte[]> audioFlow = onRequestTTS(env, data);
         if (audioFlow != null) {
             log.debug("[{}] 推送新音频流到streamProcessor, dataId={}", env.getExtensionName(),
@@ -113,7 +118,8 @@ public abstract class BaseTTSExtension extends BaseFlushExtension<byte[]> {
             audioFrame.setSamplesPerChannel(audioData.length / (bytesPerSample * numberOfChannels));
             audioFrame.setBuf(audioData);
             audioFrame.setType(MessageType.AUDIO_FRAME);
-            audioFrame.setProperty("message_timestamp", originalMessage.getTimestamp());
+            // 取llm留下来的group_timestamp 也就是llm一组回复
+            audioFrame.setProperty("group_timestamp", originalMessage.getProperty("group_timestamp"));
             env.sendMessage(audioFrame);
             log.debug("[{}] 发送音频帧成功: size={}", env.getExtensionName(), audioData.length);
         } catch (Exception e) {

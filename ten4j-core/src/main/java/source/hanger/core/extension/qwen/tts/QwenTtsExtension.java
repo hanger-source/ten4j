@@ -102,17 +102,4 @@ public class QwenTtsExtension extends BaseTTSExtension {
         super.onStart(env);
         interrupted.set(false); // 在启动时重置中断标志
     }
-
-    // REMOVED: No longer needed with EmojiManager
-    // /**
-    // * 从字符串中移除 Emoji 字符。
-    // * @param text 原始字符串
-    // * @return 移除 Emoji 后的字符串
-    // */
-    // private String removeEmojis(String text) {
-    // if (text == null || text.isEmpty()) {
-    // return text;
-    // }
-    // return EMOJI_PATTERN.matcher(text).replaceAll("");
-    // }
 }
