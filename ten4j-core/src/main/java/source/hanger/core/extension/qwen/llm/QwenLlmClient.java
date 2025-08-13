@@ -13,6 +13,9 @@ import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.utils.JsonUtils;
 
 import io.reactivex.Flowable;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.disposables.Disposables;
+import io.reactivex.schedulers.Schedulers;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -44,7 +47,7 @@ public class QwenLlmClient {
      * @param messages 用户消息列表 (现在接收 List<Message>)
      * @param callback 用于处理流式输出的回调函数
      */
-    public void streamChatCompletion(List<Message> messages, QwenLlmStreamCallback callback) {
+    public Disposable streamChatCompletion(List<Message> messages, QwenLlmStreamCallback callback) {
         GenerationParam param = GenerationParam.builder()
             .apiKey(apiKey)
             .model(model)
@@ -53,41 +56,46 @@ public class QwenLlmClient {
             .incrementalOutput(true)
             .build();
 
+        Flowable<GenerationResult> resultFlowable = null;
         try {
-            Flowable<GenerationResult> resultFlowable = generation.streamCall(param);
-            AtomicReference<String> accumulatedContent = new AtomicReference<>("");
-
-            resultFlowable.blockingForEach(message -> {
-                if (message != null && message.getOutput() != null && message.getOutput().getChoices() != null
-                    && !message.getOutput().getChoices().isEmpty()) {
-                    GenerationResult result = message;
-                    String content = result.getOutput().getChoices().get(0).getMessage().getContent();
-                    if (content != null) {
-                        accumulatedContent.updateAndGet(current -> current + content);
-                        callback.onTextReceived(content);
-                    }
-
-                    if ("stop".equals(result.getOutput().getChoices().get(0).getFinishReason())) {
-                        callback.onComplete(accumulatedContent.toString());
-                    }
-                } else {
-                    String errorMessage = String.format(
-                        "DashScope流式调用返回不完整结果: 请求ID: %s, Usage: %s, Output: %s",
-                        message != null ? message.getRequestId() : "N/A",
-                        message != null && message.getUsage() != null ? JsonUtils.toJson(message.getUsage())
-                            : "N/A",
-                        message != null && message.getOutput() != null ? JsonUtils.toJson(message.getOutput())
-                            : "N/A");
-                    log.error(errorMessage);
-                    callback.onError(new ApiException(new RuntimeException(errorMessage)));
-                }
-            });
-        } catch (NoApiKeyException | ApiException | InputRequiredException e) {
-            log.error("DashScope流式调用异常: {}", e.getMessage(), e);
+            resultFlowable = generation.streamCall(param);
+        } catch (NoApiKeyException | InputRequiredException e) {
             callback.onError(e);
-        } catch (Exception e) {
-            log.error("DashScope流式调用未知异常: {}", e.getMessage(), e);
-            callback.onError(e);
+            return Disposables.empty();
         }
+        AtomicReference<String> accumulatedContent = new AtomicReference<>("");
+
+        // 异步执行 + 可取消
+        return resultFlowable
+            .observeOn(Schedulers.io()) // 异步执行
+            .subscribe(
+                message -> {
+                    if (message != null && message.getOutput() != null && message.getOutput().getChoices() != null
+                        && !message.getOutput().getChoices().isEmpty()) {
+
+                        String content = message.getOutput().getChoices().get(0).getMessage().getContent();
+                        if (content != null) {
+                            accumulatedContent.updateAndGet(current -> current + content);
+                            callback.onTextReceived(content);
+                        }
+
+                        if ("stop".equals(message.getOutput().getChoices().get(0).getFinishReason())) {
+                            callback.onComplete(accumulatedContent.toString());
+                        }
+                    } else {
+                        String errorMessage = String.format(
+                            "DashScope流式调用返回不完整结果: 请求ID: %s, Usage: %s, Output: %s",
+                            message != null ? message.getRequestId() : "N/A",
+                            message != null && message.getUsage() != null ? JsonUtils.toJson(message.getUsage())
+                                : "N/A",
+                            message != null && message.getOutput() != null ? JsonUtils.toJson(message.getOutput())
+                                : "N/A"
+                        );
+                        log.error(errorMessage);
+                        callback.onError(new ApiException(new RuntimeException(errorMessage)));
+                    }
+                },
+                callback::onError
+            );
     }
 }

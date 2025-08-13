@@ -1,10 +1,11 @@
 package source.hanger.core.engine;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.app.App;
 import source.hanger.core.extension.Extension;
 import source.hanger.core.graph.GraphDefinition;
 import source.hanger.core.message.AudioFrameMessage;
@@ -14,7 +15,6 @@ import source.hanger.core.message.Message;
 import source.hanger.core.message.VideoFrameMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.runloop.Runloop;
-import source.hanger.core.app.App;
 import source.hanger.core.tenenv.TenEnv;
 
 /**
@@ -24,21 +24,16 @@ import source.hanger.core.tenenv.TenEnv;
 @Slf4j
 public class EngineEnvImpl implements TenEnv {
 
+    @Getter
     private final Engine engine;
     private final Runloop engineRunloop;
-    private final GraphDefinition graphDefinition; // 更改为 GraphDefinition 类型
     private final App app;
 
     public EngineEnvImpl(Engine engine, Runloop engineRunloop, GraphDefinition graphDefinition, App app) {
         this.engine = engine;
         this.engineRunloop = engineRunloop;
-        this.graphDefinition = graphDefinition;
         this.app = app;
         log.info("EngineEnvImpl created for Engine: {}", engine.getGraphId());
-    }
-
-    public Engine getEngine() {
-        return engine;
     }
 
     @Override
@@ -47,7 +42,7 @@ public class EngineEnvImpl implements TenEnv {
     }
 
     @Override
-    public CompletableFuture<CommandResult> sendCmd(Command command) {
+    public CompletableFuture<CommandResult> sendAsyncCmd(Command command) {
         return engine.submitCommand(command);
     }
 

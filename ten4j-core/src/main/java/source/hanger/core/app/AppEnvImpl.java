@@ -42,7 +42,7 @@ public class AppEnvImpl implements TenEnv {
     }
 
     @Override
-    public CompletableFuture<CommandResult> sendCmd(Command command) {
+    public CompletableFuture<CommandResult> sendAsyncCmd(Command command) {
         return app.submitCommand(command);
     }
 

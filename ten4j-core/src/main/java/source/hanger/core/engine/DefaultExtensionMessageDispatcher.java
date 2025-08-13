@@ -25,22 +25,22 @@ public class DefaultExtensionMessageDispatcher implements ExtensionMessageDispat
 
     private final EngineExtensionContext engineExtensionContext;
     private final PathTable pathTable;
-    private final ConcurrentMap<Long, CompletableFuture<Object>> commandFutures;
+    private final ConcurrentMap<String, CompletableFuture<Object>> commandFutures;
 
     public DefaultExtensionMessageDispatcher(EngineExtensionContext engineExtensionContext,
-            ConcurrentMap<Long, CompletableFuture<Object>> commandFutures) {
+        ConcurrentMap<String, CompletableFuture<Object>> commandFutures) {
         this.engineExtensionContext = engineExtensionContext;
         pathTable = engineExtensionContext.getPathTable(); // 从 ExtensionContext 获取 PathTable
         this.commandFutures = commandFutures;
         log.info("DefaultExtensionMessageDispatcher created for Engine: {}",
-                engineExtensionContext.getEngine().getGraphId());
+            engineExtensionContext.getEngine().getGraphId());
     }
 
     @Override
     public void dispatchMessage(Message message) {
         String engineId = engineExtensionContext.getEngine().getGraphId();
         log.debug("DefaultExtensionMessageDispatcher: 正在派发消息: ID={}, Name={}, Type={}, SrcLoc={}, DestLocs={}",
-                message.getId(), message.getName(), message.getType(), message.getSrcLoc(), message.getDestLocs());
+            message.getId(), message.getName(), message.getType(), message.getSrcLoc(), message.getDestLocs());
 
         List<Location> targetLocations = message.getDestLocs();
 
@@ -49,8 +49,9 @@ public class DefaultExtensionMessageDispatcher implements ExtensionMessageDispat
             targetLocations = determineMessageDestinationsFromGraph(message);
             if (targetLocations.isEmpty()) {
                 log.warn(
-                        "DefaultExtensionMessageDispatcher: 消息 {} (Name: {}, Type: {}) 没有明确的 Extension 目的地，也无法从图配置中确定，无法派发。",
-                        message.getId(), message.getName(), message.getType());
+                    "DefaultExtensionMessageDispatcher: 消息 {} (Name: {}, Type: {}) 没有明确的 Extension "
+                        + "目的地，也无法从图配置中确定，无法派发。",
+                    message.getId(), message.getName(), message.getType());
                 return;
             }
         }
@@ -58,9 +59,10 @@ public class DefaultExtensionMessageDispatcher implements ExtensionMessageDispat
         for (Location targetLocation : targetLocations) {
             // 确保目的地是当前 Engine 内部的 Extension
             if (!targetLocation.getGraphId().equals(
-                    engineExtensionContext.getEngine().getGraphDefinition().getGraphId())) {
-                log.warn("DefaultExtensionMessageDispatcher: 消息 {} (Name: {}) 的目的地 {} 不属于当前 Engine {}，跳过内部派发。",
-                        message.getId(), message.getName(), targetLocation, engineId);
+                engineExtensionContext.getEngine().getGraphDefinition().getGraphId())) {
+                log.warn(
+                    "DefaultExtensionMessageDispatcher: 消息 {} (Name: {}) 的目的地 {} 不属于当前 Engine {}，跳过内部派发。",
+                    message.getId(), message.getName(), targetLocation, engineId);
                 continue;
             }
 
@@ -77,7 +79,7 @@ public class DefaultExtensionMessageDispatcher implements ExtensionMessageDispat
                     finalMessageToSend.setDestLocs(Collections.singletonList(targetLocation));
                 } catch (CloneNotSupportedException e) {
                     log.error("DefaultExtensionMessageDispatcher: 克隆消息 {} (Name: {}) 失败，无法发送到多个目的地: {}",
-                            message.getId(), message.getName(), e.getMessage());
+                        message.getId(), message.getName(), e.getMessage());
                     continue;
                 }
             }
@@ -87,18 +89,18 @@ public class DefaultExtensionMessageDispatcher implements ExtensionMessageDispat
                 // 否则，保持原始行为，由 engineExtensionContext 内部处理
                 // 这里已经将 targetLocations 明确为单目的地或通过 clone 确保了这一点
                 engineExtensionContext.dispatchMessageToExtension(finalMessageToSend,
-                        targetLocation.getExtensionName());
+                    targetLocation.getExtensionName());
             } catch (Exception e) {
                 log.error("DefaultExtensionMessageDispatcher: 派发消息 {} (Name: {}) 到 Extension {} 失败: {}",
-                        message.getId(), message.getName(), targetLocation.getExtensionName(), e.getMessage(), e);
+                    message.getId(), message.getName(), targetLocation.getExtensionName(), e.getMessage(), e);
                 // 对于命令，如果派发失败，应该使对应的 CompletableFuture 失败
                 // 这部分逻辑现在也主要由 Engine.processMessage 负责，这里作为兜底。
                 if (message instanceof Command command) { // 修正：改回 Command 类型
-                    long commandId = Long.parseLong(command.getId()); // 修正：使用 command.getId()
+                    String commandId = command.getId(); // 修正：使用 command.getId()
                     if (commandFutures.containsKey(commandId)) {
                         commandFutures.get(commandId).completeExceptionally(
-                                new RuntimeException(
-                                        "Failed to dispatch command to extension: %s".formatted(e.getMessage())));
+                            new RuntimeException(
+                                "Failed to dispatch command to extension: %s".formatted(e.getMessage())));
                         commandFutures.remove(commandId);
                     }
                 }
@@ -123,8 +125,9 @@ public class DefaultExtensionMessageDispatcher implements ExtensionMessageDispat
         // 1. 获取消息的源 Extension 名称
         String sourceExtensionName = message.getSrcLoc() != null ? message.getSrcLoc().getExtensionName() : null;
         if (sourceExtensionName == null) {
-            log.warn("DefaultExtensionMessageDispatcher: 消息 {} (Name: {}, Type: {}) 没有源 Extension，无法从图配置中确定目的地。",
-                    message.getId(), message.getName(), message.getType());
+            log.warn(
+                "DefaultExtensionMessageDispatcher: 消息 {} (Name: {}, Type: {}) 没有源 Extension，无法从图配置中确定目的地。",
+                message.getId(), message.getName(), message.getType());
             return Collections.emptyList();
         }
 
@@ -132,8 +135,8 @@ public class DefaultExtensionMessageDispatcher implements ExtensionMessageDispat
         ExtensionInfo sourceExtInfo = engineExtensionContext.getExtensionInfo(sourceExtensionName);
         if (sourceExtInfo == null || sourceExtInfo.getMsgDestInfo() == null) {
             log.warn(
-                    "DefaultExtensionMessageDispatcher: 未找到源 Extension {} 的消息目的地信息 (AllMessageDestInfo) 或 ExtensionInfo。",
-                    sourceExtensionName);
+                "DefaultExtensionMessageDispatcher: 未找到源 Extension {} 的消息目的地信息 (AllMessageDestInfo) 或 ExtensionInfo。",
+                sourceExtensionName);
             return Collections.emptyList();
         }
 
@@ -154,13 +157,13 @@ public class DefaultExtensionMessageDispatcher implements ExtensionMessageDispat
                 break;
             default:
                 log.debug("DefaultExtensionMessageDispatcher: 消息类型 {} 不需要通过图配置进行路由。",
-                        message.getType());
+                    message.getType());
                 return Collections.emptyList();
         }
 
         if (rules == null || rules.isEmpty()) {
             log.debug("DefaultExtensionMessageDispatcher: 源 Extension {} 没有为消息类型 {} 配置路由规则。",
-                    sourceExtensionName, message.getType());
+                sourceExtensionName, message.getType());
             return Collections.emptyList();
         }
 
@@ -173,7 +176,7 @@ public class DefaultExtensionMessageDispatcher implements ExtensionMessageDispat
             // 消息名称匹配：如果规则定义了名称，则消息的名称必须与规则名称匹配。
             // 否则，如果规则名称为 null，则视为匹配成功（不进行名称过滤）。
             boolean nameMatches = rule.getName() == null
-                    || message.getName() != null && rule.getName().equals(message.getName());
+                || message.getName() != null && rule.getName().equals(message.getName());
 
             if (nameMatches && rule.getDestinations() != null) { // 修正：getDest() -> getDestinations()
                 for (DestinationInfo destInfo : rule.getDestinations()) { // 修正：getDest() -> getDestinations()
@@ -185,13 +188,13 @@ public class DefaultExtensionMessageDispatcher implements ExtensionMessageDispat
                         determinedLocations.add(new Location(appUri, graphId, targetExtensionName));
                     } else {
                         log.warn("DefaultExtensionMessageDispatcher: 路由规则中目的地 Extension 名称为空，规则: {}",
-                                rule);
+                            rule);
                     }
                 }
             }
         }
         log.debug("DefaultExtensionMessageDispatcher: 根据图配置为消息 {} (Name: {}, Type: {}) 确定了 {} 个目的地。",
-                message.getId(), message.getName(), message.getType(), determinedLocations.size());
+            message.getId(), message.getName(), message.getType(), determinedLocations.size());
         return determinedLocations;
     }
 }

@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 import com.alibaba.dashscope.common.Message;
 import com.alibaba.dashscope.common.Role;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import io.reactivex.disposables.Disposable;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +22,6 @@ import source.hanger.core.message.MessageType;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.message.command.GenericCommand;
 import source.hanger.core.tenenv.TenEnv;
-import source.hanger.core.util.QueueAgent;
 
 /**
  * 简单的LLM扩展示例，用于演示如何处理不同类型的消息。
@@ -32,24 +31,18 @@ public class QwenLLMExtension extends BaseLLMExtension {
 
     private static final Pattern PUNCTUATION_PATTERN = Pattern.compile("[,，;；:：.!?。！？]");
     private final List<Map<String, Object>> history = new CopyOnWriteArrayList<>();
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final List<Disposable> disposables = new CopyOnWriteArrayList<>();
     private QwenLlmClient qwenLlmClient;
-    private String model;
-    private String apiKey;
     private String prompt;
     private int maxHistory = 20; // Default from Python
-
-    public QwenLLMExtension() {
-        super();
-    }
 
     @Override
     public void onConfigure(TenEnv env, Map<String, Object> properties) {
         super.onConfigure(env, properties);
         log.info("[qwen_llm] Extension configuring: {}", env.getExtensionName());
 
-        apiKey = (String)properties.get("api_key");
-        model = (String)properties.get("model");
+        String apiKey = (String)properties.get("api_key");
+        String model = (String)properties.get("model");
         prompt = (String)properties.get("prompt");
         if (properties.containsKey("max_memory_length")) {
             maxHistory = (int)properties.get("max_memory_length");
@@ -125,30 +118,22 @@ public class QwenLLMExtension extends BaseLLMExtension {
     }
 
     @Override
+    public void flushInputItems(TenEnv env, Command command) {
+        super.flushInputItems(env, command);
+        disposables.forEach(Disposable::dispose);
+        // 发送 CMD_OUT_FLUSH 命令作为响应
+        Command flushCommand = GenericCommand.create(ExtensionConstants.CMD_IN_FLUSH, command.getId(),
+            command.getType());
+        env.sendCmd(flushCommand);
+        log.debug("[qwen_llm] Sent CMD_OUT_FLUSH in response to CMD_IN_FLUSH.");
+    }
+
+    @Override
     public void onCmd(TenEnv env, Command command) {
-        super.onCmd(env, command);
         String cmdName = command.getName();
         log.info("[qwen_llm] Received command: {}", cmdName);
 
         switch (cmdName) {
-            case ExtensionConstants.CMD_IN_FLUSH:
-                // 响应中断：停止当前任务，清空队列
-                interrupted.set(true); // 假设 BaseExtension 提供了 interrupted 标志
-                dataMessageProcessor.shutdown();
-                this.dataMessageProcessor = QueueAgent.create();
-                this.dataMessageProcessor.subscribe(createDataMessageConsumer());
-                this.dataMessageProcessor.start();
-                log.info("[qwen_llm] Handled flush command, queue reset.");
-
-                // 发送 CMD_OUT_FLUSH 命令作为响应
-                Command flushCommand = GenericCommand.create(ExtensionConstants.CMD_IN_FLUSH, command.getId(),
-                    command.getType());
-                env.sendCmd(flushCommand);
-                log.debug("[qwen_llm] Sent CMD_OUT_FLUSH in response to CMD_IN_FLUSH.");
-
-                CommandResult cmdResult = CommandResult.success(command, "LLM input flushed.");
-                env.sendResult(cmdResult);
-                break;
             case ExtensionConstants.CMD_IN_ON_USER_JOINED:
                 // 处理用户加入事件（如果需要）
                 // Python实现中这里会发送 greeting 消息，Java版本目前只返回OK
@@ -248,7 +233,7 @@ public class QwenLLMExtension extends BaseLLMExtension {
 
         log.info("[qwen_llm] Calling LLM with {} messages.", llmMessages.size());
 
-        qwenLlmClient.streamChatCompletion(llmMessages, new QwenLlmStreamCallback() {
+        Disposable disposable = qwenLlmClient.streamChatCompletion(llmMessages, new QwenLlmStreamCallback() {
             private final StringBuilder accumulatedContent = new StringBuilder();
             private String sentenceFragment = "";
 
@@ -258,6 +243,7 @@ public class QwenLLMExtension extends BaseLLMExtension {
                     SentenceParsingResult parsingResult = parseSentences(sentenceFragment, text);
                     for (String sentence : parsingResult.getSentences()) {
                         sendTextOutput(env, sentence, false);
+                        log.info("LLM文本输出: extensionName={}, sentence={}", env.getExtensionName(), sentence);
                     }
                     sentenceFragment = parsingResult.getRemainingFragment();
                     accumulatedContent.append(text);
@@ -293,6 +279,7 @@ public class QwenLLMExtension extends BaseLLMExtension {
                 sendTextOutput(env, "", true);
             }
         });
+        disposables.add(disposable);
     }
 
     /**

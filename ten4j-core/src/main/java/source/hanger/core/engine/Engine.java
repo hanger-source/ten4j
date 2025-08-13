@@ -62,7 +62,8 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
     private final App app; // 引用所属的 App 实例
     @Getter
     private final TenEnvProxy<EngineEnvImpl> engineEnvProxy; // 新增：Engine 自身的 TenEnvProxy 实例
-    private final ConcurrentMap<Long, CompletableFuture<CommandResult>> commandFutures; // Engine 自身的 CompletableFuture
+    private final ConcurrentMap<String, CompletableFuture<CommandResult>> commandFutures;
+    // Engine 自身的 CompletableFuture
     // 映射
     private volatile boolean isReadyToHandleMsg = false;
     private volatile boolean isClosing = false;
@@ -129,8 +130,8 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
     @Override
     public int doWork() throws Exception {
         // 从输入队列中排水并处理消息
-        return inMsgs.drain(queuedMessage -> {
-            processMessage(queuedMessage.message(), queuedMessage.connection()); // 传递 message 和 connection
+        return inMsgs.drain(message -> {
+            processMessage(message.message(), message.connection()); // 传递 message 和 connection
         });
     }
 
@@ -367,8 +368,6 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
                     submitCommandResult(CommandResult.fail(command.getId(), command.getType(), command.getName(),
                         "Unknown Engine command type or no handler registered: %s".formatted(
                             command.getType()))); // Changed
-                    // to
-                    // submitCommandResult
                 }
             } else if (graphId.equals(destLoc.getGraphId())) {
                 // 目标是当前 Engine 内部的 Extension
@@ -379,6 +378,8 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
                 // 没有目的地，无法处理
                 submitCommandResult(CommandResult.fail(command, "Command has no destination.")); // Changed to
             }
+        } else if (command.getDestLocs() == null) {
+            messageDispatcher.dispatchMessage(command);
         } else {
             // 没有目的地，无法处理
             log.warn("Engine {}: 命令 {} 没有目的地 Location，无法处理。", graphId, command.getId());
@@ -499,13 +500,13 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
         String originalCommandId = commandResult.getOriginalCommandId();
         // 这里的 CompletableFuture<Object> 应该与 C 端 ten_cmd_t 预期返回的类型对齐
         // 而不是固定为 CommandResult
-        CompletableFuture<CommandResult> future = commandFutures.remove(Long.parseLong(originalCommandId));
+        CompletableFuture<CommandResult> future = commandFutures.remove(originalCommandId);
         if (future != null) {
             if (commandResult.getStatusCode() == StatusCode.OK) { // 修改比较方式
                 future.complete(commandResult);
             } else {
                 future.completeExceptionally(new RuntimeException(
-                    "Command failed with status: %d, Detail: %s".formatted(commandResult.getStatusCode(),
+                    "Command failed with status: %d, Detail: %s".formatted(commandResult.getStatusCode().getValue(),
                         commandResult.getDetail())));
             }
         } else {
@@ -546,13 +547,18 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
         if (runloop.isNotCurrentThread()) {
             runloop.postTask(() -> {
                 // 将 CompletableFuture 放入 commandFutures 映射
-                commandFutures.put(Long.parseLong(command.getId()), future);
+                try {
+                    commandFutures.put(command.getId(), future);
+                } catch (Throwable throwable) {
+                    log.warn("Engine {}: 尝试提交命令 {}，但无法将 CompletableFuture 放入 commandFutures 映射。",
+                        graphId, command.getId(), throwable);
+                }
                 // 提交命令到消息队列，这里因为命令是内部生成，所以 connection 为 null
                 submitInboundMessage(command, null); // 更新这里
             });
         } else {
             // 如果已经在 Runloop 线程，则直接执行
-            commandFutures.put(Long.parseLong(command.getId()), future);
+            commandFutures.put(command.getId(), future);
             submitInboundMessage(command, null); // 更新这里
         }
         return future;

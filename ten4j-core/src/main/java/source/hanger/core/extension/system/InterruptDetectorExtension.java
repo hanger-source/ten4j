@@ -54,8 +54,9 @@ public class InterruptDetectorExtension extends BaseExtension {
     private void sendFlushCmd(TenEnv env, String originalCommandId, String parentCommandId) {
         // Use GenericCommand.create for flush command
         GenericCommand flushCmd = GenericCommand.create(CMD_NAME_FLUSH, originalCommandId);
-        env.sendCmd(flushCmd);
-        log.info("[InterruptDetector] Sent flush command to downstream. OriginalCmdId: {}", originalCommandId);
+        env.sendMessage(flushCmd);
+        log.info("[InterruptDetector] Sent flush command to downstream. cmdId {} OriginalCmdId: {}", flushCmd.getId(),
+            originalCommandId);
     }
 
     @Override

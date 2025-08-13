@@ -1,17 +1,16 @@
 package source.hanger.core.extension.qwen.tts;
 
 import java.util.Base64;
+import java.util.Objects;
 
 import com.alibaba.dashscope.aigc.multimodalconversation.AudioParameters;
 import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversation;
 import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationParam;
-import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationResult;
-import com.alibaba.dashscope.exception.ApiException;
 import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.exception.UploadFileException;
-import com.alibaba.dashscope.utils.JsonUtils;
 
 import io.reactivex.Flowable;
+import io.reactivex.schedulers.Schedulers;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -34,41 +33,38 @@ public class QwenTtsClient {
      *
      * @param text      要转换的文本
      * @param voiceName 语音名称 (例如: AudioParameters.Voice.CHERRY)
-     * @param callback  TTS 流式回调接口
      */
-    public void streamTextToSpeech(String text, String voiceName, QwenTtsStreamCallback callback) {
+    public Flowable<byte[]> streamTextToSpeech(String text, String voiceName) {
+        AudioParameters.Voice voice = AudioParameters.Voice.valueOf(voiceName.toUpperCase());
+
+        MultiModalConversationParam param = MultiModalConversationParam.builder()
+            .model(MODEL)
+            .apiKey(apiKey)
+            .text(text)
+            .voice(voice)
+            .build();
+
         try {
-            AudioParameters.Voice voice = AudioParameters.Voice.valueOf(voiceName.toUpperCase()); // 转换为枚举
-
-            MultiModalConversationParam param = MultiModalConversationParam.builder()
-                .model(MODEL)
-                .apiKey(apiKey)
-                .text(text)
-                .voice(voice)
-                .build();
-
-            Flowable<MultiModalConversationResult> resultFlowable = multiModalConversation.streamCall(param);
-
-            resultFlowable.blockingForEach(r -> {
-                log.debug("DashScope TTS Stream Result: {}", JsonUtils.toJson(r));
-                if (r.getOutput() != null && r.getOutput().getAudio() != null) {
-                    // 音频数据是 base64 编码的 String，需要解码为 byte[]
-                    callback.onAudioReceived(Base64.getDecoder().decode(r.getOutput().getAudio().getData()));
-                }
-                if (r.getOutput() != null && r.getOutput().getFinishReason() != null) {
-                    callback.onComplete();
-                }
-            });
-
-        } catch (ApiException | NoApiKeyException | UploadFileException e) {
-            log.error("DashScope TTS 流式调用异常: {}", e.getMessage(), e);
-            callback.onError(e);
-        } catch (IllegalArgumentException e) {
-            log.error("TTS语音名称无效: {}", voiceName, e);
-            callback.onError(new RuntimeException("无效的TTS语音名称: %s".formatted(voiceName), e));
-        } catch (Exception e) {
-            log.error("DashScope TTS 流式调用未知异常: {}", e.getMessage(), e);
-            callback.onError(e);
+            return multiModalConversation.streamCall(param)
+                .subscribeOn(Schedulers.io())  // 指定上游执行线程
+                .observeOn(Schedulers.io())    // 指定下游执行线程
+                .map(r -> {
+                    if (r.getOutput() != null && r.getOutput().getAudio() != null) {
+                        return Base64.getDecoder().decode(r.getOutput().getAudio().getData());
+                    } else {
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .takeUntil(r -> {
+                    // 结束条件，检测finishReason不为null表示结束
+                    // 由于map后流的是byte[]，这里无法检测finishReason，可以改为doOnNext里检测状态，或者用flatMap做拆分
+                    // 简化示例，暂时不实现结束控制，需要上游控制
+                    return false;
+                });
+        } catch (NoApiKeyException | UploadFileException e) {
+            return Flowable.error(e);
         }
     }
+
 }

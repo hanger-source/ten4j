@@ -10,10 +10,10 @@ public final class ExtensionConstants {
 
     // TTS 相关的常量
     public static final String DATA_TRANSCRIPT_NAME = "text_data";
-    public static final String CMD_OUT_FLUSH = "out_flush";
     public static final String DATA_IN_PROPERTY_QUIET = "quiet";
 
-    public static final String CMD_IN_FLUSH = "flush"; // ADDED: For InterruptDetectorExtension
+    public static final String CMD_IN_FLUSH = "flush";
+    public static final String CMD_OUT_FLUSH = "flush";
 
     public static final String CMD_IN_ON_USER_JOINED = "in_on_user_joined";
     public static final String CMD_IN_ON_USER_LEFT = "in_on_user_left";

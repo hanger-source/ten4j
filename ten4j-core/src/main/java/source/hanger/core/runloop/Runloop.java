@@ -1,6 +1,8 @@
 package source.hanger.core.runloop;
 
+import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -38,6 +40,8 @@ public class Runloop {
     private final LoopAgent coreAgent;
     private final int internalTaskBatchSize;
     private final ThreadLocal<Runloop> currentRunloopThreadLocal = new ThreadLocal<>();
+    private final List<Runnable> tasks;
+
     /**
      * 单一虚拟线程 保证队列消费顺序
      */
@@ -57,6 +61,7 @@ public class Runloop {
         this.internalTaskBatchSize = Math.max(1, batchSize);
         this.workAgent = workAgent;
         this.coreAgent = new LoopAgent(name);
+        tasks = new CopyOnWriteArrayList<>();
         this.virtualThreadExecutor = Executors
             .newSingleThreadExecutor(Thread.ofVirtual().name("Runloop-%s-vt".formatted(name), 0).factory());
     }
@@ -191,6 +196,10 @@ public class Runloop {
         return (cap < requestedCapacity) ? cap << 1 : cap;
     }
 
+    public void registerTask(Runnable task) {
+        tasks.add(task);
+    }
+
     private class LoopAgent implements Agent {
         private final String name;
 
@@ -213,12 +222,16 @@ public class Runloop {
                 safeRun(r);
                 workDone++;
             }
+            for (Runnable task : tasks) {
+                task.run();
+                workDone++;
+            }
             // 调用外部 workAgent
             if (workAgent != null) {
                 try {
                     workDone += workAgent.doWork();
                 } catch (Throwable e) {
-                    log.error("WorkAgent error", e);
+                    log.error("WorkAgent {} error", name, e);
                 }
             }
             return workDone;

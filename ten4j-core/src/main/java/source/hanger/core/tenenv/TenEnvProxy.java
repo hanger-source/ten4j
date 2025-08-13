@@ -3,7 +3,9 @@ package source.hanger.core.tenenv;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.app.AppEnvImpl;
+import source.hanger.core.connection.Connection;
 import source.hanger.core.engine.EngineEnvImpl;
 import source.hanger.core.engine.MessageSubmitter;
 import source.hanger.core.extension.Extension;
@@ -15,17 +17,15 @@ import source.hanger.core.message.Message;
 import source.hanger.core.message.VideoFrameMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.runloop.Runloop;
-import source.hanger.core.connection.Connection;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * @param targetEnv Renamed method Renamed to targetEnv, type is TenEnv
  */
 @Slf4j
 public record TenEnvProxy<T extends TenEnv>(
-        Runloop targetRunloop,
-        T targetEnv,
-        String signature) implements TenEnv, MessageSubmitter {
+    Runloop targetRunloop,
+    T targetEnv,
+    String signature) implements TenEnv, MessageSubmitter {
 
     /**
      * 提交一个任务到代理的目标 Runloop。
@@ -40,22 +40,22 @@ public record TenEnvProxy<T extends TenEnv>(
 
     // Proxy methods, delegating to targetEnv
     @Override
-    public CompletableFuture<CommandResult> sendCmd(Command command) {
+    public CompletableFuture<CommandResult> sendAsyncCmd(Command command) {
         CompletableFuture<CommandResult> future = new CompletableFuture<>();
         targetRunloop.postTask(() -> {
             try {
                 // TenEnvProxy 始终委托给 targetEnv 的 sendCmd 方法。
                 // 无论是 AppEnvImpl、EngineEnvImpl 还是 ExtensionEnvImpl，其 sendCmd 都是出站命令。
-                targetEnv.sendCmd(command)
-                        .whenComplete((result, throwable) -> {
-                            targetRunloop.postTask(() -> {
-                                if (throwable != null) {
-                                    future.completeExceptionally(throwable);
-                                } else {
-                                    future.complete(result);
-                                }
-                            });
+                targetEnv.sendAsyncCmd(command)
+                    .whenComplete((result, throwable) -> {
+                        targetRunloop.postTask(() -> {
+                            if (throwable != null) {
+                                future.completeExceptionally(throwable);
+                            } else {
+                                future.complete(result);
+                            }
                         });
+                    });
             } catch (Exception e) {
                 future.completeExceptionally(e);
             }
@@ -83,7 +83,7 @@ public record TenEnvProxy<T extends TenEnv>(
                 targetEnv.sendResult(commandResult);
             } catch (Exception e) {
                 log.error("Failed to proxy sendResult to {}: {}. CommandResult {} dropped.",
-                        signature, e.getMessage(), commandResult, e);
+                    signature, e.getMessage(), commandResult, e);
             }
         });
     }
@@ -227,7 +227,8 @@ public record TenEnvProxy<T extends TenEnv>(
             // 委托给 ExtensionEnvImpl 关联的 EngineExtensionContext 所持有的 Engine
             return extensionEnv.getExtensionContext().getEngine().submitInboundMessage(message, null);
         }
-        log.warn("TenEnvProxy {}: 无法处理 submitInboundMessage，未知目标环境类型: {}", signature, targetEnv.getClass().getName());
+        log.warn("TenEnvProxy {}: 无法处理 submitInboundMessage，未知目标环境类型: {}", signature,
+            targetEnv.getClass().getName());
         return false;
     }
 }

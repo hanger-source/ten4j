@@ -59,7 +59,7 @@ public class ExtensionEnvImpl implements TenEnv {
     }
 
     @Override
-    public CompletableFuture<CommandResult> sendCmd(Command command) {
+    public CompletableFuture<CommandResult> sendAsyncCmd(Command command) {
         // Extension 发送命令，通过 commandSubmitter 委托给 Engine 处理
         if (commandSubmitter != null) {
             return commandSubmitter.submitCommandFromExtension(command, extensionName);

@@ -3,7 +3,6 @@ package source.hanger.core.tenenv;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import source.hanger.core.graph.GraphConfig;
 import source.hanger.core.extension.Extension;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
@@ -27,7 +26,11 @@ public interface TenEnv {
     void postTask(Runnable task);
 
     // region 消息发送方法（从当前 TenEnv 向外发送）
-    CompletableFuture<CommandResult> sendCmd(Command command);
+    CompletableFuture<CommandResult> sendAsyncCmd(Command command);
+
+    default void sendCmd(Command command) {
+        sendMessage(command);
+    }
 
     void sendResult(CommandResult result);
 

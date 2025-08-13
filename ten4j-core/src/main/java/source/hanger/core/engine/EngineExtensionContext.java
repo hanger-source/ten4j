@@ -518,7 +518,7 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
     @Override
     public CompletableFuture<CommandResult> submitCommandFromExtension(Command command, String sourceExtensionName) {
         // 命令从 Extension 提交，委托给 Engine 的 commandSubmitter
-        log.debug("ExtensionContext: Extension {} 提交命令 {} 到 Engine。", sourceExtensionName, command.getId());
+        log.info("ExtensionContext: Extension {} 提交命令 {} 到 Engine。", sourceExtensionName, command.getId());
         // 修改 srcLoc 以反映真实的真实来源 Extension
         if (command.getSrcLoc() == null) {
             command.setSrcLoc(new Location(app.getAppUri(), engine.getGraphId(), sourceExtensionName));

@@ -62,6 +62,8 @@ public class ClientConnectionExtension extends BaseExtension {
         if (env.getAppUri().equals(command.getSrcLoc().getAppUri())) {
             clientAppUri = command.getSrcLoc().getAppUri();
         }
+        routeLocation(env, command);
+        env.sendCmd(command);
     }
 
     @Override
