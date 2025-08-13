@@ -11,6 +11,7 @@ import source.hanger.core.extension.system.ExtensionConstants;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
+import source.hanger.core.message.Message;
 import source.hanger.core.message.MessageType;
 import source.hanger.core.message.VideoFrameMessage;
 import source.hanger.core.message.command.Command;
@@ -112,13 +113,13 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
             return;
         }
         // onRequestLLM 现在返回 Flowable<GenerationResult>
-        streamProcessor.onNext(onRequestLLM(env, data));
+        streamProcessor.onNext(new StreamPayload<>(onRequestLLM(env, data), data));
     }
 
     @Override
-    protected void handleStreamItem(GenerationResult item, TenEnv env) {
+    protected void handleStreamItem(GenerationResult item, Message originalMessage, TenEnv env) {
         // 交给子类处理原始的 GenerationResult
-        processLlmGenerationResult(item, env);
+        processLlmGenerationResult(item, originalMessage, env);
     }
 
     @Override
@@ -183,13 +184,15 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
         flushInputItems(env, command);
     }
 
-    protected void sendTextOutput(TenEnv env, String text, boolean endOfSegment) {
+    protected void sendTextOutput(TenEnv env, Message originalMessage, String text, boolean endOfSegment) {
         try {
             DataMessage outputData = DataMessage.create(ExtensionConstants.LLM_DATA_OUT_NAME);
+            outputData.setId(originalMessage.getId()); // 使用原始消息的ID
             outputData.setProperty(ExtensionConstants.DATA_OUT_PROPERTY_TEXT, text);
             outputData.setProperty("role", "assistant");
             outputData.setProperty(ExtensionConstants.DATA_OUT_PROPERTY_END_OF_SEGMENT, endOfSegment);
             outputData.setProperty("extension_name", env.getExtensionName());
+            outputData.setProperty("group_timestamp", originalMessage.getTimestamp());
 
             env.sendMessage(outputData);
             log.debug("[{}] LLM文本输出发送成功: text={}, endOfSegment={}",
@@ -216,7 +219,7 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
 
     protected abstract Flowable<GenerationResult> onRequestLLM(TenEnv env, DataMessage data);
 
-    protected abstract void processLlmGenerationResult(GenerationResult result, TenEnv env);
+    protected abstract void processLlmGenerationResult(GenerationResult result, Message originalMessage, TenEnv env);
 
     protected abstract void onCancelLLM(TenEnv env);
 }

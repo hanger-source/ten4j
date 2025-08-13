@@ -6,6 +6,7 @@ import source.hanger.core.extension.system.BaseFlushExtension;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
+import source.hanger.core.message.Message;
 import source.hanger.core.message.MessageType;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
@@ -65,7 +66,7 @@ public abstract class BaseTTSExtension extends BaseFlushExtension<byte[]> {
         if (audioFlow != null) {
             log.debug("[{}] 推送新音频流到streamProcessor, dataId={}", env.getExtensionName(),
                 data.getId());
-            streamProcessor.onNext(audioFlow);
+            streamProcessor.onNext(new StreamPayload<>(audioFlow, data));
         }
     }
 
@@ -73,9 +74,9 @@ public abstract class BaseTTSExtension extends BaseFlushExtension<byte[]> {
      * 发送音频数据块，子类可重写实现具体发送逻辑
      */
     @Override
-    protected void handleStreamItem(byte[] audioData, TenEnv env) {
+    protected void handleStreamItem(byte[] audioData, Message originalMessage, TenEnv env) {
         // 默认示例实现，具体发送音频帧
-        sendAudioOutput(env, audioData, 24000, 2, 1);
+        sendAudioOutput(env, originalMessage, audioData, 24000, 2, 1);
     }
 
     /**
@@ -100,17 +101,19 @@ public abstract class BaseTTSExtension extends BaseFlushExtension<byte[]> {
     }
 
     // 发送音频帧
-    protected void sendAudioOutput(TenEnv env, byte[] audioData, int sampleRate, int bytesPerSample,
+    protected void sendAudioOutput(TenEnv env, Message originalMessage, byte[] audioData,
+        int sampleRate, int bytesPerSample,
         int numberOfChannels) {
         try {
             AudioFrameMessage audioFrame = AudioFrameMessage.create("audio_frame");
-            audioFrame.setId(MessageUtils.generateUniqueId());
+            audioFrame.setId(originalMessage.getId()); // 使用原始消息的ID
             audioFrame.setSampleRate(sampleRate);
             audioFrame.setBytesPerSample(bytesPerSample);
             audioFrame.setNumberOfChannel(numberOfChannels);
             audioFrame.setSamplesPerChannel(audioData.length / (bytesPerSample * numberOfChannels));
             audioFrame.setBuf(audioData);
             audioFrame.setType(MessageType.AUDIO_FRAME);
+            audioFrame.setProperty("message_timestamp", originalMessage.getTimestamp());
             env.sendMessage(audioFrame);
             log.debug("[{}] 发送音频帧成功: size={}", env.getExtensionName(), audioData.length);
         } catch (Exception e) {
