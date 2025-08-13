@@ -119,6 +119,7 @@ public abstract class BaseTTSExtension extends BaseFlushExtension<byte[]> {
             audioFrame.setBuf(audioData);
             audioFrame.setType(MessageType.AUDIO_FRAME);
             // 取llm留下来的group_timestamp 也就是llm一组回复
+            audioFrame.setProperty("audio_text", originalMessage.getProperty("text"));
             audioFrame.setProperty("group_timestamp", originalMessage.getProperty("group_timestamp"));
             env.sendMessage(audioFrame);
             log.debug("[{}] 发送音频帧成功: size={}", env.getExtensionName(), audioData.length);

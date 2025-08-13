@@ -28,6 +28,8 @@ import source.hanger.core.tenenv.TenEnv;
 @Slf4j
 public abstract class BaseExtension implements Extension {
 
+    protected volatile boolean isRunning = false; // Moved from BaseFlushExtension
+
     private final AtomicLong inboundMessageCounter = new AtomicLong(0);
     private final AtomicLong outboundMessageCounter = new AtomicLong(0);
     private final AtomicLong totalCommandReceived = new AtomicLong(0);
@@ -59,11 +61,13 @@ public abstract class BaseExtension implements Extension {
     @Override
     public void onStart(TenEnv env) {
         log.info("[{}] Extension启动阶段", env.getExtensionName());
+        this.isRunning = true;
     }
 
     @Override
     public void onStop(TenEnv env) {
         log.info("[{}] Extension停止阶段", env.getExtensionName());
+        this.isRunning = false;
     }
 
     @Override
@@ -80,16 +84,16 @@ public abstract class BaseExtension implements Extension {
     public void onCmd(TenEnv env, Command command) { // Changed method name and parameter order
         totalCommandReceived.incrementAndGet();
         log.warn("[{}] Extension received unhandled Command: {}. Type: {}. Total received: {}", env.getExtensionName(),
-            command.getId(), command.getType(), totalCommandReceived.get());
+                command.getId(), command.getType(), totalCommandReceived.get());
         errorCounter.incrementAndGet();
         env.postTask(() -> env
-            .sendResult(CommandResult.fail(command, "Extension does not support this command.")));
+                .sendResult(CommandResult.fail(command, "Extension does not support this command.")));
     }
 
     @Override
     public void onCmdResult(TenEnv env, CommandResult commandResult) { // Changed method name and parameter order
         log.warn("[{}] Extension received unhandled CommandResult: {}. OriginalCommandId: {}", env.getExtensionName(),
-            commandResult.getId(), commandResult.getOriginalCommandId());
+                commandResult.getId(), commandResult.getOriginalCommandId());
         errorCounter.incrementAndGet(); // Increment error count for unhandled command results
     }
 
@@ -97,8 +101,8 @@ public abstract class BaseExtension implements Extension {
     public void onDataMessage(TenEnv env, DataMessage dataMessage) { // Changed parameter order
         inboundMessageCounter.incrementAndGet();
         log.warn("[{}] Extension received unhandled DataMessage: {}. Type: {}. Total received: {}",
-            env.getExtensionName(),
-            dataMessage.getId(), dataMessage.getType(), inboundMessageCounter.get());
+                env.getExtensionName(),
+                dataMessage.getId(), dataMessage.getType(), inboundMessageCounter.get());
         errorCounter.incrementAndGet(); // Increment error count for unhandled data messages
     }
 
@@ -106,8 +110,8 @@ public abstract class BaseExtension implements Extension {
     public void onAudioFrame(TenEnv env, AudioFrameMessage audioFrame) { // Changed parameter order
         inboundMessageCounter.incrementAndGet();
         log.warn("[{}] Extension received unhandled AudioFrameMessage: {}. Type: {}. Total received: {}",
-            env.getExtensionName(),
-            audioFrame.getId(), audioFrame.getType(), inboundMessageCounter.get());
+                env.getExtensionName(),
+                audioFrame.getId(), audioFrame.getType(), inboundMessageCounter.get());
         errorCounter.incrementAndGet(); // Increment error count for unhandled audio frames
     }
 
@@ -115,8 +119,8 @@ public abstract class BaseExtension implements Extension {
     public void onVideoFrame(TenEnv env, VideoFrameMessage videoFrame) { // Changed parameter order
         inboundMessageCounter.incrementAndGet();
         log.warn("[{}] Extension received unhandled VideoFrameMessage: {}. Type: {}. Total received: {}",
-            env.getExtensionName(),
-            videoFrame.getId(), videoFrame.getType(), inboundMessageCounter.get());
+                env.getExtensionName(),
+                videoFrame.getId(), videoFrame.getType(), inboundMessageCounter.get());
         errorCounter.incrementAndGet(); // Increment error count for unhandled video frames
     }
 
@@ -128,11 +132,11 @@ public abstract class BaseExtension implements Extension {
         } else {
             currentMap.computeIfAbsent(currentKey, k -> new ConcurrentHashMap<>());
             if (currentMap.get(currentKey) instanceof Map) {
-                setPropertyInternal((Map<String, Object>)currentMap.get(currentKey), parts[1], value);
+                setPropertyInternal((Map<String, Object>) currentMap.get(currentKey), parts[1], value);
             } else {
                 // 如果中间节点不是Map，则抛出异常或覆盖
                 throw new IllegalArgumentException(
-                    "Cannot set property: intermediate path '%s' is not a map.".formatted(currentKey));
+                        "Cannot set property: intermediate path '%s' is not a map.".formatted(currentKey));
             }
         }
     }
@@ -149,7 +153,7 @@ public abstract class BaseExtension implements Extension {
         } else {
             Object value = currentMap.get(currentKey);
             if (value instanceof Map) {
-                deletePropertyInternal((Map<String, Object>)value, parts[1]);
+                deletePropertyInternal((Map<String, Object>) value, parts[1]);
             }
         }
     }
@@ -176,5 +180,10 @@ public abstract class BaseExtension implements Extension {
             return env.getExtensionName();
         }
         return "UnknownExtension"; // 或者抛出异常，取决于设计
+    }
+
+    // Getter for isRunning
+    public boolean isRunning() {
+        return isRunning;
     }
 }

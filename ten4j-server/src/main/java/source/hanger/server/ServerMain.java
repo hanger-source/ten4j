@@ -2,8 +2,8 @@ package source.hanger.server;
 
 import java.util.concurrent.TimeUnit;
 
-import source.hanger.core.app.App;
 import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.app.App;
 
 @Slf4j
 public class ServerMain {

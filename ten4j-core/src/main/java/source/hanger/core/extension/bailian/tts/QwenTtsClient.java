@@ -1,4 +1,4 @@
-package source.hanger.core.extension.qwen.tts;
+package source.hanger.core.extension.bailian.tts;
 
 import java.util.Base64;
 import java.util.Objects;

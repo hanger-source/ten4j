@@ -101,8 +101,7 @@ public class InterruptDetectorExtension extends BaseExtension {
 
         if (ExtensionConstants.LLM_DATA_OUT_NAME.equals(data.getName())) { // Check for text_data
             String text = (String)data.getProperty(TEXT_DATA_TEXT_FIELD);
-            //Boolean isFinal = (Boolean)data.getProperty(TEXT_DATA_FINAL_FIELD);
-            Boolean isFinal = true;
+            Boolean isFinal = (Boolean)data.getProperty(TEXT_DATA_FINAL_FIELD);
 
             if (text == null) {
                 text = "";
@@ -116,7 +115,6 @@ public class InterruptDetectorExtension extends BaseExtension {
             if (isFinal || text.length() >= 2) {
                 // For DataMessage, use its own ID as originalCommandId
                 sendFlushCmd(env, data.getId(), null); // parentCommandId is not directly applicable for data messages
-                // originating a flush
             }
         }
 

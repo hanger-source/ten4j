@@ -1,11 +1,10 @@
-package source.hanger.core.extension.qwen.llm;
+package source.hanger.core.extension.bailian.llm;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.regex.Pattern;
 
 import com.alibaba.dashscope.aigc.generation.GenerationResult;
 import com.alibaba.dashscope.common.Message;
@@ -29,7 +28,6 @@ import source.hanger.core.tenenv.TenEnv;
 @Slf4j
 public class QwenLLMExtension extends BaseLLMExtension {
 
-    private static final Pattern PUNCTUATION_PATTERN = Pattern.compile("[,，;；:：.!?。！？]");
     private final List<Map<String, Object>> history = new CopyOnWriteArrayList<>();
     // private final List<Disposable> disposables = new CopyOnWriteArrayList<>();
     private final StringBuilder currentLlmResponse = new StringBuilder(); // 用于累积LLM的完整回复

@@ -18,6 +18,10 @@ import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
 import source.hanger.core.util.MessageUtils;
 
+import static source.hanger.core.extension.system.ExtensionConstants.DATA_OUT_PROPERTY_END_OF_SEGMENT;
+import static source.hanger.core.extension.system.ExtensionConstants.DATA_OUT_PROPERTY_ROLE;
+import static source.hanger.core.extension.system.ExtensionConstants.DATA_OUT_PROPERTY_TEXT;
+
 /**
  * LLM基础抽象类
  * 基于ten-framework AI_BASE的AsyncLLMBaseExtension设计
@@ -193,9 +197,9 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
         try {
             DataMessage outputData = DataMessage.create(ExtensionConstants.LLM_DATA_OUT_NAME);
             outputData.setId(originalMessage.getId()); // 使用原始消息的ID
-            outputData.setProperty(ExtensionConstants.DATA_OUT_PROPERTY_TEXT, text);
-            outputData.setProperty("role", "assistant");
-            outputData.setProperty(ExtensionConstants.DATA_OUT_PROPERTY_END_OF_SEGMENT, endOfSegment);
+            outputData.setProperty(DATA_OUT_PROPERTY_TEXT, text);
+            outputData.setProperty(DATA_OUT_PROPERTY_ROLE, "assistant");
+            outputData.setProperty(DATA_OUT_PROPERTY_END_OF_SEGMENT, endOfSegment);
             outputData.setProperty("extension_name", env.getExtensionName());
             outputData.setProperty("group_timestamp", originalMessage.getTimestamp());
 

@@ -6,6 +6,7 @@ public final class ExtensionConstants {
 
     public static final String LLM_DATA_OUT_NAME = "text_data";
     public static final String DATA_OUT_PROPERTY_TEXT = "text";
+    public static final String DATA_OUT_PROPERTY_ROLE = "role";
     public static final String DATA_OUT_PROPERTY_END_OF_SEGMENT = "end_of_segment";
 
     // TTS 相关的常量

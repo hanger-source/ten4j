@@ -1,4 +1,4 @@
-package source.hanger.core.extension.qwen.tts;
+package source.hanger.core.extension.bailian.tts;
 
 import java.util.Map;
 
@@ -45,13 +45,15 @@ public class QwenTtsExtension extends BaseTTSExtension {
             isQuiet = false; // 默认不静音
         }
 
-        if (inputText == null || inputText.isEmpty()) {
+        // 使用 EmojiManager 过滤掉 inputText 中的 emoji
+        String filteredInputText = EmojiManager.removeAllEmojis(inputText)
+            // 移除换行符和空格
+            .replace("\n", "").strip();
+
+        if (filteredInputText.isEmpty()) {
             log.warn("[qwen_tts] Received empty text for TTS, ignoring.");
             return Flowable.empty();
         }
-
-        // 使用 EmojiManager 过滤掉 inputText 中的 emoji
-        String filteredInputText = EmojiManager.removeAllEmojis(inputText);
 
         log.info("[qwen_tts] Received TTS request for text: \"{}\"", filteredInputText);
 

@@ -1,21 +1,15 @@
-package source.hanger.core.extension.qwen.llm;
+package source.hanger.core.extension.bailian.llm;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
 import com.alibaba.dashscope.aigc.generation.Generation;
 import com.alibaba.dashscope.aigc.generation.GenerationParam;
 import com.alibaba.dashscope.aigc.generation.GenerationResult;
 import com.alibaba.dashscope.common.Message;
-import com.alibaba.dashscope.exception.ApiException;
 import com.alibaba.dashscope.exception.InputRequiredException;
 import com.alibaba.dashscope.exception.NoApiKeyException;
-import com.alibaba.dashscope.utils.JsonUtils;
 
 import io.reactivex.Flowable;
-import io.reactivex.disposables.Disposable;
-import io.reactivex.disposables.Disposables;
-import io.reactivex.schedulers.Schedulers;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -54,12 +48,12 @@ public class QwenLlmClient {
         // cancelCurrentRequest();
 
         GenerationParam param = GenerationParam.builder()
-                .apiKey(apiKey)
-                .model(model)
-                .messages(messages)
-                .resultFormat(GenerationParam.ResultFormat.MESSAGE)
-                .incrementalOutput(true)
-                .build();
+            .apiKey(apiKey)
+            .model(model)
+            .messages(messages)
+            .resultFormat(GenerationParam.ResultFormat.MESSAGE)
+            .incrementalOutput(true)
+            .build();
 
         Flowable<GenerationResult> resultFlowable;
         try {
