@@ -1,23 +1,16 @@
 package source.hanger.core.extension;
 
-import java.util.Collections;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.Getter;
-import lombok.Setter;
-import source.hanger.core.graph.GraphConfig;
+import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
 import source.hanger.core.message.VideoFrameMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * 基础Extension抽象类
@@ -38,19 +31,19 @@ public abstract class BaseExtension implements Extension {
     private final AtomicLong inboundMessageCounter = new AtomicLong(0);
     private final AtomicLong outboundMessageCounter = new AtomicLong(0);
     private final AtomicLong totalCommandReceived = new AtomicLong(0);
-    private final AtomicLong errorCounter = new AtomicLong(0); // Added: for tracking errors
+    private final AtomicLong errorCounter = new AtomicLong(0);
 
     // Removed engine and extensionContext fields as per previous refactoring
     // protected String extensionName;
     // protected String extensionId; // 新增：存储 Extension 的 ID
-    protected TenEnv env; // Change from TenEnvProxy to TenEnv
-    protected Map<String, Object> configuration; // Change to non-final and allow initialization in init
+    protected TenEnv env;
+    protected Map<String, Object> configuration;
 
     @Override
-    public void onConfigure(TenEnv env, Map<String, Object> properties) { // Changed parameter to TenEnv, Map
+    public void onConfigure(TenEnv env, Map<String, Object> properties) {
         this.env = env; // 确保 env 已设置
-        this.configuration = new ConcurrentHashMap<>(properties); // 初始化配置
-        log.info("Extension配置完成: extensionName={}", env.getExtensionName());
+        this.configuration = new ConcurrentHashMap<>(properties);
+        log.info("[{}] Extension配置完成", env.getExtensionName());
         onExtensionConfigure(env);
     }
 
@@ -59,94 +52,72 @@ public abstract class BaseExtension implements Extension {
     }
 
     @Override
-    public void onInit(TenEnv env) { // Changed parameter to TenEnv
-        log.info("Extension初始化阶段: extensionName={}", env.getExtensionName());
+    public void onInit(TenEnv env) {
+        log.info("[{}] Extension初始化阶段", env.getExtensionName());
     }
 
     @Override
-    public void onStart(TenEnv env) { // Changed parameter to TenEnv
-        log.info("Extension启动阶段: extensionName={}", env.getExtensionName());
+    public void onStart(TenEnv env) {
+        log.info("[{}] Extension启动阶段", env.getExtensionName());
     }
 
     @Override
-    public void onStop(TenEnv env) { // Changed parameter to TenEnv
-        log.info("Extension停止阶段: extensionName={}", env.getExtensionName());
+    public void onStop(TenEnv env) {
+        log.info("[{}] Extension停止阶段", env.getExtensionName());
     }
 
     @Override
-    public void onDeinit(TenEnv env) { // Changed parameter to TenEnv
-        log.info("Extension去初始化阶段: extensionName={}", env.getExtensionName());
+    public void onDeinit(TenEnv env) {
+        log.info("[{}] Extension去初始化阶段", env.getExtensionName());
     }
 
     @Override
-    public void destroy(TenEnv env) { // Changed parameter to TenEnv
-        log.info("Extension销毁阶段: extensionName={}", env.getExtensionName());
+    public void destroy(TenEnv env) {
+        log.info("[{}] Extension销毁阶段", env.getExtensionName());
     }
 
     @Override
     public void onCmd(TenEnv env, Command command) { // Changed method name and parameter order
         totalCommandReceived.incrementAndGet();
-        log.warn("Extension {} received unhandled Command: {}. Type: {}. Total received: {}", env.getExtensionName(),
-                command.getId(), command.getType(), totalCommandReceived.get());
-        errorCounter.incrementAndGet(); // Increment error count for unhandled commands
-        // Default implementation: return a failure result for unhandled commands
-        // Ensure this is posted to the TenEnv's runloop
+        log.warn("[{}] Extension received unhandled Command: {}. Type: {}. Total received: {}", env.getExtensionName(),
+            command.getId(), command.getType(), totalCommandReceived.get());
+        errorCounter.incrementAndGet();
         env.postTask(() -> env
-                .sendResult(CommandResult.fail(command, "Extension does not support this command.")));
+            .sendResult(CommandResult.fail(command, "Extension does not support this command.")));
     }
 
     @Override
     public void onCmdResult(TenEnv env, CommandResult commandResult) { // Changed method name and parameter order
-        log.warn("Extension {} received unhandled CommandResult: {}. OriginalCommandId: {}", env.getExtensionName(),
-                commandResult.getId(), commandResult.getOriginalCommandId());
+        log.warn("[{}] Extension received unhandled CommandResult: {}. OriginalCommandId: {}", env.getExtensionName(),
+            commandResult.getId(), commandResult.getOriginalCommandId());
         errorCounter.incrementAndGet(); // Increment error count for unhandled command results
     }
 
     @Override
     public void onDataMessage(TenEnv env, DataMessage dataMessage) { // Changed parameter order
         inboundMessageCounter.incrementAndGet();
-        log.warn("Extension {} received unhandled DataMessage: {}. Type: {}. Total received: {}",
-                env.getExtensionName(),
-                dataMessage.getId(), dataMessage.getType(), inboundMessageCounter.get());
+        log.warn("[{}] Extension received unhandled DataMessage: {}. Type: {}. Total received: {}",
+            env.getExtensionName(),
+            dataMessage.getId(), dataMessage.getType(), inboundMessageCounter.get());
         errorCounter.incrementAndGet(); // Increment error count for unhandled data messages
     }
 
     @Override
     public void onAudioFrame(TenEnv env, AudioFrameMessage audioFrame) { // Changed parameter order
         inboundMessageCounter.incrementAndGet();
-        log.warn("Extension {} received unhandled AudioFrameMessage: {}. Type: {}. Total received: {}",
-                env.getExtensionName(),
-                audioFrame.getId(), audioFrame.getType(), inboundMessageCounter.get());
+        log.warn("[{}] Extension received unhandled AudioFrameMessage: {}. Type: {}. Total received: {}",
+            env.getExtensionName(),
+            audioFrame.getId(), audioFrame.getType(), inboundMessageCounter.get());
         errorCounter.incrementAndGet(); // Increment error count for unhandled audio frames
     }
 
     @Override
     public void onVideoFrame(TenEnv env, VideoFrameMessage videoFrame) { // Changed parameter order
         inboundMessageCounter.incrementAndGet();
-        log.warn("Extension {} received unhandled VideoFrameMessage: {}. Type: {}. Total received: {}",
-                env.getExtensionName(),
-                videoFrame.getId(), videoFrame.getType(), inboundMessageCounter.get());
+        log.warn("[{}] Extension received unhandled VideoFrameMessage: {}. Type: {}. Total received: {}",
+            env.getExtensionName(),
+            videoFrame.getId(), videoFrame.getType(), inboundMessageCounter.get());
         errorCounter.incrementAndGet(); // Increment error count for unhandled video frames
-    }
-
-    // 辅助方法，用于处理嵌套路径 (与 GraphConfig 复制，考虑重构)
-    protected Optional<Object> getPropertyInternal(Map<String, Object> currentMap, String path) {
-        String[] parts = path.split("\\.", 2);
-        String currentKey = parts[0];
-        if (!currentMap.containsKey(currentKey)) {
-            return Optional.empty();
-        }
-
-        Object value = currentMap.get(currentKey);
-        if (parts.length == 1) {
-            return Optional.ofNullable(value);
-        } else {
-            if (value instanceof Map) {
-                return getPropertyInternal((Map<String, Object>) value, parts[1]);
-            } else {
-                return Optional.empty(); // 路径中有嵌套，但当前值不是Map
-            }
-        }
     }
 
     protected void setPropertyInternal(Map<String, Object> currentMap, String path, Object value) {
@@ -157,11 +128,11 @@ public abstract class BaseExtension implements Extension {
         } else {
             currentMap.computeIfAbsent(currentKey, k -> new ConcurrentHashMap<>());
             if (currentMap.get(currentKey) instanceof Map) {
-                setPropertyInternal((Map<String, Object>) currentMap.get(currentKey), parts[1], value);
+                setPropertyInternal((Map<String, Object>)currentMap.get(currentKey), parts[1], value);
             } else {
                 // 如果中间节点不是Map，则抛出异常或覆盖
                 throw new IllegalArgumentException(
-                        "Cannot set property: intermediate path '%s' is not a map.".formatted(currentKey));
+                    "Cannot set property: intermediate path '%s' is not a map.".formatted(currentKey));
             }
         }
     }
@@ -178,7 +149,7 @@ public abstract class BaseExtension implements Extension {
         } else {
             Object value = currentMap.get(currentKey);
             if (value instanceof Map) {
-                deletePropertyInternal((Map<String, Object>) value, parts[1]);
+                deletePropertyInternal((Map<String, Object>)value, parts[1]);
             }
         }
     }

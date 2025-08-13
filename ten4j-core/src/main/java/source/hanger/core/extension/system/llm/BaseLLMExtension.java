@@ -1,12 +1,12 @@
 package source.hanger.core.extension.system.llm;
 
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.alibaba.dashscope.aigc.generation.GenerationResult;
+
+import io.reactivex.Flowable;
 import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.extension.BaseExtension;
+import source.hanger.core.extension.system.BaseFlushExtension;
 import source.hanger.core.extension.system.ExtensionConstants;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
@@ -28,12 +28,9 @@ import source.hanger.core.util.MessageUtils;
  * 4. 精确的错误处理和监控 (此处为占位符，需实际集成)
  */
 @Slf4j
-public abstract class BaseLLMExtension extends BaseExtension {
+public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResult> {
 
-    protected final AtomicBoolean interrupted = new AtomicBoolean(false);
     private final Map<String, Object> sessionState = new java.util.concurrent.ConcurrentHashMap<>();
-    private final ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
-    protected boolean isRunning = false;
 
     public BaseLLMExtension() {
         super();
@@ -42,7 +39,6 @@ public abstract class BaseLLMExtension extends BaseExtension {
     @Override
     public void onConfigure(TenEnv env, Map<String, Object> properties) {
         super.onConfigure(env, properties);
-        log.info("LLM扩展配置阶段: extensionName={}", env.getExtensionName());
     }
 
     @Override
@@ -54,23 +50,20 @@ public abstract class BaseLLMExtension extends BaseExtension {
     @Override
     public void onStart(TenEnv env) {
         super.onStart(env);
-        log.info("LLM扩展启动阶段: extensionName={}", env.getExtensionName());
-        isRunning = true;
-        interrupted.set(false);
+        // log.info("LLM扩展启动阶段: extensionName={}", env.getExtensionName());
+        // isRunning = true;
+        // interrupted.set(false);
+        // disposable = generateDisposable(env);
     }
 
     @Override
     public void onStop(TenEnv env) {
         super.onStop(env);
-        log.info("LLM扩展停止阶段: extensionName={}", env.getExtensionName());
-        isRunning = false;
-        interrupted.set(true);
     }
 
     @Override
     public void onDeinit(TenEnv env) {
         super.onDeinit(env);
-        log.info("LLM扩展清理阶段: extensionName={}", env.getExtensionName());
     }
 
     @Override
@@ -88,11 +81,6 @@ public abstract class BaseLLMExtension extends BaseExtension {
                 case ExtensionConstants.CMD_CHAT_COMPLETION_CALL:
                     handleChatCompletionCall(env, command);
                     break;
-                case ExtensionConstants.CMD_IN_FLUSH:
-                    flushInputItems(env, command);
-                    CommandResult flushResult = CommandResult.success(command, "LLM input flushed.");
-                    env.sendResult(flushResult);
-                    break;
                 case ExtensionConstants.CMD_IN_ON_USER_JOINED:
                     onUserJoined(env, command);
                     CommandResult userJoinedResult = CommandResult.success(command, "User joined.");
@@ -104,40 +92,50 @@ public abstract class BaseLLMExtension extends BaseExtension {
                     env.sendResult(userLeftResult);
                     break;
                 default:
-                    log.warn("未知的LLM命令: extensionName={}, commandName={}",
-                        env.getExtensionName(), command.getName());
-                    CommandResult result = CommandResult.success(command, "Unknown LLM command, ignored.");
-                    env.sendResult(result);
+                    // 将其他未处理的命令传递给父类
+                    super.onCmd(env, command);
                     break;
             }
             long duration = System.currentTimeMillis() - startTime;
         } catch (Exception e) {
             log.error("LLM扩展命令处理异常: extensionName={}, commandName={}",
                 env.getExtensionName(), command.getName(), e);
-            sendErrorResult(env, command, "LLM命令处理异常: " + e.getMessage());
+            sendErrorResult(env, command, "LLM命令处理异常: %s".formatted(e.getMessage()));
         }
     }
 
     @Override
     public void onDataMessage(TenEnv env, DataMessage data) {
         if (!isRunning) {
-            log.warn("LLM扩展未运行，忽略数据: extensionName={}, dataId={}",
+            log.warn("[{}] LLM扩展未运行，忽略数据: dataId={}",
                 env.getExtensionName(), data.getId());
             return;
         }
-        onDataChatCompletion(env, data);
+        // onRequestLLM 现在返回 Flowable<GenerationResult>
+        streamProcessor.onNext(onRequestLLM(env, data));
+    }
+
+    @Override
+    protected void handleStreamItem(GenerationResult item, TenEnv env) {
+        // 交给子类处理原始的 GenerationResult
+        processLlmGenerationResult(item, env);
+    }
+
+    @Override
+    protected void onCancelFlush(TenEnv env) {
+        onCancelLLM(env);
     }
 
     @Override
     public void onAudioFrame(TenEnv env, AudioFrameMessage audioFrame) {
         super.onAudioFrame(env, audioFrame);
         if (!isRunning) {
-            log.warn("LLM扩展未运行，忽略音频帧: extensionName={}, frameId={}",
+            log.warn("[{}] LLM扩展未运行，忽略音频帧: frameId={}",
                 env.getExtensionName(), audioFrame.getId());
             return;
         }
 
-        log.debug("LLM扩展收到音频帧: extensionName={}, frameId={}",
+        log.debug("[{}] LLM扩展收到音频帧: frameId={}",
             env.getExtensionName(), audioFrame.getId());
     }
 
@@ -145,19 +143,18 @@ public abstract class BaseLLMExtension extends BaseExtension {
     public void onVideoFrame(TenEnv env, VideoFrameMessage videoFrame) {
         super.onVideoFrame(env, videoFrame);
         if (!isRunning) {
-            log.warn("LLM扩展未运行，忽略视频帧: extensionName={}, frameId={}",
-                env.getExtensionName(), videoFrame.getId());
+            log.warn("[{}] LLM扩展未运行，忽略视频帧: frameId={}", env.getExtensionName(), videoFrame.getId());
             return;
         }
 
-        log.debug("LLM扩展收到视频帧: extensionName={}, frameId={}",
+        log.debug("[{}] LLM扩展收到视频帧: frameId={}",
             env.getExtensionName(), videoFrame.getId());
     }
 
     @Override
     public void onCmdResult(TenEnv env, CommandResult commandResult) {
         super.onCmdResult(env, commandResult);
-        log.warn("LLM扩展 {} 收到未处理的 CommandResult: {}. OriginalCommandId: {}", env.getExtensionName(),
+        log.warn("[{}] LLM扩展 收到未处理的 CommandResult: {}. OriginalCommandId: {}", env.getExtensionName(),
             commandResult.getId(), commandResult.getOriginalCommandId());
     }
 
@@ -171,18 +168,18 @@ public abstract class BaseLLMExtension extends BaseExtension {
             onCallChatCompletion(env, command, args);
 
         } catch (Exception e) {
-            log.error("聊天完成调用处理失败: extensionName={}", env.getExtensionName(), e);
+            log.error("[{}] 聊天完成调用处理失败", env.getExtensionName(), e);
             sendErrorResult(env, command, "聊天完成调用失败: %s".formatted(e.getMessage()));
         }
     }
 
     protected void onUserJoined(TenEnv env, Command command) {
-        log.info("LLM扩展收到用户加入事件: extensionName={}", env.getExtensionName());
+        log.info("[{}] LLM扩展收到用户加入事件", env.getExtensionName());
         flushInputItems(env, command);
     }
 
     protected void onUserLeft(TenEnv env, Command command) {
-        log.info("LLM扩展收到用户离开事件: extensionName={}", env.getExtensionName());
+        log.info("[{}] LLM扩展收到用户离开事件", env.getExtensionName());
         flushInputItems(env, command);
     }
 
@@ -195,10 +192,10 @@ public abstract class BaseLLMExtension extends BaseExtension {
             outputData.setProperty("extension_name", env.getExtensionName());
 
             env.sendMessage(outputData);
-            log.debug("LLM文本输出发送成功: extensionName={}, text={}, endOfSegment={}",
+            log.debug("[{}] LLM文本输出发送成功: text={}, endOfSegment={}",
                 env.getExtensionName(), text, endOfSegment);
         } catch (Exception e) {
-            log.error("LLM文本输出发送异常: extensionName={}", env.getExtensionName(), e);
+            log.error("[{}] LLM文本输出发送异常: ", env.getExtensionName(), e);
         }
     }
 
@@ -215,12 +212,11 @@ public abstract class BaseLLMExtension extends BaseExtension {
         env.sendResult(errorResult);
     }
 
-    public void flushInputItems(TenEnv env, Command command) {
-        interrupted.set(false);
-        log.info("Flushed LLM input items and reset processor: extensionName={}", env.getExtensionName());
-    }
-
     protected abstract void onCallChatCompletion(TenEnv env, Command originalCommand, Map<String, Object> args);
 
-    protected abstract void onDataChatCompletion(TenEnv env, DataMessage data);
+    protected abstract Flowable<GenerationResult> onRequestLLM(TenEnv env, DataMessage data);
+
+    protected abstract void processLlmGenerationResult(GenerationResult result, TenEnv env);
+
+    protected abstract void onCancelLLM(TenEnv env);
 }

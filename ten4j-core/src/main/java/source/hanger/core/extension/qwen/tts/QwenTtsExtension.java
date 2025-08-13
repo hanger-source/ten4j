@@ -64,11 +64,6 @@ public class QwenTtsExtension extends BaseTTSExtension {
     @Override
     public void flushInputItems(TenEnv env, Command command) {
         super.flushInputItems(env, command);
-        // 发送 CMD_OUT_FLUSH 命令作为响应
-        //Command outFlushCmd = GenericCommand.create(ExtensionConstants.CMD_IN_FLUSH, command.getId(),
-        //    command.getType());
-        //env.sendCmd(outFlushCmd);
-        //log.debug("[qwen_tts] Sent CMD_OUT_FLUSH in response to CMD_IN_FLUSH.");
         CommandResult cmdResult = CommandResult.success(command, "TTS input flushed.");
         env.sendResult(cmdResult);
     }
@@ -83,13 +78,8 @@ public class QwenTtsExtension extends BaseTTSExtension {
 
     @Override
     public void onCmd(TenEnv env, Command command) {
-        super.onCmd(env, command);
         String cmdName = command.getName();
-        log.info("[qwen_tts] Received command: {}", cmdName);
         switch (cmdName) {
-            case ExtensionConstants.CMD_IN_FLUSH:
-                // 处理用户离开事件（如果需要）
-                break;
             case ExtensionConstants.CMD_IN_ON_USER_JOINED:
                 // 处理用户加入事件（如果需要）
                 CommandResult joinResult = CommandResult.success(command, "User joined.");

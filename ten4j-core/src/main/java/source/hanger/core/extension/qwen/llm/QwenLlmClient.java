@@ -28,6 +28,8 @@ public class QwenLlmClient {
     private final Generation generation;
     private final String apiKey;
     private final String model;
+    // private volatile Disposable currentDisposable = Disposables.empty(); //
+    // 用于管理当前活跃的请求
 
     /**
      * 构造函数。
@@ -45,57 +47,41 @@ public class QwenLlmClient {
      * 以流式模式调用聊天补全API。
      *
      * @param messages 用户消息列表 (现在接收 List<Message>)
-     * @param callback 用于处理流式输出的回调函数
+     * @return 返回 LLM 生成的原始结果流
      */
-    public Disposable streamChatCompletion(List<Message> messages, QwenLlmStreamCallback callback) {
-        GenerationParam param = GenerationParam.builder()
-            .apiKey(apiKey)
-            .model(model)
-            .messages(messages)
-            .resultFormat(GenerationParam.ResultFormat.MESSAGE)
-            .incrementalOutput(true)
-            .build();
+    public Flowable<GenerationResult> streamChatCompletion(List<Message> messages) {
+        // 在开始新的请求前，先取消之前的请求 (现在由 Extension 的 Flowable 订阅取消机制处理)
+        // cancelCurrentRequest();
 
-        Flowable<GenerationResult> resultFlowable = null;
+        GenerationParam param = GenerationParam.builder()
+                .apiKey(apiKey)
+                .model(model)
+                .messages(messages)
+                .resultFormat(GenerationParam.ResultFormat.MESSAGE)
+                .incrementalOutput(true)
+                .build();
+
+        Flowable<GenerationResult> resultFlowable;
         try {
             resultFlowable = generation.streamCall(param);
         } catch (NoApiKeyException | InputRequiredException e) {
-            callback.onError(e);
-            return Disposables.empty();
+            return Flowable.error(e);
         }
-        AtomicReference<String> accumulatedContent = new AtomicReference<>("");
 
-        // 异步执行 + 可取消
-        return resultFlowable
-            .observeOn(Schedulers.io()) // 异步执行
-            .subscribe(
-                message -> {
-                    if (message != null && message.getOutput() != null && message.getOutput().getChoices() != null
-                        && !message.getOutput().getChoices().isEmpty()) {
+        // 保存当前的订阅，以便后续取消 (现在由 Extension 的 Flowable 订阅管理)
+        // currentDisposable = resultFlowable.subscribe();
 
-                        String content = message.getOutput().getChoices().get(0).getMessage().getContent();
-                        if (content != null) {
-                            accumulatedContent.updateAndGet(current -> current + content);
-                            callback.onTextReceived(content);
-                        }
-
-                        if ("stop".equals(message.getOutput().getChoices().get(0).getFinishReason())) {
-                            callback.onComplete(accumulatedContent.toString());
-                        }
-                    } else {
-                        String errorMessage = String.format(
-                            "DashScope流式调用返回不完整结果: 请求ID: %s, Usage: %s, Output: %s",
-                            message != null ? message.getRequestId() : "N/A",
-                            message != null && message.getUsage() != null ? JsonUtils.toJson(message.getUsage())
-                                : "N/A",
-                            message != null && message.getOutput() != null ? JsonUtils.toJson(message.getOutput())
-                                : "N/A"
-                        );
-                        log.error(errorMessage);
-                        callback.onError(new ApiException(new RuntimeException(errorMessage)));
-                    }
-                },
-                callback::onError
-            );
+        return resultFlowable;
     }
+
+    // /**
+    // * 取消当前正在进行的 LLM 请求。
+    // */
+    // public void cancelCurrentRequest() {
+    // if (currentDisposable != null && !currentDisposable.isDisposed()) {
+    // log.info("Cancelling current Qwen LLM request.");
+    // currentDisposable.dispose();
+    // currentDisposable = Disposables.empty();
+    // }
+    // }
 }
