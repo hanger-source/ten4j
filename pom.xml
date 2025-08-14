@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xmlns="http://maven.apache.org/POM/4.0.0"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>source.hanger</groupId>
@@ -28,7 +28,7 @@
         <msgpack.version>0.9.8</msgpack.version>
         <junit.version>5.11.3</junit.version>
         <mockito.version>5.14.2</mockito.version>
-        <micrometer.version>1.14.2</micrometer.version>
+        <micrometer.version>1.15.3</micrometer.version>
         <lombok.version>1.18.36</lombok.version>
     </properties>
 
@@ -72,18 +72,6 @@
                 <scope>import</scope>
             </dependency>
 
-            <!-- Spring IoC 容器 -->
-            <dependency>
-                <groupId>org.springframework</groupId>
-                <artifactId>spring-context</artifactId>
-                <version>${spring.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.springframework</groupId>
-                <artifactId>spring-beans</artifactId>
-                <version>${spring.version}</version>
-            </dependency>
-
             <!-- 日志框架 -->
             <dependency>
                 <groupId>org.slf4j</groupId>
@@ -121,6 +109,11 @@
                 <artifactId>lombok</artifactId>
                 <version>${lombok.version}</version>
                 <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.reflections</groupId>
+                <artifactId>reflections</artifactId>
+                <version>0.10.2</version>
             </dependency>
 
 
@@ -173,7 +166,8 @@
                     <configuration>
                         <argLine>--enable-preview --add-opens
                             java.base/jdk.internal.misc=ALL-UNNAMED --add-opens
-                            java.base/java.util.zip=ALL-UNNAMED</argLine>
+                            java.base/java.util.zip=ALL-UNNAMED
+                        </argLine>
                         <forkCount>1</forkCount>
                         <reuseForks>false</reuseForks>
                         <testFailureIgnore>true</testFailureIgnore>
