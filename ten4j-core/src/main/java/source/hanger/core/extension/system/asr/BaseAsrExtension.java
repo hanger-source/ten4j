@@ -27,13 +27,16 @@ public abstract class BaseAsrExtension extends BaseExtension {
     protected final AtomicBoolean stopped = new AtomicBoolean(false);
     protected final AtomicBoolean reconnecting = new AtomicBoolean(false);
     protected String sessionId;
+    protected TenEnv tenEnv;
     private Disposable asrStreamDisposable;
 
     public void onStart(TenEnv env) {
         log.info("[{}] ASR扩展启动", env.getExtensionName());
         stopped.set(false);
         reconnecting.set(false);
+        this.tenEnv = env;
         startAsrStream(env);
+        super.onStart(env);
     }
 
     protected void startAsrStream(TenEnv env) {
@@ -118,6 +121,7 @@ public abstract class BaseAsrExtension extends BaseExtension {
                 try {
                     disposeAsrStreamsInternal();
                     Thread.sleep(200);
+                    onClientInit(); // Add this line
                     startAsrStream(env);
                     log.info("[{}] Reconnection completed successfully.", env.getExtensionName());
                 } catch (Exception e) {
@@ -151,4 +155,7 @@ public abstract class BaseAsrExtension extends BaseExtension {
     public int getInputAudioSampleRate() {
         return 16000;
     }
+
+    // Add this abstract method
+    protected abstract void onClientInit();
 }

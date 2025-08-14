@@ -13,7 +13,7 @@ import static java.nio.ByteBuffer.wrap;
 @Slf4j
 public class ParaformerASRExtension extends BaseAsrExtension {
 
-    private ParaformerASRClient paraformerASRClient; // Concrete client instance
+    private volatile ParaformerASRClient paraformerASRClient; // Concrete client instance
 
     @Override
     public void onStart(TenEnv env) {
@@ -46,6 +46,16 @@ public class ParaformerASRExtension extends BaseAsrExtension {
     }
 
     @Override
+    protected void onClientInit() {
+        // Reinitialize the concrete client here
+        String apiKey = tenEnv.getPropertyString("api_key").orElse("");
+        String model = tenEnv.getPropertyString("model").orElse("paraformer-realtime-v2");
+        this.paraformerASRClient = new ParaformerASRClient(tenEnv.getExtensionName(), apiKey, model);
+        log.info("[{}] Reinitializing ParaformerASRClient with config: apiKey={}, model={}",
+            tenEnv.getExtensionName(), "***", model);
+    }
+
+    @Override
     public void onAudioFrame(TenEnv env, AudioFrameMessage audioFrame) {
         super.onAudioFrame(env, audioFrame); // Call super.onAudioFrame if it has shared logic
         if (!isRunning()) { // isRunning is from BaseExtension
@@ -53,9 +63,10 @@ public class ParaformerASRExtension extends BaseAsrExtension {
                 env.getExtensionName(), audioFrame.getId());
             return;
         }
-        if (paraformerASRClient != null) {
+        final ParaformerASRClient currentClient = this.paraformerASRClient; // Cache volatile variable
+        if (currentClient != null) {
             try {
-                paraformerASRClient.sendAudioFrame(wrap(audioFrame.getBuf()));
+                currentClient.sendAudioFrame(wrap(audioFrame.getBuf()));
             } catch (RuntimeException e) { // Catch RuntimeException from client for reconnect handling
                 log.error("[{}] Failed to send audio frame via client: {}, attempting reconnect.",
                     env.getExtensionName(),
