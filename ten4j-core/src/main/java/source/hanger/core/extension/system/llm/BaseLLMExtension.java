@@ -116,6 +116,10 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
                 env.getExtensionName(), data.getId());
             return;
         }
+        if (!data.getPropertyBool("is_final").orElse(false)) {
+            log.info("[{}] LLM扩展收到非最终数据: text={}", env.getExtensionName(), data.getProperty("text"));
+            return;
+        }
         // onRequestLLM 现在返回 Flowable<GenerationResult>
         streamProcessor.onNext(new StreamPayload<>(onRequestLLM(env, data), data));
     }

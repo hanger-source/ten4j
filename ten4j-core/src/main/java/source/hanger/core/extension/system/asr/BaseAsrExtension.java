@@ -20,6 +20,9 @@ import source.hanger.core.util.MessageUtils;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonMap;
+import static source.hanger.core.extension.system.ExtensionConstants.ASR_DATA_OUT_NAME;
+import static source.hanger.core.extension.system.ExtensionConstants.DATA_OUT_PROPERTY_END_OF_SEGMENT;
+import static source.hanger.core.extension.system.ExtensionConstants.DATA_OUT_PROPERTY_ROLE;
 
 @Slf4j
 public abstract class BaseAsrExtension extends BaseExtension {
@@ -76,6 +79,7 @@ public abstract class BaseAsrExtension extends BaseExtension {
         Map<String, Object> properties = new HashMap<>();
         properties.put("text", item.getSentence().getText());
         properties.put("is_final", item.isSentenceEnd());
+        properties.put(DATA_OUT_PROPERTY_END_OF_SEGMENT, item.isSentenceEnd());
         properties.put("start_ms", item.getSentence().getBeginTime());
         properties.put("duration_ms",
             item.getSentence().getEndTime() != null && item.getSentence().getBeginTime() != null
@@ -85,10 +89,12 @@ public abstract class BaseAsrExtension extends BaseExtension {
         properties.put("metadata", singletonMap("session_id", this.sessionId));
         properties.put("words", emptyList());
 
-        DataMessage message = DataMessage.create("asr_result");
+        DataMessage message = DataMessage.create(ASR_DATA_OUT_NAME);
+        properties.put(DATA_OUT_PROPERTY_ROLE, "user");
         message.setProperties(properties);
+        message.setProperty("asr_request_id", item.getRequestId());
         env.sendData(message);
-        log.debug("[{}] Sent ASR transcription: {}", env.getExtensionName(), item.getSentence().getText());
+        log.info("[{}] Sent ASR transcription: {}", env.getExtensionName(), item.getSentence().getText());
     }
 
     public void onDeinit(TenEnv env) {

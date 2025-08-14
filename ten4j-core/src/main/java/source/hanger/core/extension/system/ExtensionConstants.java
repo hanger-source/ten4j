@@ -5,6 +5,7 @@ public final class ExtensionConstants {
     public static final String CMD_CHAT_COMPLETION_CALL = "chat_completion_call";
 
     public static final String LLM_DATA_OUT_NAME = "text_data";
+    public static final String ASR_DATA_OUT_NAME = "asr_result";
     public static final String DATA_OUT_PROPERTY_TEXT = "text";
     public static final String DATA_OUT_PROPERTY_ROLE = "role";
     public static final String DATA_OUT_PROPERTY_END_OF_SEGMENT = "end_of_segment";

@@ -1,5 +1,6 @@
 package source.hanger.core.extension.system;
 
+import java.util.ArrayList;
 import java.util.Map;
 
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +11,9 @@ import source.hanger.core.message.command.Command;
 import source.hanger.core.message.command.GenericCommand;
 import source.hanger.core.tenenv.TenEnv;
 import source.hanger.core.util.MessageUtils;
+
+import static source.hanger.core.extension.system.ExtensionConstants.ASR_DATA_OUT_NAME;
+import static source.hanger.core.extension.system.ExtensionConstants.LLM_DATA_OUT_NAME;
 
 @Slf4j
 public class InterruptDetectorExtension extends BaseExtension {
@@ -96,10 +100,10 @@ public class InterruptDetectorExtension extends BaseExtension {
 
     @Override
     public void onDataMessage(TenEnv env, DataMessage data) {
-        super.onDataMessage(env, data);
-        log.info("[InterruptDetector] Received data message: {}", data.getName());
+        log.info("[{}] Received data message: {}", env.getExtensionName(), data.getName());
 
-        if (ExtensionConstants.LLM_DATA_OUT_NAME.equals(data.getName())) { // Check for text_data
+        if (LLM_DATA_OUT_NAME.equals(data.getName())
+            || ASR_DATA_OUT_NAME.equals(data.getName())) { // Check for text_data
             String text = (String)data.getProperty(TEXT_DATA_TEXT_FIELD);
             Boolean isFinal = (Boolean)data.getProperty(TEXT_DATA_FINAL_FIELD);
 
@@ -110,7 +114,8 @@ public class InterruptDetectorExtension extends BaseExtension {
                 isFinal = false;
             }
 
-            log.debug("[InterruptDetector] {}: {} {}: {}", TEXT_DATA_TEXT_FIELD, text, TEXT_DATA_FINAL_FIELD, isFinal);
+            log.debug("[{}] {}: {} {}: {}", env.getExtensionName(), TEXT_DATA_TEXT_FIELD, text, TEXT_DATA_FINAL_FIELD,
+                isFinal);
 
             if (isFinal || text.length() >= 2) {
                 // For DataMessage, use its own ID as originalCommandId
@@ -118,14 +123,15 @@ public class InterruptDetectorExtension extends BaseExtension {
             }
         }
 
+        if (ASR_DATA_OUT_NAME.equals(data.getName())) {
+            // Change the name to LLM_DATA_OUT_NAME
+            data.setDestLocs(new ArrayList<>());
+            data.setName(LLM_DATA_OUT_NAME);
+        }
+
         // Forward the original data message to downstream
         env.sendMessage(data);
-        log.info("[InterruptDetector] Forwarded data message: {} with text: {} and final: {}",
+        log.info("[{}] Forwarded data message: {} with text: {} and final: {}", env.getExtensionName(),
             data.getName(), data.getProperty(TEXT_DATA_TEXT_FIELD), data.getProperty(TEXT_DATA_FINAL_FIELD));
-
-        // Note: For DataMessage, we typically don't return a CmdResult directly,
-        // but rather send the data message downstream. If an explicit result is
-        // expected,
-        // it would usually be a CommandResult for a corresponding Command.
     }
 }

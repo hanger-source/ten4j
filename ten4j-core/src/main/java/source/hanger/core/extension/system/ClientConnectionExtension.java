@@ -102,14 +102,14 @@ public class ClientConnectionExtension extends BaseExtension {
         Location srcLoc = message.getSrcLoc();
         if (srcLoc == null || !env.getAppUri().equals(srcLoc.getAppUri())) {
             // 入站消息
-            log.info("ClientConnectionExtension: 入站消息 type: {} name: {}", message.getType(), message.getName());
+            //log.info("[{}]: 入站消息 type: {} name: {}", env.getExtensionName(), message.getType(), message.getName());
             message.setSrcLoc(new Location(env.getAppUri(), env.getGraphId(), null));
             message.setDestLocs(new ArrayList<>());
             if (srcLoc != null) {
                 this.clientAppUri = srcLoc.getAppUri();
             }
         } else {
-            log.info("ClientConnectionExtension: 出站消息 type: {} name: {}", message.getType(), message.getName());
+            //log.info("[{}]: 出站消息 type: {} name: {}", env.getExtensionName(), message.getType(), message.getName());
             message.setDestLocs(List.of(new Location(clientAppUri, null, null)));
         }
     }

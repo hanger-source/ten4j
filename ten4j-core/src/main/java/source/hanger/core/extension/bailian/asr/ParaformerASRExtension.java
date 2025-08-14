@@ -1,5 +1,7 @@
 package source.hanger.core.extension.bailian.asr;
 
+import java.io.File;
+
 import com.alibaba.dashscope.audio.asr.recognition.RecognitionResult;
 
 import io.reactivex.Flowable;
@@ -14,6 +16,7 @@ import static java.nio.ByteBuffer.wrap;
 public class ParaformerASRExtension extends BaseAsrExtension {
 
     private volatile ParaformerASRClient paraformerASRClient; // Concrete client instance
+    private AudioFileWriter audioFileWriter; // New instance for audio writing
 
     @Override
     public void onStart(TenEnv env) {
@@ -23,6 +26,11 @@ public class ParaformerASRExtension extends BaseAsrExtension {
         this.paraformerASRClient = new ParaformerASRClient(env.getExtensionName(), apiKey, model);
         log.info("[{}] Initializing ParaformerASRClient with config: apiKey={}, model={}",
             env.getExtensionName(), "***", model);
+
+        // Initialize AudioFileWriter
+        String outputDir = System.getProperty("user.home") + File.separator + "asr_audio_chunks";
+        this.audioFileWriter = new AudioFileWriter(env.getExtensionName(), outputDir);
+        log.info("[{}] Initialized AudioFileWriter, saving chunks to: {}", env.getExtensionName(), outputDir);
 
         super.onStart(env); // Call super.onStart AFTER client is initialized (which now calls
         // startAsrStream)
@@ -43,6 +51,9 @@ public class ParaformerASRExtension extends BaseAsrExtension {
             paraformerASRClient.stopRecognitionClient();
             paraformerASRClient = null; // Clear reference
         }
+        if (audioFileWriter != null) {
+            audioFileWriter.close();
+        }
     }
 
     @Override
@@ -53,11 +64,22 @@ public class ParaformerASRExtension extends BaseAsrExtension {
         this.paraformerASRClient = new ParaformerASRClient(tenEnv.getExtensionName(), apiKey, model);
         log.info("[{}] Reinitializing ParaformerASRClient with config: apiKey={}, model={}",
             tenEnv.getExtensionName(), "***", model);
+        // Reinitialize AudioFileWriter on reconnect as well
+        String outputDir = System.getProperty("user.home") + File.separator + "asr_audio_chunks";
+        this.audioFileWriter = new AudioFileWriter(tenEnv.getExtensionName(), outputDir);
+        log.info("[{}] Reinitialized AudioFileWriter on reconnect, saving chunks to: {}", tenEnv.getExtensionName(),
+            outputDir);
     }
 
     @Override
     public void onAudioFrame(TenEnv env, AudioFrameMessage audioFrame) {
-        super.onAudioFrame(env, audioFrame); // Call super.onAudioFrame if it has shared logic
+        log.debug("[{}] Received audio frame with buffer size: {}", env.getExtensionName(), audioFrame.getBuf().length);
+        // Write audio frame to file
+        if (audioFileWriter != null) {
+            // 记录音频 用于测试音频是否正确接收
+            //audioFileWriter.writeAudioFrame(ByteBuffer.wrap(audioFrame.getBuf())); // Wrap byte[] to ByteBuffer
+        }
+
         if (!isRunning()) { // isRunning is from BaseExtension
             log.warn("[{}] Paraformer ASR扩展未运行，忽略音频帧: frameId={}",
                 env.getExtensionName(), audioFrame.getId());
