@@ -35,8 +35,8 @@ public class HttpHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) {
         if (msg.uri().startsWith("/websocket")) {
-            // 如果是 WebSocket 升级请求，不处理并传递给下一个 handler
-            ctx.fireChannelRead(msg);
+            // 如果是 WebSocket 升级请求，保留消息并传递给下一个 handler
+            ctx.fireChannelRead(msg.retain()); // 关键：retain()
             return;
         }
 
@@ -59,9 +59,9 @@ public class HttpHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
     }
 
     private void sendHttpResponse(ChannelHandlerContext ctx, FullHttpRequest request, String content,
-        io.netty.handler.codec.http.HttpResponseStatus status) {
+            io.netty.handler.codec.http.HttpResponseStatus status) {
         DefaultFullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, status,
-            Unpooled.copiedBuffer(content, CharsetUtil.UTF_8));
+                Unpooled.copiedBuffer(content, CharsetUtil.UTF_8));
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=UTF-8");
         HttpUtil.setContentLength(response, response.content().readableBytes());
 

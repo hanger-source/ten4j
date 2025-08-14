@@ -81,7 +81,7 @@ public class TenServer {
                                         new ChunkedWriteHandler(), // 处理大文件传输
                                         // 新增：HTTP 请求处理器，在 WebSocket 升级之前处理
                                         new HttpHandler(ServerConstants.HTTP_CONTROLLER_PACKAGE), // 处理 HTTP 请求的自定义
-                                                                                                  // Handler
+                                        // Handler
                                         // WebSocket 协议处理器，路径为 "/websocket"
                                         // 在握手完成后，HTTP 请求会被替换为 WebSocket 帧
                                         new WebSocketServerProtocolHandler("/websocket", null, true, 65536), // 明确设置
