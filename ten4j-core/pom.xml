@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xmlns="http://maven.apache.org/POM/4.0.0"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
@@ -21,6 +21,7 @@
         <msgpack.version>0.9.10</msgpack.version>
         <mvel2.version>2.5.0.Final</mvel2.version>
         <jackson.version>2.18.4</jackson.version> <!-- Updated Jackson version -->
+        <dashscope.version>2.20.9</dashscope.version>
     </properties>
 
     <artifactId>ten4j-core</artifactId>
@@ -46,7 +47,7 @@
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>dashscope-sdk-java</artifactId>
-            <version>2.19.0</version> <!-- Updated to 2.19.0 for TTS -->
+            <version>${dashscope.version}</version> <!-- Updated to 2.19.0 for TTS -->
         </dependency>
 
         <!-- Netty for ByteBuf -->
@@ -204,7 +205,8 @@
                 <configuration>
                     <argLine>--enable-preview --add-opens java.base/jdk.internal.misc=ALL-UNNAMED
                         --add-opens
-                        java.base/java.util.zip=ALL-UNNAMED</argLine>
+                        java.base/java.util.zip=ALL-UNNAMED
+                    </argLine>
                 </configuration>
             </plugin>
         </plugins>
