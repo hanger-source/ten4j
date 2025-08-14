@@ -1,4 +1,4 @@
-package source.hanger.server.handler;
+package source.hanger.server.handler.decoder;
 
 import java.util.List;
 
@@ -19,16 +19,17 @@ public class WebSocketFrameToByteBufDecoder extends MessageToMessageDecoder<WebS
             ByteBuf binaryData = frame.content();
             out.add(binaryData.retain()); // retain the ByteBuf for the next handler
             log.debug("WebSocketFrameToByteBufDecoder: Decoded BinaryWebSocketFrame to ByteBuf, size: {}",
-                    binaryData.readableBytes());
+                binaryData.readableBytes());
         } else if (frame instanceof TextWebSocketFrame) {
             // If you expect text frames and want to convert them to ByteBuf, handle here.
             // For now, we only process binary frames for MessagePack.
             log.warn(
-                    "WebSocketFrameToByteBufDecoder: Received TextWebSocketFrame, but expecting BinaryWebSocketFrame. Content: {}",
-                    ((TextWebSocketFrame) frame).text());
+                "WebSocketFrameToByteBufDecoder: Received TextWebSocketFrame, but expecting BinaryWebSocketFrame. "
+                    + "Content: {}",
+                ((TextWebSocketFrame)frame).text());
         } else {
             log.warn("WebSocketFrameToByteBufDecoder: Received unknown WebSocketFrame type: {}",
-                    frame.getClass().getName());
+                frame.getClass().getName());
         }
     }
 

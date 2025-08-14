@@ -1,4 +1,4 @@
-package source.hanger.server.handler;
+package source.hanger.server.handler.encoder;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.buffer.ByteBuf;
@@ -34,7 +34,7 @@ public class MessagePackEncoder extends MessageToByteEncoder<Message> {
                 // 将最终的 EXT 字节写入 ByteBuf
                 out.writeBytes(packer.toByteArray());
                 log.debug("MsgPackEncoder: 编码消息成功，类型: {}，封装为 EXT 类型: {}", msg.getType(),
-                        MessageConstants.TEN_MSGPACK_EXT_TYPE_MSG);
+                    MessageConstants.TEN_MSGPACK_EXT_TYPE_MSG);
             }
         } catch (Exception e) {
             log.error("MsgPackEncoder: 编码消息失败。", e);

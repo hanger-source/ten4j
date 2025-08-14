@@ -1,4 +1,4 @@
-package source.hanger.server.handler;
+package source.hanger.server.handler.encoder;
 
 import java.util.List;
 
@@ -15,6 +15,6 @@ public class ByteBufToWebSocketFrameEncoder extends MessageToMessageEncoder<Byte
     protected void encode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) {
         out.add(new BinaryWebSocketFrame(msg.retain())); // Wrap the ByteBuf in a BinaryWebSocketFrame
         log.debug("ByteBufToWebSocketFrameEncoder: Encoded ByteBuf to BinaryWebSocketFrame, size: {}",
-                msg.readableBytes());
+            msg.readableBytes());
     }
 }

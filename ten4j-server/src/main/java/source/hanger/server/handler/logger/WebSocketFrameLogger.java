@@ -1,13 +1,13 @@
-package source.hanger.server.handler;
+package source.hanger.server.handler.logger;
 
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import lombok.extern.slf4j.Slf4j;
 
@@ -21,13 +21,13 @@ public class WebSocketFrameLogger extends ChannelDuplexHandler {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof WebSocketFrame) {
-            WebSocketFrame frame = (WebSocketFrame) msg;
+            WebSocketFrame frame = (WebSocketFrame)msg;
             String frameType = getFrameType(frame);
             log.debug("WebSocketFrameLogger: 收到 {} 帧 (rsv: {}, final: {}, payloadLength: {})",
-                    frameType, frame.rsv(), frame.isFinalFragment(), frame.content().readableBytes());
+                frameType, frame.rsv(), frame.isFinalFragment(), frame.content().readableBytes());
             // 如果是文本帧，可以记录内容
             if (frame instanceof TextWebSocketFrame) {
-                log.debug("WebSocketFrameLogger: Text Frame Content: {}", ((TextWebSocketFrame) frame).text());
+                log.debug("WebSocketFrameLogger: Text Frame Content: {}", ((TextWebSocketFrame)frame).text());
             }
         }
         super.channelRead(ctx, msg);
@@ -36,13 +36,13 @@ public class WebSocketFrameLogger extends ChannelDuplexHandler {
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         if (msg instanceof WebSocketFrame) {
-            WebSocketFrame frame = (WebSocketFrame) msg;
+            WebSocketFrame frame = (WebSocketFrame)msg;
             String frameType = getFrameType(frame);
             log.debug("WebSocketFrameLogger: 发送 {} 帧 (rsv: {}, final: {}, payloadLength: {})",
-                    frameType, frame.rsv(), frame.isFinalFragment(), frame.content().readableBytes());
+                frameType, frame.rsv(), frame.isFinalFragment(), frame.content().readableBytes());
             // 如果是文本帧，可以记录内容
             if (frame instanceof TextWebSocketFrame) {
-                log.debug("WebSocketFrameLogger: Text Frame Content: {}", ((TextWebSocketFrame) frame).text());
+                log.debug("WebSocketFrameLogger: Text Frame Content: {}", ((TextWebSocketFrame)frame).text());
             }
         }
         super.write(ctx, msg, promise);

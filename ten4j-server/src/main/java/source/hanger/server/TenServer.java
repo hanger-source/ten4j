@@ -22,12 +22,12 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.app.App;
-import source.hanger.server.handler.ByteBufToWebSocketFrameEncoder;
-import source.hanger.server.handler.MessagePackDecoder;
-import source.hanger.server.handler.MessagePackEncoder;
 import source.hanger.server.handler.NettyConnectionHandler;
-import source.hanger.server.handler.WebSocketFrameToByteBufDecoder;
 import source.hanger.server.handler.WebSocketMessageDispatcher;
+import source.hanger.server.handler.decoder.MessagePackDecoder;
+import source.hanger.server.handler.decoder.WebSocketFrameToByteBufDecoder;
+import source.hanger.server.handler.encoder.ByteBufToWebSocketFrameEncoder;
+import source.hanger.server.handler.encoder.MessagePackEncoder;
 
 /**
  * TenServer 类封装了 Netty 服务器的启动、停止和配置。

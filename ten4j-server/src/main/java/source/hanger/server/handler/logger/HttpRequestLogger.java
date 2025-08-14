@@ -1,4 +1,4 @@
-package source.hanger.server.handler;
+package source.hanger.server.handler.logger;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
