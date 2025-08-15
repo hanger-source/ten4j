@@ -185,7 +185,7 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
         // 清理所有命令的 CompletableFuture
         commandFutures.values().forEach(future -> {
             if (!future.isDone()) {
-                future.completeExceptionally(new IllegalStateException("Engine " + graphId + " stopped."));
+                future.completeExceptionally(new IllegalStateException("Engine %s stopped.".formatted(graphId)));
             }
         });
         commandFutures.clear();
@@ -350,28 +350,44 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
         if (command.getDestLocs() != null && !command.getDestLocs().isEmpty()) {
             Location destLoc = command.getDestLocs().getFirst(); // 假设只处理第一个目的地
 
-            if (graphId.equals(destLoc.getGraphId()) && destLoc.getExtensionName() == null) {
-                // 目标是当前 Engine 自身
-                EngineCommandHandler handler = commandHandlers.get(command.getType());
-                if (handler != null) {
-                    try {
-                        handler.handle(engineEnvProxy, command);
-                    } catch (Exception e) {
-                        log.error("Engine {}: 命令处理器处理命令 {} 失败: {}", graphId, command.getId(), e.getMessage(),
-                            e);
-                        submitCommandResult(CommandResult.fail(command.getId(), command.getType(), command.getName(),
-                            "Engine command handling failed: %s".formatted(
-                                e.getMessage()))); // Changed to submitCommandResult
+            if (graphId.equals(destLoc.getGraphId())) { // 目标是当前 Engine
+                if (destLoc.getExtensionName() == null) { // 目标是当前 Engine 自身 (非 Extension)
+                    EngineCommandHandler handler = commandHandlers.get(command.getType());
+                    if (handler != null) {
+                        try {
+                            handler.handle(engineEnvProxy, command);
+                        } catch (Exception e) {
+                            log.error("Engine {}: 命令处理器处理命令 {} 失败: {}", graphId, command.getId(),
+                                e.getMessage(),
+                                e);
+                            submitCommandResult(
+                                CommandResult.fail(command.getId(), command.getType(), command.getName(),
+                                    "Engine command handling failed: %s".formatted(
+                                        e.getMessage()))); // Changed to submitCommandResult
+                        }
+                    } else {
+                        // 如果 Engine 没有注册处理器，且命令是针对 App 的，则重新路由回 App
+                        // 例如：StopGraphCommand 应该由 App 处理
+                        if (app.getAppCommandHandlers().containsKey(command.getType())) { // 检查 App 是否有此命令的处理器
+                            log.debug("Engine {}: 将 App 级别的命令 {} 重新路由回 App。", graphId, command.getId());
+                            app.handleInboundMessage(command, null); // 重新提交给 App 的队列
+                        } else {
+                            log.warn("Engine {}: 未知 Engine 级别命令类型或没有注册处理器: {}", graphId,
+                                command.getType());
+                            submitCommandResult(
+                                CommandResult.fail(command.getId(), command.getType(), command.getName(),
+                                    "Unknown Engine command type or no handler registered: %s".formatted(
+                                        command.getType()))); // Changed
+                        }
                     }
-                } else {
-                    log.warn("Engine {}: 未知 Engine 级别命令类型或没有注册处理器: {}", graphId, command.getType());
-                    submitCommandResult(CommandResult.fail(command.getId(), command.getType(), command.getName(),
-                        "Unknown Engine command type or no handler registered: %s".formatted(
-                            command.getType()))); // Changed
+                } else { // 目标是当前 Engine 内部的 Extension
+                    messageDispatcher.dispatchMessage(command);
                 }
-            } else if (graphId.equals(destLoc.getGraphId())) {
-                // 目标是当前 Engine 内部的 Extension
-                messageDispatcher.dispatchMessage(command);
+            } else if (destLoc.getAppUri() != null && !destLoc.getAppUri().isEmpty() &&
+                app.getAppUri().equals(destLoc.getAppUri())) { // 目标是当前 App 但不是当前 Engine
+                log.debug("Engine {}: 将指向同一 App 内其他 Engine 的命令 {} 重新路由回 App。", graphId,
+                    command.getId());
+                app.handleInboundMessage(command, null); // 重新提交给 App 的队列
             } else if (destLoc.getAppUri() != null && !destLoc.getAppUri().isEmpty()) { // 目标是其他 App/Remote
                 routeMessageToRemote(command); // 修正：直接通过 Engine 路由到 Remote
             } else {
