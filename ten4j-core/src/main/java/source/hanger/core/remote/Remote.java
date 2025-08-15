@@ -1,5 +1,6 @@
 package source.hanger.core.remote;
 
+import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 
 import lombok.Getter;
@@ -7,7 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.app.MessageReceiver;
 import source.hanger.core.connection.Connection;
 import source.hanger.core.engine.Engine;
+import source.hanger.core.message.Location;
 import source.hanger.core.message.Message;
+import source.hanger.core.message.command.StopGraphCommand;
 import source.hanger.core.runloop.Runloop;
 
 /**
@@ -32,7 +35,7 @@ public class Remote implements MessageReceiver {
         this.engine = engine;
         this.runloop = runloop;
         log.info("Remote {}: 创建，关联连接 {}，关联引擎 {}", uri, connection.getConnectionId(),
-                engine.getGraphId());
+            engine.getGraphId());
 
         // 关键修改：在 Remote 构造时，就将 Connection 依附到自身
         this.connection.attachToRemote(this);
@@ -57,7 +60,7 @@ public class Remote implements MessageReceiver {
 
         // 确保消息的源 App URI 被设置为此 Remote 的 URI
         if (message.getSrcLoc() != null && (message.getSrcLoc().getAppUri() == null || message.getSrcLoc().getAppUri()
-                .isEmpty())) {
+            .isEmpty())) {
             message.getSrcLoc().setAppUri(this.uri).setGraphId(engine.getGraphId());
             log.debug("Remote {}: 设置入站消息 {} 的源 App URI 为 {}", uri, message.getId(), this.uri);
         }
@@ -87,7 +90,7 @@ public class Remote implements MessageReceiver {
         // 对齐 C 语言中 ten_remote_send_msg 的逻辑：在发送前设置消息的源 URI 为 Remote 的 URI
         // 只有当消息的源 URI 未被指定时才设置，防止覆盖上层已设置的源
         if (message.getSrcLoc() != null && (message.getSrcLoc().getAppUri() == null || message.getSrcLoc().getAppUri()
-                .isEmpty())) {
+            .isEmpty())) {
             message.getSrcLoc().setAppUri(this.uri).setGraphId(engine.getGraphId());
             log.debug("Remote {}: 设置出站消息 {} 的源 App URI 为 {}", uri, message.getId(), this.uri);
         }
@@ -118,8 +121,24 @@ public class Remote implements MessageReceiver {
      * @param connection 已关闭的 Connection 实例。
      */
     public void onConnectionClosed(Connection connection) {
-        log.info("Remote {}: 关联连接 {} 已关闭，通知关联 Engine 移除此 Remote。");
-        // TODO: 通知 Engine 或 App 移除此 Remote
-        // 例如：engine.removeRemote(this); // 如果 Engine 管理 Remote 列表
+        log.info("Remote {}: 关联连接 {} 已关闭，通知关联 Engine 移除此 Remote。", uri, connection.getConnectionId());
+        if (engine != null) {
+            // 首先从 Engine 中移除此 Remote
+            engine.removeRemote(this.uri);
+
+            // 创建 StopGraphCommand 并发送给 App
+            // 注意：StopGraphCommand 需要一个 Graph ID 来识别要停止的 Engine
+            // 这里的 graphId 应该就是当前 Remote 所关联的 Engine 的 graphId
+            Location destLoc = new Location().setAppUri(engine.getApp().getAppUri()).setGraphId(engine.getGraphId());
+            Location srcLoc = new Location().setAppUri(engine.getApp().getAppUri()).setGraphId(engine.getGraphId());
+            StopGraphCommand stopGraphCommand = new StopGraphCommand(srcLoc,
+                Collections.singletonList(destLoc), engine.getGraphId()); // 传递 graphId 给命令
+
+            // 通过 App 的 submitCommand 方法发送命令
+            // 确保 App 能够处理 StopGraphCommand
+            engine.getApp().submitCommand(stopGraphCommand);
+
+            log.info("Remote {}: 已向 App 发送 StopGraphCommand 以停止 Engine {}。", uri, engine.getGraphId());
+        }
     }
 }

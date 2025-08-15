@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import com.alibaba.dashscope.audio.asr.recognition.RecognitionResult;
 
 import io.reactivex.Flowable;
+import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.schedulers.Schedulers;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +30,7 @@ public abstract class BaseAsrExtension extends BaseExtension {
 
     protected final AtomicBoolean stopped = new AtomicBoolean(false);
     protected final AtomicBoolean reconnecting = new AtomicBoolean(false);
+    private final CompositeDisposable disposables = new CompositeDisposable(); // 新增：管理所有 Disposable
     protected String sessionId;
     protected TenEnv tenEnv;
     private Disposable asrStreamDisposable;
@@ -106,6 +108,7 @@ public abstract class BaseAsrExtension extends BaseExtension {
         if (asrStreamDisposable != null && !asrStreamDisposable.isDisposed()) {
             asrStreamDisposable.dispose();
         }
+        disposables.clear(); // 新增：清理所有定时器 Disposable
         onClientStop();
     }
 
@@ -122,27 +125,29 @@ public abstract class BaseAsrExtension extends BaseExtension {
         reconnecting.set(true);
         log.info("[{}] Starting reconnection process.", env.getExtensionName());
 
-        Flowable.timer(200, TimeUnit.MILLISECONDS, Schedulers.io())
-            .doOnComplete(() -> {
-                try {
-                    disposeAsrStreamsInternal();
-                    Thread.sleep(200);
-                    onClientInit(); // Add this line
-                    startAsrStream(env);
-                    log.info("[{}] Reconnection completed successfully.", env.getExtensionName());
-                } catch (Exception e) {
-                    log.error("[{}] Reconnection failed: {}", env.getExtensionName(), e.getMessage(), e);
-                    if (!stopped.get()) {
-                        Flowable.timer(1000, TimeUnit.MILLISECONDS, Schedulers.io())
-                            .subscribe(v -> handleReconnect(env));
-                    } else {
-                        log.info("[{}] Extension stopped, not retrying reconnection.", env.getExtensionName());
+        disposables.add(Flowable.timer(200, TimeUnit.MILLISECONDS, Schedulers.io()).doOnComplete(() -> {
+                    try {
+                        disposeAsrStreamsInternal();
+                        Thread.sleep(200);
+                        onClientInit(); // Add this line
+                        startAsrStream(env);
+                        log.info("[{}] Reconnection completed successfully.", env.getExtensionName());
+                    } catch (Exception e) {
+                        log.error("[{}] Reconnection failed: {}", env.getExtensionName(), e.getMessage(), e);
+                        if (!stopped.get()) {
+                            disposables.add( // 新增：将 Disposable 添加到 CompositeDisposable
+                                Flowable.timer(1000, TimeUnit.MILLISECONDS, Schedulers.io())
+                                    .subscribe(v -> handleReconnect(env)));
+                        } else {
+                            log.info("[{}] Extension stopped, not retrying reconnection.",
+                                env.getExtensionName());
+                        }
+                    } finally {
+                        reconnecting.set(false);
                     }
-                } finally {
-                    reconnecting.set(false);
-                }
-            })
-            .subscribe();
+                })
+                .subscribe() // 修正：直接调用 subscribe() 来获取 Disposable
+        );
     }
 
     protected void sendAsrError(TenEnv env, String messageId, MessageType messageType, String messageName,
