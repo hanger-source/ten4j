@@ -55,8 +55,10 @@ cd ten-realtime-chat
 ```bash
 cd ten4j
 mvn clean install
-mvn spring-boot:run
+java -Dserver.port=8080 --add-opens java.base/sun.nio.ch=ALL-UNNAMED --add-opens java.base/jdk.internal.misc=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED -jar ten4j-server/target/ten4j-server-1.0-SNAPSHOT.jar
 ```
+
+您可以通过 `-Dserver.port=<端口号>` 参数来指定后端服务的端口，例如 `-Dserver.port=8080`。
 
 此命令会编译所有模块并启动 `ten4j-server`，它将监听 WebSocket 连接。请注意控制台输出，确认服务已成功启动。
 

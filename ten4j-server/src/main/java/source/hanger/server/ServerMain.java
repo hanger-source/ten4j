@@ -11,9 +11,19 @@ public class ServerMain {
     private static final int DEFAULT_PORT = 9090;
     private static final String DEFAULT_APP_URI = "ten://localhost/default_app";
     private static final String DEFAULT_CONFIG_PATH = "property.json"; // 假设配置文件路径
+    private static final int PORT = Integer.parseInt(System.getProperty("server.port", String.valueOf(DEFAULT_PORT)));
 
     public static void main(String[] args) throws Exception {
-        int port = DEFAULT_PORT;
+        System.out.println("\n" +
+                "  _____  _____  _   _  _  _        _ \n" +
+                " |_   _|| ____|| \\ | || || |      | |\n" +
+                "   | |  |  _|  |  \\| || || |_  _  | |\n" +
+                "   | |  | |___ | |\\  ||__   _|| |_| |\n" +
+                "   |_|  |_____||_| \\_|   |_|   \\___/ \n" +
+                "                                     \n" +
+                "                                             :: TEN4J SERVER ::  (Port: " + PORT + ")\n");
+
+        int port = PORT;
         String appUri = DEFAULT_APP_URI;
         String configPath = DEFAULT_CONFIG_PATH;
 
