@@ -37,7 +37,7 @@
 
 ## ⚙️ 如何运行
 
-要运行 `ten4j` 项目，您需要安装 Java 开发环境 (JDK 8 或更高版本) 和 Apache Maven。
+要运行 `ten4j` 项目，您需要安装 Java 开发环境 (JDK 21 或更高版本) 和 Apache Maven。
 
 ### 1. 克隆项目
 
