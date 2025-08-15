@@ -1,13 +1,13 @@
 # ten4j
-![Demo](https://github.com/hanger-source/ten-realtime-chat/blob/main/demo.png)
+![Demo](https://github.com/hanger-source/ten-realtime-chat/raw/main/demo.png)
 
-- [返回主项目](https://github.com/hanger-source/ten-realtime-chat/blob/main/README.md): `ten-realtime-chat` 是一个全面的实时聊天应用示例，旨在展示如何高效整合基于 WebSocket 的前端和基于 Java `ten4j` 框架的后端，实现高性能、高并发的双向实时通信。
+- [返回主项目](https://github.com/hanger-source/ten-realtime-chat): `ten-realtime-chat` 是一个全面的实时聊天应用示例，旨在展示如何高效整合基于 WebSocket 的前端和基于 Java `ten4j` 框架的后端，实现高性能、高并发的双向实时通信。
 
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/hanger-source/ten4j/blob/main/LICENSE)
 
 ## 🚀 项目简介
 
-`ten4j` 是 [TEN-framework](https://github.com/TEN-framework/ten-framework) 的一个 Java 参考实现，旨在为开发者提供一个基于 Java 的、用于构建会话式 AI 代理的强大后端框架。本项目实现了 `TEN-framework` 的部分核心功能，专注于后端逻辑、实时通信（通过 WebSocket）以及与 AI 服务的集成，为开发高性能、高并发的实时交互应用奠定基础。
+`[ten4j](https://github.com/hanger-source/ten4j)` 是 [`TEN-framework`](https://github.com/TEN-framework/ten-framework) 的一个 Java 参考实现，旨在为开发者提供一个基于 Java 的、用于构建会话式 AI 代理的强大后端框架。本项目实现了 `TEN-framework` 的部分核心功能，专注于后端逻辑、实时通信（通过 WebSocket）以及与 AI 服务的集成，为开发高性能、高并发的实时交互应用奠定基础。
 
 **⚠️ 注意**: 本项目目前仅保证核心功能可正常运行。部分功能代码可能仍存在错误或未经过全面测试。
 
@@ -67,20 +67,10 @@ java -Dserver.port=8080 --add-opens java.base/sun.nio.ch=ALL-UNNAMED --add-opens
 
 ## 🔗 与 TEN-framework 的关系
 
-`ten4j` 是 `TEN-framework` (一个开源的会话式 AI 代理框架) 的一个 Java 实现。`TEN-framework` 旨在提供构建多模态、实时 AI 代理的通用能力，而 `ten4j` 则是利用 Java 语言和生态系统，对其中部分核心概念和功能进行了具体实现和探索。您可以访问 `TEN-framework` 的官方 GitHub 仓库了解更多信息：
+`[ten4j](https://github.com/hanger-source/ten4j)` 是 `TEN-framework` (一个开源的会话式 AI 代理框架) 的一个 Java 实现。`TEN-framework` 旨在提供构建多模态、实时 AI 代理的通用能力，而 `TEN-framework` 则是利用 Java 语言和生态系统，对其中部分核心概念和功能进行了具体实现和探索。您可以访问 `TEN-framework` 的官方 GitHub 仓库了解更多信息：
 
 -   **TEN-framework GitHub**: [https://github.com/TEN-framework/ten-framework](https://github.com/TEN-framework/ten-framework)
 
-衷心感谢 `TEN-framework` 社区为本项目提供了丰富的灵感和宝贵的开源代码，供我们学习和借鉴。
-
-## 🤝 贡献
-
-我们欢迎所有对 `ten4j` 项目的贡献！无论是 Bug 修复、功能增强、文档改进还是代码审查，您的贡献都将帮助我们提升项目质量。请在提交 Pull Request 之前，确保您的更改符合项目的编码规范并已通过所有相关测试。
-
-## ✨ **AI 辅助开发**
-
-本项目在开发过程中充分利用了 Cursor 的 AI 编码能力，包括但不限于项目分析、方案设计、代码实现、问题调试等环节。Cursor AI 有效提升了开发效率和代码质量。
-
 ## 📄 许可证
 
-本项目采用 Apache 2.0 许可证。详情请参阅项目根目录下的 [LICENSE](LICENSE) 文件。 
+本项目采用 Apache 2.0 许可证。详情请参阅项目根目录下的 [`LICENSE`](https://github.com/hanger-source/ten4j/blob/main/LICENSE) 文件。
