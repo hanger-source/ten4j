@@ -6,8 +6,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.Map;
+import java.util.UUID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,8 +38,28 @@ public class GraphLoader {
      * @return 解析后的GraphDefinition对象
      * @throws JsonProcessingException 如果JSON解析失败
      */
-    public static GraphDefinition loadGraphDefinitionFromJson(String jsonString) throws JsonProcessingException {
-        return OBJECT_MAPPER.readValue(jsonString, GraphDefinition.class);
+    public static GraphDefinition loadGraphDefinitionFromJson(String jsonString,
+            Map<String, Object> externalProperties)
+            throws JsonProcessingException {
+        GraphDefinition graphDefinition = OBJECT_MAPPER.readValue(jsonString, GraphDefinition.class);
+
+        // Resolve properties at the graph definition level
+        if (graphDefinition.getProperty() != null) {
+            graphDefinition.setProperty((Map<String, Object>) resolveGraphProperties(graphDefinition.getProperty(),
+                    externalProperties));
+        }
+
+        // Resolve properties within each node definition
+        if (graphDefinition.getNodes() != null) {
+            graphDefinition.getNodes().forEach(node -> {
+                if (node.getProperty() != null) {
+                    node.setProperty(
+                            (Map<String, Object>) resolveGraphProperties(node.getProperty(), externalProperties));
+                }
+            });
+        }
+
+        return graphDefinition;
     }
 
     /**
@@ -72,31 +92,49 @@ public class GraphLoader {
         return OBJECT_MAPPER.writeValueAsString(graphConfig);
     }
 
-    private static Object resolveEnvironmentVariables(Object value) {
+    private static Object resolveGraphProperties(Object value, Map<String, Object> externalProperties) {
         if (value instanceof Map) {
             Map<String, Object> map = (Map<String, Object>) value;
-            Map<String, Object> resolvedMap = new java.util.LinkedHashMap<>(); // Preserve insertion order
-            map.forEach((k, v) -> resolvedMap.put(k, resolveEnvironmentVariables(v)));
+            Map<String, Object> resolvedMap = new java.util.LinkedHashMap<>();
+            map.forEach((k, v) -> resolvedMap.put(k, resolveGraphProperties(v, externalProperties)));
             return resolvedMap;
         } else if (value instanceof List) {
             List<Object> list = (List<Object>) value;
             List<Object> resolvedList = new java.util.ArrayList<>();
-            list.forEach(item -> resolvedList.add(resolveEnvironmentVariables(item)));
+            list.forEach(item -> resolvedList.add(resolveGraphProperties(item, externalProperties)));
             return resolvedList;
         } else if (value instanceof String) {
             String str = (String) value;
-            // 正则表达式匹配 {{env:VAR_NAME}}
-            java.util.regex.Matcher matcher = java.util.regex.Pattern
-                    .compile("\\{\\{\\s*env:([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\}\\}").matcher(str); // Updated regex
-            if (matcher.matches()) {
-                String varName = matcher.group(1);
+            // First, try to match {{key}} from externalProperties
+            java.util.regex.Matcher cmdPropMatcher = java.util.regex.Pattern.compile(
+                    "\\{\\{([a-zA-Z_][a-zA-Z0-9_]*)\\}\\}").matcher(str);
+            if (cmdPropMatcher.matches()) {
+                String key = cmdPropMatcher.group(1);
+                if (externalProperties != null && externalProperties.containsKey(key)) {
+                    Object resolvedValue = externalProperties.get(key);
+                    log.debug("Resolved command property: {} -> {}", key, resolvedValue != null ? "***" : "null");
+                    return resolvedValue; // Return the actual object, not just string
+                } else {
+                    log.warn("Command property '{}' not found in StartGraphCommand properties. Returning empty string.",
+                            key);
+                    return ""; // User requested empty string if not found
+                }
+            }
+
+            // If not a {{key}} placeholder, try to match {{env:VAR_NAME}} from
+            // System.getenv
+            java.util.regex.Matcher envMatcher = java.util.regex.Pattern.compile(
+                    "\\{\\{\\s*env:([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\}\\}").matcher(str);
+            if (envMatcher.matches()) {
+                String varName = envMatcher.group(1);
                 String envValue = System.getenv(varName);
                 if (envValue != null) {
-                    log.debug("Resolved environment variable: {} -> ***", varName); // Log with masked value
+                    log.debug("Resolved environment variable: {} -> ***", varName);
                     return envValue;
                 } else {
-                    log.warn("Environment variable {} not found. Keeping original string for now: {}", varName, str);
-                    return str; // Return original string if not found
+                    log.warn("Environment variable '{}' not found. Returning original string for now: {}", varName,
+                            str);
+                    return str; // Return original string if env var not found
                 }
             }
         }
@@ -127,14 +165,16 @@ public class GraphLoader {
                     }
                     // 解析环境变量
                     // 假设 GraphDefinition 的属性都在 'nodes' 字段的 'property' 中
-                    if (entry.getGraph().getNodes() != null) {
-                        entry.getGraph().getNodes().forEach(node -> {
-                            if (node.getProperty() != null) {
-                                // 递归解析属性 Map 中的环境变量
-                                node.setProperty((Map<String, Object>) resolveEnvironmentVariables(node.getProperty()));
-                            }
-                        });
-                    }
+                    // !!! REMOVED: resolve env variables at graph loading time (no command
+                    // properties here)
+                    // if (entry.getGraph().getNodes() != null) {
+                    // entry.getGraph().getNodes().forEach(node -> {
+                    // if (node.getProperty() != null) {
+                    // node.setProperty(
+                    // (Map<String, Object>)resolveGraphProperties(node.getProperty(), null));
+                    // }
+                    // });
+                    // }
                 }
                 predefinedGraphs.add(entry);
             } catch (IOException e) {

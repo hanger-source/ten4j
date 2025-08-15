@@ -24,6 +24,7 @@
         "extension_group": "llm_group",
         "property": {
           "api_key": "{{env:BAILIAN_DASHSCOPE_API_KEY}}",
+          "prompt": "{{prompt}}",
           "model": "qwen-turbo"
         }
       },

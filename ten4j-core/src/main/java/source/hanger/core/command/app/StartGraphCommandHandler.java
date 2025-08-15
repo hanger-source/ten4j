@@ -3,6 +3,7 @@ package source.hanger.core.command.app;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -54,7 +55,8 @@ public class StartGraphCommandHandler implements AppCommandHandler {
             // 如果提供了 JSON 定义，解析它来获取 graphId
             try {
                 GraphDefinition tempGraphDef = GraphLoader
-                    .loadGraphDefinitionFromJson(startCommand.getGraphJsonDefinition());
+                    .loadGraphDefinitionFromJson(startCommand.getGraphJsonDefinition(),
+                        startCommand.getProperties());
                 targetGraphId = tempGraphDef.getGraphId();
             } catch (JsonProcessingException e) {
                 log.error("StartGraphCommandHandler: 解析 graphJsonDefinition 失败: {}", e.getMessage());
@@ -74,7 +76,9 @@ public class StartGraphCommandHandler implements AppCommandHandler {
                     // StartGraphCommandHandler 缺乏 ObjectMapper 实例，可以考虑作为依赖注入或静态实例
                     // 暂时使用新的 ObjectMapper 实例
                     String graphJson = new ObjectMapper().writeValueAsString(loadedDefinition);
-                    graphDefinition = GraphLoader.loadGraphDefinitionFromJson(graphJson); // 重新加载以确保完整性
+                    graphDefinition = GraphLoader.loadGraphDefinitionFromJson(graphJson,
+                        startCommand.getProperties()); // 重新加载以确保完整性
+                    graphDefinition.setGraphId(UUID.randomUUID().toString());
                     log.info("StartGraphCommandHandler: 找到预定义图 {}。", targetGraphId);
                     graphDefinition.setGraphName(targetGraphId);
                 } catch (JsonProcessingException e) {
@@ -89,7 +93,8 @@ public class StartGraphCommandHandler implements AppCommandHandler {
         // 如果没有找到预定义图，则尝试从命令中获取 JSON 定义
         if (graphDefinition == null && startCommand.getGraphJsonDefinition() != null) {
             try {
-                graphDefinition = GraphLoader.loadGraphDefinitionFromJson(startCommand.getGraphJsonDefinition());
+                graphDefinition = GraphLoader.loadGraphDefinitionFromJson(startCommand.getGraphJsonDefinition(),
+                    startCommand.getProperties());
                 graphDefinition.setGraphId(graphDefinition.getGraphId());
                 log.info("StartGraphCommandHandler: 从 JSON 定义创建图 {}。", graphDefinition.getGraphId());
             } catch (JsonProcessingException e) {
@@ -161,7 +166,8 @@ public class StartGraphCommandHandler implements AppCommandHandler {
             Map<String, Object> properties = new HashMap<>();
             properties.put("graph_id", graphId);
             properties.put("app_uri", app.getAppUri());
-            //properties.put("predefined_graph_runtime_info", new ObjectMapper().writeValueAsString(runtimeInfo));
+            // properties.put("predefined_graph_runtime_info", new
+            // ObjectMapper().writeValueAsString(runtimeInfo));
 
             CommandResult successResult;
             if (engineNewlyStarted) {

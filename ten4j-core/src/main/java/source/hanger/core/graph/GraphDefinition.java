@@ -1,12 +1,13 @@
 package source.hanger.core.graph;
 
+import java.util.List;
+import java.util.Map;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
-
-import java.util.List;
 
 /**
  * 表示一个消息处理图的静态配置或蓝图。
@@ -36,4 +37,6 @@ public class GraphDefinition {
     // 映射 property.json 中的 "connections" 数组。
     @JsonProperty("connections")
     private List<ConnectionDefinition> connections;
+
+    private Map<String, Object> property;
 }
