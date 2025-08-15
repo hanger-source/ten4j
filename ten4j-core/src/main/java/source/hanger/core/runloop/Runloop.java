@@ -198,7 +198,7 @@ public class Runloop {
             } finally {
                 currentRunloopThreadLocal.remove();
             }
-        }, "%s-Thread".formatted(coreAgent.roleName()));
+        }, "%s-Core".formatted(coreAgent.roleName()));
         t.setDaemon(false);
         t.setUncaughtExceptionHandler((_, ex) -> log.error("Core thread error", ex));
         t.start();

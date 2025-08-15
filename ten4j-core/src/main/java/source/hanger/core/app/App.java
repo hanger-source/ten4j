@@ -117,7 +117,7 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
         availableExtensions = new ConcurrentHashMap<>(); // 初始化 Extension 注册表
 
         this.appConfig = appConfig != null ? appConfig : new GraphConfig(); // 使用传入的配置或默认空配置
-        appRunloop = Runloop.createRunloopWithWorker("AppRunloop-%s".formatted(appUri), this);
+        appRunloop = Runloop.createRunloopWithWorker("App[%s]".formatted(appUri), this);
 
         appCommandHandlers = new HashMap<>(); // 初始化 App 命令处理器映射
         registerAppCommandHandlers(); // 注册 App 级别的命令处理器

@@ -93,7 +93,7 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
 
         // 获取或创建 ExtensionThread。每个 ExtensionGroup 将对应一个 ExtensionThread。
         ExtensionThread extensionThread = extensionThreads.computeIfAbsent(extensionGroupName, k -> {
-            ExtensionThread newThread = new ExtensionThread("ExtensionThread-%s".formatted(k), this);
+            ExtensionThread newThread = new ExtensionThread("ExtensionThread[%s]".formatted(k), this);
             newThread.start(); // 启动线程，以便其 Runloop 可用
             return newThread;
         });
@@ -224,7 +224,7 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
         // 获取或创建 ExtensionThread。每个 ExtensionGroup 将对应一个 ExtensionThread。
         // 这里假设 ExtensionGroup 的名称直接对应 ExtensionThread 的名称。
         ExtensionThread extensionThread = extensionThreads.computeIfAbsent(extensionGroupName, k -> {
-            ExtensionThread newThread = new ExtensionThread("ExtensionThread-%s".formatted(k), this);
+            ExtensionThread newThread = new ExtensionThread("ExtensionThread[%s]".formatted(k), this);
             newThread.start(); // 启动线程，以便其 Runloop 可用
             return newThread;
         });

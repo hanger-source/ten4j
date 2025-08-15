@@ -33,7 +33,7 @@ public class ExtensionThread implements Agent {
     public ExtensionThread(String threadName, EngineExtensionContext engineExtensionContext) {
         this.threadName = threadName;
         this.engineExtensionContext = engineExtensionContext;
-        runloop = Runloop.createRunloop("%s-Runloop".formatted(threadName));
+        runloop = Runloop.createRunloop("%s".formatted(threadName));
         log.info("ExtensionThread {} created.", threadName);
     }
 

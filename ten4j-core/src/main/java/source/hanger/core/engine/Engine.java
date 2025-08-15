@@ -76,7 +76,7 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
 
         // Engine 自身的 Runloop 初始化
         if (hasOwnLoop) {
-            runloop = Runloop.createRunloopWithWorker("-runloop-engine(%s)".formatted(graphId),
+            runloop = Runloop.createRunloopWithWorker("Engine[%s]".formatted(graphId),
                 this); // 每个 Engine 都有自己的 Runloop
         } else {
             // 如果没有自己的 Runloop，则尝试使用 App 的 Runloop
