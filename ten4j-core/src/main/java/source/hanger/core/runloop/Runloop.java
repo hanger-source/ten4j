@@ -63,7 +63,7 @@ public class Runloop {
         this.coreAgent = new LoopAgent(name);
         tasks = new CopyOnWriteArrayList<>();
         this.virtualThreadExecutor = Executors
-            .newSingleThreadExecutor(Thread.ofVirtual().name("Runloop-%s-vt".formatted(name), 0).factory());
+                .newSingleThreadExecutor(Thread.ofVirtual().name("Runloop-%s-vt".formatted(name), 0).factory());
     }
 
     public static Runloop createRunloopWithWorker(String name, Agent workAgent) {
@@ -82,15 +82,15 @@ public class Runloop {
         shuttingDown.set(false);
 
         IdleStrategy idleStrategy = new BackoffIdleStrategy(
-            1, 1,
-            TimeUnit.NANOSECONDS.toNanos(50),
-            TimeUnit.MICROSECONDS.toNanos(100));
+                1, 1,
+                TimeUnit.NANOSECONDS.toNanos(50),
+                TimeUnit.MICROSECONDS.toNanos(100));
 
         agentRunner = new AgentRunner(
-            idleStrategy,
-            ex -> log.error("Runloop uncaught error", ex),
-            null,
-            coreAgent);
+                idleStrategy,
+                ex -> log.error("Runloop uncaught error", ex),
+                null,
+                coreAgent);
 
         coreThread = createCoreThread(agentRunner);
         log.info("Runloop started on thread: {}", coreThread.getName());
@@ -112,7 +112,9 @@ public class Runloop {
 
     public void wakeup() {
         Thread t = coreThread;
-        if (t != null) {LockSupport.unpark(t);}
+        if (t != null) {
+            LockSupport.unpark(t);
+        }
     }
 
     public void shutdown() {
@@ -125,6 +127,18 @@ public class Runloop {
         drainRemainingTasks();
         wakeup();
         joinCoreThread();
+        // Add shutdown for virtualThreadExecutor
+        virtualThreadExecutor.shutdown();
+        try {
+            if (!virtualThreadExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+                log.warn("VirtualThreadExecutor did not terminate in time.");
+                virtualThreadExecutor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Interrupted while waiting for VirtualThreadExecutor to terminate.");
+            virtualThreadExecutor.shutdownNow();
+        }
         log.info("Runloop shutdown complete.");
     }
 
@@ -218,7 +232,9 @@ public class Runloop {
             // 批量处理内部任务
             for (int i = 0; i < internalTaskBatchSize; i++) {
                 Runnable r = taskQueue.poll();
-                if (r == null) {break;}
+                if (r == null) {
+                    break;
+                }
                 safeRun(r);
                 workDone++;
             }
@@ -240,13 +256,17 @@ public class Runloop {
         @Override
         public void onStart() {
             log.info("{} started", roleName());
-            if (workAgent != null) {safeRun(workAgent::onStart);}
+            if (workAgent != null) {
+                safeRun(workAgent::onStart);
+            }
         }
 
         @Override
         public void onClose() {
             log.info("{} closed", roleName());
-            if (workAgent != null) {safeRun(workAgent::onClose);}
+            if (workAgent != null) {
+                safeRun(workAgent::onClose);
+            }
         }
 
         private void safeRun(Runnable task) {

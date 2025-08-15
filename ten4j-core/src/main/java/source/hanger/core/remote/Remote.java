@@ -32,7 +32,7 @@ public class Remote implements MessageReceiver {
         this.engine = engine;
         this.runloop = runloop;
         log.info("Remote {}: 创建，关联连接 {}，关联引擎 {}", uri, connection.getConnectionId(),
-            engine.getGraphId());
+                engine.getGraphId());
 
         // 关键修改：在 Remote 构造时，就将 Connection 依附到自身
         this.connection.attachToRemote(this);
@@ -57,7 +57,7 @@ public class Remote implements MessageReceiver {
 
         // 确保消息的源 App URI 被设置为此 Remote 的 URI
         if (message.getSrcLoc() != null && (message.getSrcLoc().getAppUri() == null || message.getSrcLoc().getAppUri()
-            .isEmpty())) {
+                .isEmpty())) {
             message.getSrcLoc().setAppUri(this.uri).setGraphId(engine.getGraphId());
             log.debug("Remote {}: 设置入站消息 {} 的源 App URI 为 {}", uri, message.getId(), this.uri);
         }
@@ -87,7 +87,7 @@ public class Remote implements MessageReceiver {
         // 对齐 C 语言中 ten_remote_send_msg 的逻辑：在发送前设置消息的源 URI 为 Remote 的 URI
         // 只有当消息的源 URI 未被指定时才设置，防止覆盖上层已设置的源
         if (message.getSrcLoc() != null && (message.getSrcLoc().getAppUri() == null || message.getSrcLoc().getAppUri()
-            .isEmpty())) {
+                .isEmpty())) {
             message.getSrcLoc().setAppUri(this.uri).setGraphId(engine.getGraphId());
             log.debug("Remote {}: 设置出站消息 {} 的源 App URI 为 {}", uri, message.getId(), this.uri);
         }
@@ -106,6 +106,9 @@ public class Remote implements MessageReceiver {
             connection.close(); // 关闭关联的连接
         }
         // TODO: 其他资源清理，例如从 Engine 中移除自身
+        if (engine != null) {
+            engine.removeRemote(this.uri); // 通知 Engine 移除此 Remote
+        }
         log.info("Remote {}: 已关闭。", uri);
     }
 

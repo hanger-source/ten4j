@@ -1,12 +1,12 @@
 package source.hanger.core.graph;
 
+import java.util.Map;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
-
-import java.util.Map;
 
 /**
  * 表示图中的一个节点定义（Extension 或 Subgraph）。
@@ -48,12 +48,4 @@ public class NodeDefinition {
      * 对应 property.json 中的 "property" 字段。
      */
     private Map<String, Object> property;
-
-    /**
-     * 节点私有环境变量，传递给对应的 Extension 实例。
-     * 对应 property.json 中的 "env_properties" 字段（如果存在）。
-     * 虽然 property.json 示例中没有直接体现，但作为一个通用的配置字段，可以保留。
-     */
-    @JsonProperty("env_properties")
-    private Map<String, String> envProperties;
 }

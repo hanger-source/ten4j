@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,7 +18,7 @@ import source.hanger.core.util.ResourceUtils;
 @Slf4j
 public class GraphLoader {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
-        .configure(SerializationFeature.INDENT_OUTPUT, true);
+            .configure(SerializationFeature.INDENT_OUTPUT, true);
 
     /**
      * 从JSON字符串加载图配置。
@@ -71,6 +72,37 @@ public class GraphLoader {
         return OBJECT_MAPPER.writeValueAsString(graphConfig);
     }
 
+    private static Object resolveEnvironmentVariables(Object value) {
+        if (value instanceof Map) {
+            Map<String, Object> map = (Map<String, Object>) value;
+            Map<String, Object> resolvedMap = new java.util.LinkedHashMap<>(); // Preserve insertion order
+            map.forEach((k, v) -> resolvedMap.put(k, resolveEnvironmentVariables(v)));
+            return resolvedMap;
+        } else if (value instanceof List) {
+            List<Object> list = (List<Object>) value;
+            List<Object> resolvedList = new java.util.ArrayList<>();
+            list.forEach(item -> resolvedList.add(resolveEnvironmentVariables(item)));
+            return resolvedList;
+        } else if (value instanceof String) {
+            String str = (String) value;
+            // 正则表达式匹配 {{env:VAR_NAME}}
+            java.util.regex.Matcher matcher = java.util.regex.Pattern
+                    .compile("\\{\\{\\s*env:([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\}\\}").matcher(str); // Updated regex
+            if (matcher.matches()) {
+                String varName = matcher.group(1);
+                String envValue = System.getenv(varName);
+                if (envValue != null) {
+                    log.debug("Resolved environment variable: {} -> ***", varName); // Log with masked value
+                    return envValue;
+                } else {
+                    log.warn("Environment variable {} not found. Keeping original string for now: {}", varName, str);
+                    return str; // Return original string if not found
+                }
+            }
+        }
+        return value;
+    }
+
     /**
      * 从 classpath 的 resources/graph 目录下加载所有预定义的图配置。
      *
@@ -89,13 +121,25 @@ public class GraphLoader {
                 PredefinedGraphEntry entry = OBJECT_MAPPER.readValue(is, PredefinedGraphEntry.class);
                 // 假设每个 PredefinedGraphEntry 内部的 GraphDefinition 应该有一个 graphId。
                 // 如果 JSON 文件本身没有顶层 uuid，这里可以生成一个。
-                if (entry.getGraph() != null && entry.getGraph().getGraphId() == null) {
-                    entry.getGraph().setGraphId(UUID.randomUUID().toString());
+                if (entry.getGraph() != null) {
+                    if (entry.getGraph().getGraphId() == null) {
+                        entry.getGraph().setGraphId(UUID.randomUUID().toString());
+                    }
+                    // 解析环境变量
+                    // 假设 GraphDefinition 的属性都在 'nodes' 字段的 'property' 中
+                    if (entry.getGraph().getNodes() != null) {
+                        entry.getGraph().getNodes().forEach(node -> {
+                            if (node.getProperty() != null) {
+                                // 递归解析属性 Map 中的环境变量
+                                node.setProperty((Map<String, Object>) resolveEnvironmentVariables(node.getProperty()));
+                            }
+                        });
+                    }
                 }
                 predefinedGraphs.add(entry);
             } catch (IOException e) {
                 log.error("Error reading or parsing JSON stream from resource '{}/{}': {}", resourcePath, fileExtension,
-                    e.getMessage());
+                        e.getMessage());
             }
         }
 
