@@ -18,8 +18,8 @@ public final class ExtensionConstants {
     public static final String CMD_IN_FLUSH = "flush";
     public static final String CMD_OUT_FLUSH = "flush";
 
-    public static final String CMD_IN_ON_USER_JOINED = "in_on_user_joined";
-    public static final String CMD_IN_ON_USER_LEFT = "in_on_user_left";
+    public static final String CMD_IN_ON_USER_JOINED = "on_user_joined";
+    public static final String CMD_IN_ON_USER_LEFT = "on_user_left";
 
     // Tooling related constants
     public static final String CMD_TOOL_CALL = "tool_call";

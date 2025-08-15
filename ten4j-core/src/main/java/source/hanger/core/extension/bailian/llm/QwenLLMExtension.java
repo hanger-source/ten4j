@@ -212,11 +212,11 @@ public class QwenLLMExtension extends BaseLLMExtension {
             case ExtensionConstants.CMD_IN_ON_USER_JOINED:
                 // 处理用户加入事件（如果需要）
                 // Python实现中这里会发送 greeting 消息，Java版本目前只返回OK
-                String greeting = (String)command.getProperty("greeting");
+                String greeting = String.valueOf(env.getProperty("greeting").orElse(""));
                 if (greeting != null && !greeting.isEmpty()) {
                     try {
                         onMsg("assistant", greeting);
-                        sendTextOutput(env, (source.hanger.core.message.Message)command, greeting, true);
+                        sendTextOutput(env, command, greeting, true);
                         log.info("[qwen_llm] Greeting [{}] sent to user.", greeting);
                     } catch (Exception e) {
                         log.error("[qwen_llm] Failed to send greeting [{}], error: {}", greeting, e.getMessage(), e);

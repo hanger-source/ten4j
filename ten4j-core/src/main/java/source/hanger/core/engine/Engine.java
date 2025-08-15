@@ -394,7 +394,7 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
                 // 没有目的地，无法处理
                 submitCommandResult(CommandResult.fail(command, "Command has no destination.")); // Changed to
             }
-        } else if (command.getDestLocs() == null) {
+        } else if (command.getDestLocs() == null || command.getDestLocs().isEmpty()) {
             messageDispatcher.dispatchMessage(command);
         } else {
             // 没有目的地，无法处理

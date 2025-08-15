@@ -25,6 +25,7 @@
         "property": {
           "api_key": "{{env:BAILIAN_DASHSCOPE_API_KEY}}",
           "prompt": "{{prompt}}",
+          "greeting": "{{greeting}}",
           "model": "qwen-turbo"
         }
       },
@@ -60,6 +61,16 @@
     "connections": [
       {
         "extension": "client_connection",
+        "cmd": [
+          {
+            "name": "on_user_joined",
+            "dest": [
+              {
+                "extension": "llm"
+              }
+            ]
+          }
+        ],
         "data": [
           {
             "name": "text_data",

@@ -19,10 +19,13 @@ import source.hanger.core.graph.GraphLoader;
 import source.hanger.core.graph.PredefinedGraphEntry;
 import source.hanger.core.graph.runtime.PredefinedGraphRuntimeInfo;
 import source.hanger.core.message.CommandResult;
+import source.hanger.core.message.Location;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.message.command.StartGraphCommand;
 import source.hanger.core.remote.Remote;
 import source.hanger.core.tenenv.TenEnvProxy;
+import source.hanger.core.common.ExtensionConstants; // 导入 ExtensionConstants
+import source.hanger.core.message.command.GenericCommand; // 导入 GenericCommand
 
 /**
  * `StartGraphCommandHandler` 处理 `StartGraphCommand` 命令，负责启动 Engine。
@@ -169,6 +172,7 @@ public class StartGraphCommandHandler implements AppCommandHandler {
             // properties.put("predefined_graph_runtime_info", new
             // ObjectMapper().writeValueAsString(runtimeInfo));
 
+            sendUserJoinedCommand(engine, connection, command);
             CommandResult successResult;
             if (engineNewlyStarted) {
                 successResult = CommandResult.success(
@@ -190,5 +194,18 @@ public class StartGraphCommandHandler implements AppCommandHandler {
             connection.sendOutboundMessage(successResult);
         }
         return null;
+    }
+
+    private void sendUserJoinedCommand(Engine engine, Connection connection, Command command) {
+        if (connection != null) {
+            Command userJoinedCommand = new GenericCommand(UUID.randomUUID().toString(),
+                ExtensionConstants.CMD_IN_ON_USER_JOINED, null);
+            userJoinedCommand.setParentCommandId(command.getId());
+            userJoinedCommand.setSrcLoc(new Location(connection.getUri(), engine.getGraphId(), null));
+            userJoinedCommand.setDestLocs(List.of(new Location(engine.getApp().getAppUri(), engine.getGraphId(),
+                "client_connection")));
+            engine.submitCommand(userJoinedCommand);
+            log.info("StartGraphCommandHandler: 已发送 CMD_IN_ON_USER_JOINED 命令到 Engine {}.", engine.getGraphId());
+        }
     }
 }

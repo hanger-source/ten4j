@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.BaseExtension;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
@@ -16,6 +17,7 @@ import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
 
 import static java.util.Collections.singletonList;
+import static source.hanger.core.common.ExtensionConstants.*;
 
 /**
  * @author fuhangbo.hanger.uhfun
@@ -58,8 +60,7 @@ public class ClientConnectionExtension extends BaseExtension {
 
     @Override
     public void onCmd(TenEnv env, Command command) {
-        // command.getProperties()
-        if (env.getAppUri().equals(command.getSrcLoc().getAppUri())) {
+        if (clientAppUri == null && command.getName().equals(CMD_IN_ON_USER_JOINED)) {
             clientAppUri = command.getSrcLoc().getAppUri();
         }
         routeLocation(env, command);
