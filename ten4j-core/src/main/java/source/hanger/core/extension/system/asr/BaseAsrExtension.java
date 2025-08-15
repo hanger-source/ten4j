@@ -20,9 +20,9 @@ import source.hanger.core.util.MessageUtils;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonMap;
-import static source.hanger.core.extension.system.ExtensionConstants.ASR_DATA_OUT_NAME;
-import static source.hanger.core.extension.system.ExtensionConstants.DATA_OUT_PROPERTY_END_OF_SEGMENT;
-import static source.hanger.core.extension.system.ExtensionConstants.DATA_OUT_PROPERTY_ROLE;
+import static source.hanger.core.common.ExtensionConstants.ASR_DATA_OUT_NAME;
+import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_END_OF_SEGMENT;
+import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_ROLE;
 
 @Slf4j
 public abstract class BaseAsrExtension extends BaseExtension {

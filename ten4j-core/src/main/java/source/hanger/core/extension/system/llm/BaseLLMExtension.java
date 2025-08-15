@@ -6,8 +6,8 @@ import com.alibaba.dashscope.aigc.generation.GenerationResult;
 
 import io.reactivex.Flowable;
 import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.system.BaseFlushExtension;
-import source.hanger.core.extension.system.ExtensionConstants;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
@@ -18,9 +18,9 @@ import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
 import source.hanger.core.util.MessageUtils;
 
-import static source.hanger.core.extension.system.ExtensionConstants.DATA_OUT_PROPERTY_END_OF_SEGMENT;
-import static source.hanger.core.extension.system.ExtensionConstants.DATA_OUT_PROPERTY_ROLE;
-import static source.hanger.core.extension.system.ExtensionConstants.DATA_OUT_PROPERTY_TEXT;
+import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_END_OF_SEGMENT;
+import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_ROLE;
+import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_TEXT;
 
 /**
  * LLM基础抽象类

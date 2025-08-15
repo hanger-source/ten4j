@@ -1,4 +1,4 @@
-package source.hanger.core.extension.system;
+package source.hanger.core.common;
 
 public final class ExtensionConstants {
 

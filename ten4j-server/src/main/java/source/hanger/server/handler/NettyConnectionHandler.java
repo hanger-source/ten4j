@@ -45,10 +45,22 @@ public class NettyConnectionHandler extends ChannelInboundHandlerAdapter {
         // 将 NettyConnection 存储到 Channel 的属性中，以便后续可以在管道中获取
         ctx.channel().attr(NettyConnection.CONNECTION_ATTRIBUTE_KEY).set(connection);
 
-        // 通知 App 有新的连接
-        app.onNewConnection(connection);
-
         super.channelActive(ctx);
+    }
+
+    /**
+     * 在 WebSocket 连接建立成功后调用，通知 App 有新的 WebSocket 连接。
+     *
+     * @param ctx ChannelHandlerContext
+     */
+    public void onWebSocketConnected(ChannelHandlerContext ctx) {
+        NettyConnection connection = ctx.channel().attr(NettyConnection.CONNECTION_ATTRIBUTE_KEY).get();
+        if (connection != null) {
+            log.info("NettyConnectionHandler: WebSocket 连接已建立，通知 App 新连接: {}", connection.getConnectionId());
+            app.onNewConnection(connection);
+        } else {
+            log.warn("NettyConnectionHandler: 无法在 WebSocket 连接建立时找到对应的 NettyConnection 实例。");
+        }
     }
 
     @Override

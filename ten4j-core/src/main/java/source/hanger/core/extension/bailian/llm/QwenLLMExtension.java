@@ -15,7 +15,7 @@ import io.reactivex.Flowable;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.extension.system.ExtensionConstants;
+import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.system.llm.BaseLLMExtension;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;

@@ -41,20 +41,26 @@ public class HttpDispatcher {
 
         for (Class<?> controllerClass : controllerClasses) {
             try {
+                HttpRequestController controllerAnnotation = controllerClass.getAnnotation(HttpRequestController.class);
+                String controllerBasePath = (controllerAnnotation != null) ? controllerAnnotation.value() : "/";
+
                 Object controllerInstance = controllerClass.getDeclaredConstructor().newInstance();
                 controllerInstances.put(controllerClass, controllerInstance);
 
                 for (Method method : controllerClass.getMethods()) {
                     if (method.isAnnotationPresent(HttpRequestMapping.class)) {
                         HttpRequestMapping mapping = method.getAnnotation(HttpRequestMapping.class);
-                        String path = mapping.path();
+                        String routePath = mapping.path();
 
                         // 将字符串方法名解析为 HttpMethod 枚举
                         HttpMethod httpMethod = HttpMethod.valueOf(mapping.method());
 
-                        routes.computeIfAbsent(path, k -> new HashMap<>()).put(httpMethod,
+                        // Combine controller base path and route path
+                        String fullPath = combinePaths(controllerBasePath, routePath);
+
+                        routes.computeIfAbsent(fullPath, k -> new HashMap<>()).put(httpMethod,
                                 new MethodInvoker(controllerInstance, method));
-                        log.info("Mapped: [{} {}] to {}.{}", httpMethod, path, controllerClass.getName(),
+                        log.info("Mapped: [{} {}] to {}.{}", httpMethod, fullPath, controllerClass.getName(),
                                 method.getName());
                     }
                 }
@@ -64,6 +70,16 @@ public class HttpDispatcher {
                         controllerClass.getName(), e.getMessage());
             }
         }
+    }
+
+    private String combinePaths(String basePath, String routePath) {
+        if (basePath.endsWith("/")) {
+            basePath = basePath.substring(0, basePath.length() - 1);
+        }
+        if (!routePath.startsWith("/")) {
+            routePath = "/" + routePath;
+        }
+        return basePath + routePath;
     }
 
     /**
@@ -81,6 +97,15 @@ public class HttpDispatcher {
         String path = questionMarkIndex > -1 ? uri.substring(0, questionMarkIndex) : uri;
 
         Map<HttpMethod, MethodInvoker> methodInvokers = routes.get(path);
+
+        // Try with trailing slash if not found and path doesn't end with slash
+        if (methodInvokers == null && !path.endsWith("/")) {
+            methodInvokers = routes.get(path + "/");
+        }
+        // Try without trailing slash if not found and path ends with slash
+        if (methodInvokers == null && path.endsWith("/") && path.length() > 1) {
+            methodInvokers = routes.get(path.substring(0, path.length() - 1));
+        }
 
         if (methodInvokers != null) {
             MethodInvoker invoker = methodInvokers.get(method);

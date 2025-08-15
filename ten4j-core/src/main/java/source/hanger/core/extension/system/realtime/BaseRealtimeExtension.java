@@ -1,11 +1,10 @@
 package source.hanger.core.extension.system.realtime;
 
-import com.google.gson.JsonObject;
-import io.reactivex.Flowable;
 import io.reactivex.processors.PublishProcessor;
 import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.common.ExtensionConstants;
+import source.hanger.core.extension.bailian.realtime.events.RealtimeEvent;
 import source.hanger.core.extension.system.BaseFlushExtension;
-import source.hanger.core.extension.system.ExtensionConstants;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
@@ -14,12 +13,6 @@ import source.hanger.core.message.MessageType;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
 import source.hanger.core.util.MessageUtils;
-
-import java.util.Map;
-
-import source.hanger.core.extension.bailian.realtime.events.RealtimeEvent;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  * Realtime API 扩展的抽象基类。
@@ -179,17 +172,18 @@ public abstract class BaseRealtimeExtension extends BaseFlushExtension<RealtimeE
     protected void sendTextOutput(TenEnv env, Message originalMessage, String text, boolean endOfSegment) {
         try {
             DataMessage outputData = DataMessage.create(ExtensionConstants.REALTIME_DATA_OUT_NAME); // Define this
-                                                                                                    // constant
+            // constant
             outputData.setId(originalMessage.getId());
             outputData.setProperty(ExtensionConstants.DATA_OUT_PROPERTY_TEXT, text);
             outputData.setProperty(ExtensionConstants.DATA_OUT_PROPERTY_END_OF_SEGMENT, endOfSegment);
             outputData.setProperty("extension_name", env.getExtensionName());
             outputData.setProperty("group_timestamp", originalMessage.getTimestamp());
             outputData.setProperty(ExtensionConstants.DATA_OUT_PROPERTY_ROLE, "assistant"); // Assuming assistant role
-                                                                                            // for output
+            // for output
 
             env.sendMessage(outputData);
-            log.debug("[{}] Realtime文本输出发送成功: text={}, endOfSegment={}", env.getExtensionName(), text, endOfSegment);
+            log.debug("[{}] Realtime文本输出发送成功: text={}, endOfSegment={}", env.getExtensionName(), text,
+                endOfSegment);
         } catch (Exception e) {
             log.error("[{}] Realtime文本输出发送异常: ", env.getExtensionName(), e);
         }
@@ -206,7 +200,7 @@ public abstract class BaseRealtimeExtension extends BaseFlushExtension<RealtimeE
      * @param numberOfChannels 通道数
      */
     protected void sendAudioOutput(TenEnv env, Message originalMessage, byte[] audioData,
-            int sampleRate, int bytesPerSample, int numberOfChannels) {
+        int sampleRate, int bytesPerSample, int numberOfChannels) {
         try {
             AudioFrameMessage audioFrame = AudioFrameMessage.create("audio_frame");
             audioFrame.setId(originalMessage.getId());
@@ -228,9 +222,9 @@ public abstract class BaseRealtimeExtension extends BaseFlushExtension<RealtimeE
 
     // 发送错误结果
     protected void sendErrorResult(TenEnv env, String messageId, MessageType messageType, String messageName,
-            String errorMessage) {
+        String errorMessage) {
         String finalMessageId = (messageId != null && !messageId.isEmpty()) ? messageId
-                : MessageUtils.generateUniqueId();
+            : MessageUtils.generateUniqueId();
         CommandResult errorResult = CommandResult.fail(finalMessageId, messageType, messageName, errorMessage);
         env.sendResult(errorResult);
         log.error("[{}] Realtime Error [{}]: {}", env.getExtensionName(), messageName, errorMessage);

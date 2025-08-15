@@ -15,6 +15,9 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.cors.CorsConfig;
+import io.netty.handler.codec.http.cors.CorsConfigBuilder;
+import io.netty.handler.codec.http.cors.CorsHandler;
 import io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.logging.LogLevel;
@@ -61,6 +64,26 @@ public class TenServer {
         }
     }
 
+    private CorsConfig createCorsConfig() {
+        return CorsConfigBuilder.forAnyOrigin()
+                .allowNullOrigin()
+                .allowCredentials()
+                .allowedRequestMethods(io.netty.handler.codec.http.HttpMethod.GET,
+                        io.netty.handler.codec.http.HttpMethod.POST,
+                        io.netty.handler.codec.http.HttpMethod.PUT,
+                        io.netty.handler.codec.http.HttpMethod.DELETE,
+                        io.netty.handler.codec.http.HttpMethod.OPTIONS)
+                .allowedRequestHeaders(io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE,
+                        io.netty.handler.codec.http.HttpHeaderNames.HOST,
+                        io.netty.handler.codec.http.HttpHeaderNames.ORIGIN,
+                        io.netty.handler.codec.http.HttpHeaderNames.REFERER,
+                        io.netty.handler.codec.http.HttpHeaderNames.USER_AGENT,
+                        io.netty.handler.codec.http.HttpHeaderNames.COOKIE,
+                        io.netty.handler.codec.http.HttpHeaderNames.ACCEPT)
+                .exposeHeaders(io.netty.handler.codec.http.HttpHeaderNames.LOCATION)
+                .build();
+    }
+
     public CompletableFuture<Void> start() {
         CompletableFuture<Void> serverStartFuture = new CompletableFuture<>();
         for (int attempt = 0; attempt < MAX_RETRY_ATTEMPTS; attempt++) {
@@ -78,6 +101,7 @@ public class TenServer {
                                 ch.pipeline().addLast(
                                         new HttpServerCodec(), // HTTP 编解码器
                                         new HttpObjectAggregator(65536), // HTTP 消息聚合器
+                                        new CorsHandler(createCorsConfig()), // CORS 处理
                                         new ChunkedWriteHandler(), // 处理大文件传输
                                         // 新增：HTTP 请求处理器，在 WebSocket 升级之前处理
                                         new HttpHandler(ServerConstants.HTTP_CONTROLLER_PACKAGE), // 处理 HTTP 请求的自定义
@@ -89,8 +113,9 @@ public class TenServer {
                                         // MsgPack 编解码器
                                         new WebSocketFrameToByteBufDecoder(),
                                         new MessagePackDecoder(), // MsgPack 解码器
-                                        new WebSocketMessageDispatcher(), // WebSocket 消息调度器，传入 App
-                                        new NettyConnectionHandler(app), // 负责 Connection 生命周期管理和消息转发给 App
+                                        new NettyConnectionHandler(app), // This will be the only NettyConnectionHandler
+                                        new WebSocketMessageDispatcher(), // WebSocket 消息调度器 (will be updated to take
+                                                                          // NettyConnectionHandler)
                                         new ByteBufToWebSocketFrameEncoder(), // ByteBuf 到 WebSocketFrame 编码器
                                         new MessagePackEncoder() // MsgPack 编码器
                                 );

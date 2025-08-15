@@ -198,14 +198,9 @@ public abstract class AbstractConnection implements Connection {
         if (migrationState != ConnectionMigrationState.CLEANED) {
             this.migrationState = ConnectionMigrationState.CLEANING;
             log.info("Connection {}: 开始清理资源...", connectionId);
-            // if (protocol != null) {
-            // protocol.cleanup(); // 清理协议资源
-            // }
             // TODO: 清理其他资源，如解除与 Engine 的绑定等
-            // Channel 关闭将在 NettyConnection 或 NettyConnectionHandler 中处理
             this.migrationState = ConnectionMigrationState.CLEANED;
             log.info("Connection {}: 资源清理完成，当前状态: {}", connectionId, migrationState);
-            // onProtocolCleaned(); // 移除，协议清理现在由 NettyConnectionHandler 隐式处理
         }
     }
 
@@ -247,7 +242,7 @@ public abstract class AbstractConnection implements Connection {
         this.messageReceiver = remote; // Remote 将接收 Connection 的入站消息
         log.info("AbstractConnection {}: 依附到 Remote {}{}", connectionId, remote.getUri(),
             remote.getRunloop().getCoreThread() != null
-                ? "，Runloop: " + remote.getRunloop().getCoreThread().getName()
+                ? "，Runloop: %s".formatted(remote.getRunloop().getCoreThread().getName())
                 : "");
 
         // 设置当前 Runloop 为 Remote 的 Runloop

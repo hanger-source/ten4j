@@ -1,0 +1,163 @@
+{
+  "name": "标准对话",
+  "auto_start": true,
+  "graph": {
+    "nodes": [
+      {
+        "type": "extension",
+        "name": "client_connection",
+        "addon": "source.hanger.core.extension.system.ClientConnectionExtension",
+        "extension_group": "default",
+        "property": {}
+      },
+      {
+        "type": "extension",
+        "name": "echo_handler",
+        "addon": "source.hanger.core.extension.system.EchoExtension",
+        "extension_group": "default",
+        "property": {}
+      },
+      {
+        "type": "extension",
+        "name": "llm",
+        "addon": "source.hanger.core.extension.bailian.llm.QwenLLMExtension",
+        "extension_group": "llm_group",
+        "property": {
+          "api_key": "sk-679adb8eb9cc479fa879bc2f62c8d9a5",
+          "model": "qwen-turbo"
+        }
+      },
+      {
+        "type": "extension",
+        "name": "tts",
+        "addon": "source.hanger.core.extension.bailian.tts.QwenTtsExtension",
+        "extension_group": "tts_group",
+        "property": {
+          "api_key": "sk-679adb8eb9cc479fa879bc2f62c8d9a5",
+          "voice_name": "Cherry"
+        }
+      },
+      {
+        "type": "extension",
+        "name": "asr",
+        "addon": "source.hanger.core.extension.bailian.asr.ParaformerASRExtension",
+        "extension_group": "asr_group",
+        "property": {
+          "api_key": "sk-679adb8eb9cc479fa879bc2f62c8d9a5",
+          "model": "paraformer-realtime-v2"
+        }
+      },
+      {
+        "type": "extension",
+        "name": "interrupt_detector",
+        "addon": "source.hanger.core.extension.system.InterruptDetectorExtension",
+        "extension_group": "default",
+        "property": {
+        }
+      }
+    ],
+    "connections": [
+      {
+        "extension": "client_connection",
+        "data": [
+          {
+            "name": "text_data",
+            "dest": [
+              {
+                "extension": "interrupt_detector"
+              }
+            ]
+          }
+        ],
+        "audio_frame": [
+          {
+            "name": "audio_frame",
+            "dest": [
+              {
+                "extension": "asr"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "extension": "interrupt_detector",
+        "cmd": [
+          {
+            "name": "flush",
+            "dest": [
+              {
+                "extension": "llm"
+              }
+            ]
+          }
+        ],
+        "data": [
+          {
+            "name": "text_data",
+            "dest": [
+              {
+                "extension": "llm"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "extension": "asr",
+        "data": [
+          {
+            "name": "asr_result",
+            "dest": [
+              {
+                "extension": "interrupt_detector"
+              },
+              {
+                "extension": "client_connection"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "extension": "llm",
+        "cmd": [
+          {
+            "name": "flush",
+            "dest": [
+              {
+                "extension": "tts"
+              }
+            ]
+          }
+        ],
+        "data": [
+          {
+            "name": "text_data",
+            "dest": [
+              {
+                "extension": "client_connection"
+              },
+              {
+                "extension": "tts"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "extension": "tts",
+        "audio_frame": [
+          {
+            "name": "audio_frame",
+            "dest": [
+              {
+                "extension": "client_connection"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

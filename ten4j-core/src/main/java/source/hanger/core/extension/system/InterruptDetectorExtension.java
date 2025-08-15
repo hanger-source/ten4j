@@ -12,8 +12,8 @@ import source.hanger.core.message.command.GenericCommand;
 import source.hanger.core.tenenv.TenEnv;
 import source.hanger.core.util.MessageUtils;
 
-import static source.hanger.core.extension.system.ExtensionConstants.ASR_DATA_OUT_NAME;
-import static source.hanger.core.extension.system.ExtensionConstants.LLM_DATA_OUT_NAME;
+import static source.hanger.core.common.ExtensionConstants.ASR_DATA_OUT_NAME;
+import static source.hanger.core.common.ExtensionConstants.LLM_DATA_OUT_NAME;
 
 @Slf4j
 public class InterruptDetectorExtension extends BaseExtension {

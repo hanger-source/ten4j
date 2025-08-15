@@ -4,6 +4,7 @@ import java.util.HashMap;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.message.Message;
 import source.hanger.server.connection.NettyConnection;
@@ -38,7 +39,16 @@ public class WebSocketMessageDispatcher extends SimpleChannelInboundHandler<Mess
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         // WebSocketServerProtocolHandler 会在握手成功时触发 HandshakeComplete
-        // 这里可以进行一些连接建立后的初始化操作
+        if (evt == WebSocketServerProtocolHandler.ServerHandshakeStateEvent.HANDSHAKE_COMPLETE) {
+            log.info("WebSocket Handshake Complete (Enum Event) for Channel: {}", ctx.channel().id().asShortText());
+            // 获取 NettyConnectionHandler 实例并通知 WebSocket 连接已建立
+            NettyConnectionHandler nettyConnectionHandler = ctx.pipeline().get(NettyConnectionHandler.class);
+            if (nettyConnectionHandler != null) {
+                nettyConnectionHandler.onWebSocketConnected(ctx);
+            } else {
+                log.warn("WebSocketMessageDispatcher: 无法在管道中找到 NettyConnectionHandler 实例。");
+            }
+        }
         super.userEventTriggered(ctx, evt);
     }
 

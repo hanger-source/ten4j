@@ -4,11 +4,17 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.util.ResourceUtils;
 
+@Slf4j
 public class GraphLoader {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
         .configure(SerializationFeature.INDENT_OUTPUT, true);
@@ -63,5 +69,37 @@ public class GraphLoader {
      */
     public static String toJson(GraphConfig graphConfig) throws JsonProcessingException {
         return OBJECT_MAPPER.writeValueAsString(graphConfig);
+    }
+
+    /**
+     * 从 classpath 的 resources/graph 目录下加载所有预定义的图配置。
+     *
+     * @return 包含所有预定义图条目的 GraphConfig 对象
+     * @throws IOException 如果读取或解析文件失败
+     */
+    public static GraphConfig loadPredefinedGraphsConfig() throws IOException {
+        List<PredefinedGraphEntry> predefinedGraphs = new ArrayList<>();
+        String resourcePath = "graph"; // 对应 resources/graph 目录
+        String fileExtension = ".json";
+
+        List<InputStream> jsonInputStreams = ResourceUtils.getResourceInputStreams(resourcePath, fileExtension);
+
+        for (InputStream inputStream : jsonInputStreams) {
+            try (InputStream is = inputStream) { // Ensure InputStream is closed
+                PredefinedGraphEntry entry = OBJECT_MAPPER.readValue(is, PredefinedGraphEntry.class);
+                // 假设每个 PredefinedGraphEntry 内部的 GraphDefinition 应该有一个 graphId。
+                // 如果 JSON 文件本身没有顶层 uuid，这里可以生成一个。
+                if (entry.getGraph() != null && entry.getGraph().getGraphId() == null) {
+                    entry.getGraph().setGraphId(UUID.randomUUID().toString());
+                }
+                predefinedGraphs.add(entry);
+            } catch (IOException e) {
+                log.error("Error reading or parsing JSON stream from resource '{}/{}': {}", resourcePath, fileExtension,
+                    e.getMessage());
+            }
+        }
+
+        // 根据收集到的预定义图列表构建 GraphConfig
+        return new GraphConfig().setPredefinedGraphs(predefinedGraphs);
     }
 }

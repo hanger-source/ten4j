@@ -5,7 +5,7 @@ import java.util.Map;
 import io.reactivex.Flowable;
 import lombok.extern.slf4j.Slf4j;
 import net.fellbaum.jemoji.EmojiManager;
-import source.hanger.core.extension.system.ExtensionConstants;
+import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.system.tts.BaseTTSExtension;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
