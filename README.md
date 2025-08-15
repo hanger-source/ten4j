@@ -66,6 +66,8 @@ mvn spring-boot:run
 
 -   **TEN-framework GitHub**: [https://github.com/TEN-framework/ten-framework](https://github.com/TEN-framework/ten-framework)
 
+衷心感谢 `TEN-framework` 社区为本项目提供了丰富的灵感和宝贵的开源代码，供我们学习和借鉴。
+
 ## 🤝 贡献
 
 我们欢迎所有对 `ten4j` 项目的贡献！无论是 Bug 修复、功能增强、文档改进还是代码审查，您的贡献都将帮助我们提升项目质量。请在提交 Pull Request 之前，确保您的更改符合项目的编码规范并已通过所有相关测试。
