@@ -1,4 +1,7 @@
 # ten4j
+![Demo](https://github.com/hanger-source/ten-realtime-chat/blob/main/demo.png)
+
+- [返回主项目](https://github.com/hanger-source/ten-realtime-chat/blob/main/README.md): `ten-realtime-chat` 是一个全面的实时聊天应用示例，旨在展示如何高效整合基于 WebSocket 的前端和基于 Java `ten4j` 框架的后端，实现高性能、高并发的双向实时通信。
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
