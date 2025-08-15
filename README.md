@@ -57,7 +57,7 @@ cd ten-realtime-chat
 
 ```bash
 cd ten4j
-mvn clean install
+mvn clean install -Pbuild-jar
 java -Dserver.port=8080 --add-opens java.base/sun.nio.ch=ALL-UNNAMED --add-opens java.base/jdk.internal.misc=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED -jar ten4j-server/target/ten4j-server-1.0-SNAPSHOT.jar
 ```
 
