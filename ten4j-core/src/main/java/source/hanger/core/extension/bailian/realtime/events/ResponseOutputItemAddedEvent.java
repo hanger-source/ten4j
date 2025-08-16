@@ -7,17 +7,20 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import source.hanger.core.extension.bailian.realtime.events.response.Item;
+
+import java.util.List;
 
 /**
- * 表示 Realtime API 的 "response.text.delta" 事件。
+ * 表示 Realtime API 的 "response.output_item.added" 事件。
  */
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString(callSuper = true)
-@JsonTypeName("response.text.delta")
-public class ResponseTextDeltaEvent extends RealtimeEvent {
+@JsonTypeName("response.output_item.added")
+public class ResponseOutputItemAddedEvent extends RealtimeEvent {
 
     @JsonProperty("event_id")
     private String eventId;
@@ -27,8 +30,12 @@ public class ResponseTextDeltaEvent extends RealtimeEvent {
     private String itemId;
     @JsonProperty("output_index")
     private String outputIndex;
-    @JsonProperty("content_index")
-    private String contentIndex;
-    private String delta;
-    private String text;
+    @JsonProperty("output_type")
+    private String outputType;
+    @JsonProperty("content_parts")
+    private List<Object> contentParts;
+
+    @JsonProperty("item")
+    private Item item;
+
 }

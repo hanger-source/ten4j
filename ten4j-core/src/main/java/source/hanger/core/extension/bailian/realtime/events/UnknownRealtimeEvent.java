@@ -1,28 +1,36 @@
 package source.hanger.core.extension.bailian.realtime.events;
 
-import com.google.gson.JsonObject;
-import lombok.AllArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * 未知实时事件，用于捕获所有未显式定义在 {@link RealtimeEvent} 子类型中的事件。
+ */
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@ToString
-public class UnknownRealtimeEvent implements RealtimeEvent {
-    public static final String TYPE = "unknown";
-    private JsonObject rawMessage;
+@ToString(callSuper = true)
+@JsonTypeName("unknown")
+public class UnknownRealtimeEvent extends RealtimeEvent {
 
-    @Override
-    public String getType() {
-        return rawMessage != null && rawMessage.has("type") ? rawMessage.get("type").getAsString() : TYPE;
-    }
+    @JsonProperty("event_id")
+    private String eventId;
+    @JsonProperty("response_id")
+    private String responseId;
+    private String rawType;
 
-    @Override
-    public JsonObject toJsonObject() {
-        return rawMessage;
+    private Map<String, Object> properties = new HashMap<>();
+
+    @JsonAnySetter
+    public void add(String key, Object value) {
+        this.properties.put(key, value);
     }
 }

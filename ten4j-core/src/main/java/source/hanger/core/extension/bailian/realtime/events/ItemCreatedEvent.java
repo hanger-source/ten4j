@@ -7,23 +7,25 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import source.hanger.core.extension.bailian.realtime.events.response.Item;
 
 /**
- * 表示 Realtime API 的 "input_audio_buffer.speech_started" 事件。
+ * 表示 Realtime API 的 "conversation.item.created" 事件。
  */
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString(callSuper = true)
-@JsonTypeName("input_audio_buffer.speech_started")
-public class InputAudioBufferSpeechStartedEvent extends RealtimeEvent {
+@JsonTypeName("conversation.item.created")
+public class ItemCreatedEvent extends RealtimeEvent {
 
     @JsonProperty("event_id")
     private String eventId;
-    private String id;
-    @JsonProperty("audio_start_ms")
-    private Long audioStartMs;
     @JsonProperty("item_id")
     private String itemId;
+    @JsonProperty("previous_item_id")
+    private String previousItemId;
+    @JsonProperty("item")
+    private Item item;
 }

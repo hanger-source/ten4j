@@ -77,7 +77,6 @@ public abstract class BaseRealtimeExtension extends BaseFlushExtension<RealtimeE
      */
     @Override
     public void onAudioFrame(TenEnv env, AudioFrameMessage audioFrame) {
-        super.onAudioFrame(env, audioFrame);
         if (!isRunning()) {
             log.warn("[{}] Realtime 扩展未运行，忽略音频帧: frameId={}", env.getExtensionName(), audioFrame.getId());
             return;
@@ -161,24 +160,31 @@ public abstract class BaseRealtimeExtension extends BaseFlushExtension<RealtimeE
      */
     protected abstract void handleRealtimeCommand(TenEnv env, Command command);
 
+
+    protected void sendAudioTranscriptionText(TenEnv env, String eventId, String text, boolean endOfSegment) {
+        sendTextOutput(env, eventId, eventId, text, endOfSegment, "user");
+    }
+
+    protected void sendTextOutput(TenEnv env, String eventId, String responseId, String text, boolean endOfSegment) {
+        sendTextOutput(env, eventId, responseId, text, endOfSegment, "assistant");
+    }
     /**
      * 发送文本输出。
      *
      * @param env             当前的TenEnv环境
-     * @param originalMessage 触发此文本输出的原始消息
      * @param text            要发送的文本内容
      * @param endOfSegment    是否是片段的结束
      */
-    protected void sendTextOutput(TenEnv env, Message originalMessage, String text, boolean endOfSegment) {
+    protected void sendTextOutput(TenEnv env, String eventId, String groupId, String text, boolean endOfSegment, String role) {
         try {
-            DataMessage outputData = DataMessage.create(ExtensionConstants.REALTIME_DATA_OUT_NAME); // Define this
+            DataMessage outputData = DataMessage.create(ExtensionConstants.LLM_DATA_OUT_NAME); // Define this
             // constant
-            outputData.setId(originalMessage.getId());
+            outputData.setId(eventId);
             outputData.setProperty(ExtensionConstants.DATA_OUT_PROPERTY_TEXT, text);
             outputData.setProperty(ExtensionConstants.DATA_OUT_PROPERTY_END_OF_SEGMENT, endOfSegment);
             outputData.setProperty("extension_name", env.getExtensionName());
-            outputData.setProperty("group_timestamp", originalMessage.getTimestamp());
-            outputData.setProperty(ExtensionConstants.DATA_OUT_PROPERTY_ROLE, "assistant"); // Assuming assistant role
+            outputData.setProperty("group_id", groupId);
+            outputData.setProperty(ExtensionConstants.DATA_OUT_PROPERTY_ROLE, role); // Assuming assistant role
             // for output
 
             env.sendMessage(outputData);
@@ -193,17 +199,16 @@ public abstract class BaseRealtimeExtension extends BaseFlushExtension<RealtimeE
      * 发送音频输出。
      *
      * @param env              当前的TenEnv环境
-     * @param originalMessage  触发此音频输出的原始消息
      * @param audioData        音频数据字节数组
      * @param sampleRate       采样率
      * @param bytesPerSample   每样本字节数
      * @param numberOfChannels 通道数
      */
-    protected void sendAudioOutput(TenEnv env, Message originalMessage, byte[] audioData,
+    protected void sendAudioOutput(TenEnv env, String eventId, String responseId, byte[] audioData,
         int sampleRate, int bytesPerSample, int numberOfChannels) {
         try {
             AudioFrameMessage audioFrame = AudioFrameMessage.create("pcm_frame");
-            audioFrame.setId(originalMessage.getId());
+            audioFrame.setId(eventId);
             audioFrame.setSampleRate(sampleRate);
             audioFrame.setBytesPerSample(bytesPerSample);
             audioFrame.setNumberOfChannel(numberOfChannels);
@@ -211,7 +216,7 @@ public abstract class BaseRealtimeExtension extends BaseFlushExtension<RealtimeE
             audioFrame.setBuf(audioData);
             audioFrame.setType(MessageType.AUDIO_FRAME);
             audioFrame.setProperty("extension_name", env.getExtensionName());
-            audioFrame.setProperty("group_timestamp", originalMessage.getTimestamp());
+            audioFrame.setProperty("group_id", responseId);
 
             env.sendMessage(audioFrame);
             log.debug("[{}] Realtime音频帧发送成功: size={}", env.getExtensionName(), audioData.length);

@@ -210,21 +210,21 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
                             return; // 跳过此图的启动
                         }
 
-                        Location srcLoc = new Location(appUri, null, null);
-                        // 注意：graphId 会在 Engine 启动时生成，这里不需要从 GraphDefinition 获取
-                        // destLoc 的 graphId 应该为 null，表示目标是 App 内部的 Engine 实例（由 StartGraphCommand 触发创建）
-                        Location destLoc = new Location(appUri, null, null);
-
-                        StartGraphCommand startCmd = new StartGraphCommand(
-                                MessageUtils.generateUniqueId(),
-                                srcLoc,
-                                Collections.singletonList(destLoc),
-                                "Auto-start predefined graph", // message
-                                graphJson, // 使用重新序列化后的图 JSON 字符串
-                                false // longRunningMode
-                        );
+                        //Location srcLoc = new Location(appUri, null, null);
+                        //// 注意：graphId 会在 Engine 启动时生成，这里不需要从 GraphDefinition 获取
+                        //// destLoc 的 graphId 应该为 null，表示目标是 App 内部的 Engine 实例（由 StartGraphCommand 触发创建）
+                        //Location destLoc = new Location(appUri, null, null);
+                        //
+                        //StartGraphCommand startCmd = new StartGraphCommand(
+                        //        MessageUtils.generateUniqueId(),
+                        //        srcLoc,
+                        //        Collections.singletonList(destLoc),
+                        //        "Auto-start predefined graph", // message
+                        //        graphJson, // 使用重新序列化后的图 JSON 字符串
+                        //        false // longRunningMode
+                        //);
                         // 提交命令到 App Runloop，然后由 App 的 handleInboundMessage 处理
-                        appEnvProxy.sendCmd(startCmd); // 使用 appEnvProxy 提交命令
+                        //appEnvProxy.sendCmd(startCmd); // 使用 appEnvProxy 提交命令
                     });
         }
         log.info("App: 已启动。");

@@ -4,14 +4,16 @@ import com.alibaba.dashscope.audio.omni.OmniRealtimeCallback;
 import com.alibaba.dashscope.audio.omni.OmniRealtimeConversation;
 import com.alibaba.dashscope.audio.omni.OmniRealtimeParam;
 import com.alibaba.dashscope.exception.NoApiKeyException;
-import com.google.gson.JsonObject;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.JsonObject; // Retain JsonObject for raw message handling
 import io.reactivex.Flowable;
 import io.reactivex.processors.PublishProcessor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
-import com.google.gson.Gson;
+// Removed Gson import: import com.google.gson.Gson;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -20,6 +22,30 @@ import lombok.ToString;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import io.reactivex.disposables.Disposable;
+import source.hanger.core.extension.bailian.realtime.events.RealtimeEvent;
+// Explicitly import all event classes for clarity and to remove redundant TYPE constants
+import source.hanger.core.extension.bailian.realtime.events.ConnectionClosedEvent;
+import source.hanger.core.extension.bailian.realtime.events.ConnectionOpenedEvent;
+import source.hanger.core.extension.bailian.realtime.events.FunctionCallArgumentsDoneEvent;
+import source.hanger.core.extension.bailian.realtime.events.InputAudioBufferCommittedEvent;
+import source.hanger.core.extension.bailian.realtime.events.InputAudioBufferSpeechStartedEvent;
+import source.hanger.core.extension.bailian.realtime.events.InputAudioBufferSpeechStoppedEvent;
+import source.hanger.core.extension.bailian.realtime.events.InputAudioTranscriptionCompletedEvent;
+import source.hanger.core.extension.bailian.realtime.events.ItemCreatedEvent;
+import source.hanger.core.extension.bailian.realtime.events.ResponseAudioDeltaEvent;
+import source.hanger.core.extension.bailian.realtime.events.ResponseAudioDoneEvent;
+import source.hanger.core.extension.bailian.realtime.events.ResponseAudioTranscriptDeltaEvent;
+import source.hanger.core.extension.bailian.realtime.events.ResponseAudioTranscriptDoneEvent;
+import source.hanger.core.extension.bailian.realtime.events.ResponseContentPartAddedEvent;
+import source.hanger.core.extension.bailian.realtime.events.ResponseContentPartDoneEvent;
+import source.hanger.core.extension.bailian.realtime.events.ResponseCreatedEvent;
+import source.hanger.core.extension.bailian.realtime.events.ResponseDoneEvent;
+import source.hanger.core.extension.bailian.realtime.events.ResponseOutputItemAddedEvent;
+import source.hanger.core.extension.bailian.realtime.events.ResponseOutputItemDoneEvent;
+import source.hanger.core.extension.bailian.realtime.events.ResponseTextDeltaEvent;
+import source.hanger.core.extension.bailian.realtime.events.SessionCreatedEvent;
+import source.hanger.core.extension.bailian.realtime.events.SessionUpdatedEvent;
+import source.hanger.core.extension.bailian.realtime.events.UnknownRealtimeEvent;
 
 /**
  * 封装与 DashScope Omni Realtime API 的低级交互。
@@ -28,10 +54,17 @@ import io.reactivex.disposables.Disposable;
 @Slf4j
 public class QwenOmniRealtimeClient {
 
+    /**
+     * -- GETTER --
+     *  获取 OmniRealtimeConversation 实例。
+     *
+     * @return OmniRealtimeConversation 实例。
+     */
+    @Getter
     private OmniRealtimeConversation conversation;
     // Removed apiKey, model, sampleRate as they will be part of OmniRealtimeParam
     private final OmniRealtimeParam param; // Store the parameter for reconnection
-    private final PublishProcessor<source.hanger.core.extension.bailian.realtime.events.RealtimeEvent> eventProcessor; // To
+    private final PublishProcessor<RealtimeEvent> eventProcessor; // To
                                                                                                                        // push
                                                                                                                        // events
                                                                                                                        // received
@@ -41,6 +74,9 @@ public class QwenOmniRealtimeClient {
     private Disposable disposable;
     private boolean isManualDisconnect = false;
 
+    // Jackson ObjectMapper for polymorphic deserialization
+    private final ObjectMapper objectMapper;
+
     // Reconnection parameters
     private static final int RECONNECT_DELAY_SECONDS = 5; // Reconnect after 5 seconds
 
@@ -48,6 +84,7 @@ public class QwenOmniRealtimeClient {
         this.param = param;
         this.eventProcessor = PublishProcessor.create();
         this.executorService = Executors.newSingleThreadScheduledExecutor();
+        this.objectMapper = new ObjectMapper(); // Initialize ObjectMapper
     }
 
     /**
@@ -65,14 +102,14 @@ public class QwenOmniRealtimeClient {
             @Override
             public void onOpen() {
                 log.info("[qwen_omni_realtime_client] Connected Successfully");
-                eventProcessor.onNext(new source.hanger.core.extension.bailian.realtime.events.ConnectionOpenedEvent());
+                eventProcessor.onNext(new ConnectionOpenedEvent());
             }
 
             @Override
             public void onEvent(JsonObject message) {
-                log.debug("[qwen_omni_realtime_client] Received raw message: {}", message.toString());
+                log.debug("\n[qwen_omni_realtime_client] Received raw message: {}\n", message.toString());
                 // Parse the JsonObject into a specific RealtimeEvent type
-                source.hanger.core.extension.bailian.realtime.events.RealtimeEvent event = parseRealtimeEvent(message);
+                RealtimeEvent event = parseRealtimeEvent(message);
                 eventProcessor.onNext(event);
             }
 
@@ -86,7 +123,7 @@ public class QwenOmniRealtimeClient {
                 log.info("[qwen_omni_realtime_client] Connection closed. Code: {}, Reason: {}", code, reason);
                 // Push a ConnectionClosedEvent
                 eventProcessor.onNext(
-                        new source.hanger.core.extension.bailian.realtime.events.ConnectionClosedEvent(code, reason));
+                        new ConnectionClosedEvent(code, reason));
                 // Clean up disposable if connection is intentionally closed by the client
                 if (disposable != null && !disposable.isDisposed()) {
                     disposable.dispose();
@@ -137,7 +174,7 @@ public class QwenOmniRealtimeClient {
      *
      * @return 包含 JsonObject 事件的 Flowable
      */
-    public Flowable<source.hanger.core.extension.bailian.realtime.events.RealtimeEvent> getEvents() {
+    public Flowable<RealtimeEvent> getEvents() {
         return eventProcessor;
     }
 
@@ -151,68 +188,25 @@ public class QwenOmniRealtimeClient {
     }
 
     /**
-     * 获取 OmniRealtimeConversation 实例。
-     *
-     * @return OmniRealtimeConversation 实例。
-     */
-    public OmniRealtimeConversation getConversation() {
-        return conversation;
-    }
-
-    /**
      * 将原始 JsonObject 解析为具体的 RealtimeEvent 类型。
      *
      * @param message 原始的 JsonObject 消息。
      * @return 对应的 RealtimeEvent 实例。
      */
-    private source.hanger.core.extension.bailian.realtime.events.RealtimeEvent parseRealtimeEvent(JsonObject message) {
+    private RealtimeEvent parseRealtimeEvent(JsonObject message) {
         if (message == null || !message.has("type")) {
             log.warn("[qwen_omni_realtime_client] Received message without 'type' field: {}", message);
-            // Return a generic event or null, or throw an exception
-            return null; // Or a generic UnknownEvent
+            return new UnknownRealtimeEvent();
         }
 
-        String type = message.get("type").getAsString();
-        switch (type) {
-            case source.hanger.core.extension.bailian.realtime.events.SessionCreatedEvent.TYPE:
-                source.hanger.core.extension.bailian.realtime.events.SessionCreatedEvent sessionCreatedEvent = new Gson()
-                        .fromJson(message,
-                                source.hanger.core.extension.bailian.realtime.events.SessionCreatedEvent.class);
-                return sessionCreatedEvent;
-            case source.hanger.core.extension.bailian.realtime.events.ResponseTextDeltaEvent.TYPE:
-                source.hanger.core.extension.bailian.realtime.events.ResponseTextDeltaEvent textDeltaEvent = new Gson()
-                        .fromJson(message,
-                                source.hanger.core.extension.bailian.realtime.events.ResponseTextDeltaEvent.class);
-                return textDeltaEvent;
-            case source.hanger.core.extension.bailian.realtime.events.ResponseAudioDeltaEvent.TYPE:
-                source.hanger.core.extension.bailian.realtime.events.ResponseAudioDeltaEvent audioDeltaEvent = new Gson()
-                        .fromJson(message,
-                                source.hanger.core.extension.bailian.realtime.events.ResponseAudioDeltaEvent.class);
-                return audioDeltaEvent;
-            case source.hanger.core.extension.bailian.realtime.events.FunctionCallArgumentsDoneEvent.TYPE:
-                source.hanger.core.extension.bailian.realtime.events.FunctionCallArgumentsDoneEvent functionCallEvent = new Gson()
-                        .fromJson(message,
-                                source.hanger.core.extension.bailian.realtime.events.FunctionCallArgumentsDoneEvent.class);
-                return functionCallEvent;
-            case source.hanger.core.extension.bailian.realtime.events.InputAudioTranscriptionCompletedEvent.TYPE:
-                source.hanger.core.extension.bailian.realtime.events.InputAudioTranscriptionCompletedEvent transcriptionCompletedEvent = new Gson()
-                        .fromJson(message,
-                                source.hanger.core.extension.bailian.realtime.events.InputAudioTranscriptionCompletedEvent.class);
-                return transcriptionCompletedEvent;
-            case source.hanger.core.extension.bailian.realtime.events.InputAudioBufferSpeechStartedEvent.TYPE:
-                source.hanger.core.extension.bailian.realtime.events.InputAudioBufferSpeechStartedEvent speechStartedEvent = new Gson()
-                        .fromJson(message,
-                                source.hanger.core.extension.bailian.realtime.events.InputAudioBufferSpeechStartedEvent.class);
-                return speechStartedEvent;
-            case source.hanger.core.extension.bailian.realtime.events.InputAudioBufferSpeechStoppedEvent.TYPE:
-                source.hanger.core.extension.bailian.realtime.events.InputAudioBufferSpeechStoppedEvent speechStoppedEvent = new Gson()
-                        .fromJson(message,
-                                source.hanger.core.extension.bailian.realtime.events.InputAudioBufferSpeechStoppedEvent.class);
-                return speechStoppedEvent;
-            default:
-                log.warn("[qwen_omni_realtime_client] Unknown event type received: {}", type);
-                // Return a generic RealtimeEvent wrapper for unknown types
-                return new source.hanger.core.extension.bailian.realtime.events.UnknownRealtimeEvent(message);
+        try {
+            // Use ObjectMapper for polymorphic deserialization
+            log.debug("\n----- \n[qwen_omni_realtime_client] Parsing RealtimeEvent: {}\n-----\n", message);
+            return objectMapper.readValue(message.toString(), RealtimeEvent.class);
+        } catch (JsonProcessingException e) {
+            log.error("[qwen_omni_realtime_client] Error parsing RealtimeEvent: {}", e.getMessage(), e);
+            // Fallback to UnknownRealtimeEvent on parsing error
+            return new UnknownRealtimeEvent();
         }
     }
 }

@@ -1,7 +1,7 @@
 package source.hanger.core.extension.bailian.realtime.events;
 
-import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -9,23 +9,27 @@ import lombok.Setter;
 import lombok.ToString;
 
 /**
- * 表示 Realtime API 的 "conversation.item.input_audio_transcription.completed" 事件。
+ * 表示 Realtime API 的 "response.audio_transcript.delta" 事件。
  */
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString(callSuper = true)
-@JsonTypeName("conversation.item.input_audio_transcription.completed")
-public class InputAudioTranscriptionCompletedEvent extends RealtimeEvent {
+@JsonTypeName("response.audio_transcript.delta")
+public class ResponseAudioTranscriptDeltaEvent extends RealtimeEvent {
 
     @JsonProperty("event_id")
     private String eventId;
+    @JsonProperty("response_id")
+    private String responseId;
     @JsonProperty("item_id")
     private String itemId;
-    @JsonProperty("transcription_id")
-    private String transcriptionId;
+    @JsonProperty("output_index")
+    private String outputIndex;
     @JsonProperty("content_index")
-    private Integer contentIndex;
-    private String transcript;
+    private String contentIndex;
+    @JsonProperty("delta")
+    private String delta;
+    private String text;
 }

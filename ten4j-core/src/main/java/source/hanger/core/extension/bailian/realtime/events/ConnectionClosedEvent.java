@@ -1,6 +1,6 @@
 package source.hanger.core.extension.bailian.realtime.events;
 
-import com.google.gson.JsonObject;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -13,26 +13,12 @@ import lombok.ToString;
  */
 @Getter
 @Setter
-@NoArgsConstructor
+@ToString(callSuper = true)
 @AllArgsConstructor
-@ToString
-public class ConnectionClosedEvent implements RealtimeEvent {
-    public static final String TYPE = "connection.closed";
+@NoArgsConstructor
+@JsonTypeName("connection.closed")
+public class ConnectionClosedEvent extends RealtimeEvent {
 
     private int code;
     private String reason;
-
-    @Override
-    public String getType() {
-        return TYPE;
-    }
-
-    @Override
-    public JsonObject toJsonObject() {
-        JsonObject json = new JsonObject();
-        json.addProperty("type", TYPE);
-        json.addProperty("code", code);
-        json.addProperty("reason", reason);
-        return json;
-    }
 }
