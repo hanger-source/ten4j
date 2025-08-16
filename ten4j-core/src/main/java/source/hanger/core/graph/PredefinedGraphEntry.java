@@ -24,6 +24,9 @@ public class PredefinedGraphEntry {
     @JsonProperty("index")
     private Integer index;
 
+    @JsonProperty("doc_url")
+    private String docUrl;
+
     /**
      * 图的原始 JSON 定义字符串。
      * 对应 property.json 中的 "graph" 字段。

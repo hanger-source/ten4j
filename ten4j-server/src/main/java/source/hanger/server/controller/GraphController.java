@@ -36,8 +36,9 @@ public class GraphController {
                         String uuid = entry.getGraph().getGraphId();
                         String name = entry.getName();
                         boolean autoStart = entry.isAutoStart();
+                        String docUrl = entry.getDocUrl();
 
-                        graphs.add(new GraphInfo(uuid, name, entry.getIndex(), autoStart));
+                        graphs.add(new GraphInfo(uuid, name, entry.getIndex(), autoStart, docUrl));
                     } else {
                         log.warn("Invalid PredefinedGraphEntry found, skipping: {}", entry);
                     }
@@ -62,5 +63,6 @@ public class GraphController {
         public String name;
         public Integer index;
         public boolean autoStart;
+        public String docUrl;
     }
 }

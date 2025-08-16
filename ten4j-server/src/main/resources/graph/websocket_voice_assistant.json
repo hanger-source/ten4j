@@ -2,6 +2,7 @@
   "name": "标准对话",
   "auto_start": true,
   "index": 0,
+  "doc_url": "",
   "graph": {
     "nodes": [
       {

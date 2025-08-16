@@ -2,6 +2,7 @@
   "name": "即时响应",
   "auto_start": true,
   "index": 1,
+  "doc_url": "",
   "graph": {
     "nodes": [
       {
