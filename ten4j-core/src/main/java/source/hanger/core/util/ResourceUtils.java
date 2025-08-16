@@ -72,7 +72,9 @@ public class ResourceUtils {
                         // extension
                         if (entryName.startsWith(resourcePath + "/") && entryName.endsWith(fileExtension)) {
                             log.debug("ResourceUtils: Found entry in JAR: {}", entryName);
-                            inputStreams.add(jarFile.getInputStream(entry));
+                            try (InputStream entryStream = jarFile.getInputStream(entry)) {
+                                inputStreams.add(new java.io.ByteArrayInputStream(entryStream.readAllBytes()));
+                            }
                         }
                     }
                 } catch (IOException e) {

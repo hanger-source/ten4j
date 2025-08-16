@@ -8,7 +8,7 @@ import source.hanger.core.app.App;
 @Slf4j
 public class ServerMain {
 
-    private static final int DEFAULT_PORT = 9090;
+    private static final int DEFAULT_PORT = 8080;
     private static final String DEFAULT_APP_URI = "ten://localhost/default_app";
     private static final String DEFAULT_CONFIG_PATH = "property.json"; // 假设配置文件路径
     private static final int PORT = Integer.parseInt(System.getProperty("server.port", String.valueOf(DEFAULT_PORT)));
