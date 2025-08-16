@@ -204,7 +204,7 @@ public class QwenOmniRealtimeClient {
             log.debug("\n----- \n[qwen_omni_realtime_client] Parsing RealtimeEvent: {}\n-----\n", message);
             return objectMapper.readValue(message.toString(), RealtimeEvent.class);
         } catch (JsonProcessingException e) {
-            log.error("[qwen_omni_realtime_client] Error parsing RealtimeEvent: {}", e.getMessage(), e);
+            log.error("\n----- \n[qwen_omni_realtime_client] \n{}\nError parsing RealtimeEvent: {}\n-----\n", message, e.getMessage(), e);
             // Fallback to UnknownRealtimeEvent on parsing error
             return new UnknownRealtimeEvent();
         }

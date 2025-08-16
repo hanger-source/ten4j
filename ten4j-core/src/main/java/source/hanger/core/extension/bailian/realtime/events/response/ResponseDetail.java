@@ -42,6 +42,8 @@ public class ResponseDetail {
     @AllArgsConstructor
     @ToString
     public static class StatusDetails {
+        @JsonProperty("type")
+        private String type;
         @JsonProperty("code")
         private Integer code;
         @JsonProperty("reason")

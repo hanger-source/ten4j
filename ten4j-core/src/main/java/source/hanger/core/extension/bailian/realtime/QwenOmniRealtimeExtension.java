@@ -52,7 +52,6 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
     private int vadPrefixPaddingMs;
     private int vadSilenceDurationMs;
     private boolean enableStorage; // New: Enable storage from config
-    private String systemPrompt; // New: System prompt from config
     private String prompt; // New: Prompt from config
 
     private ChatMemory chatMemory; // New: Chat memory instance
@@ -83,8 +82,8 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
         // New: Max history from config
         int maxHistory = env.getPropertyInt("max_history").orElse(20);
         enableStorage = env.getPropertyBool("enable_storage").orElse(false);
-        systemPrompt = env.getPropertyString("system_prompt").orElse("你是一个人工智能助手。请用清晰、简洁的语言回复我。在回答问题之前，请充分理解问题。\n");
-        prompt = env.getPropertyString("prompt").orElse("");
+        String systemPrompt = env.getPropertyString("system_prompt").orElse("请用清晰、简洁的语言回复我。在回答问题之前，请充分理解问题。\n");
+        prompt = "%s -（%s）\n".formatted(systemPrompt, env.getPropertyString("prompt").orElse(""));
 
         log.info("[{}] Config: model={}, language={}, voice={}, sampleRate={}, audioOut={}"
                 + ", inputTranscript={}, serverVad={}, vadType={}, vadThreshold={}, vadPrefixPaddingMs={}"
@@ -226,14 +225,12 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
         if (audioOut) {
             modalities.add("audio");
         }
-
-        ResponseCreateParams responseParams = ResponseCreateParams.builder()
-            .instructions(text)
-            .modalities(modalities)
-            .build();
         return ResponseCreateMessage.builder()
             .type("response.create")
-            .response(responseParams)
+            .response(ResponseCreateParams.builder()
+                .instructions(text)
+                .modalities(modalities)
+                .build())
             .eventId(eventId)
             .build();
     }
@@ -263,6 +260,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
             try {
                 log.debug("[{}] Sending audio frame size: {}", env.getExtensionName(), audioData.length);
                 String audioBase64 = java.util.Base64.getEncoder().encodeToString(audioData);
+
                 realtimeClient.getConversation().appendAudio(audioBase64);
             } catch (Exception e) {
                 log.error("[{}] Failed to send audio to Realtime API: {}", env.getExtensionName(), e.getMessage(), e);
@@ -388,33 +386,13 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
 
     private void handleUserJoined(TenEnv env, Command command) {
         log.info("[{}] User joined. Sending greeting if configured.", env.getExtensionName());
-        String greeting = command.getPropertyString("greeting").orElse("");
+        String greeting = env.getPropertyString("greeting").orElse("");
         if (!greeting.isEmpty()) {
             try {
-                List<String> modalities = new ArrayList<>();
-                if (audioOut) {
-                    modalities.add("audio");
-                }
-                if (inputTranscript) {
-                    modalities.add("text");
-                }
-
-                ResponseCreateParams responseParams = ResponseCreateParams.builder()
-                    .instructions(greeting)
-                    .modalities(modalities)
-                    .build();
-
-                ResponseCreateMessage responseCreateMessage = ResponseCreateMessage.builder()
-                    .type("response.create")
-                    .response(responseParams)
-                    .build();
-
+                String eventId = UUID.randomUUID().toString(); // Generate a unique event_id
                 // 使用 Jackson 将对象转换为 JSON 字符串
-                String messageJson = objectMapper.writeValueAsString(responseCreateMessage);
-
-                // TODO: Re-enable send after clarifying OmniRealtimeConversation's send
-                // mechanism
-                // realtimeClient.getConversation().send(responseCreateJson.toString());
+                ResponseCreateMessage createMessage = buildResponseCreateMessage("对我说：'%s'".formatted(greeting), eventId);
+                String messageJson = objectMapper.writeValueAsString(createMessage);
                 realtimeClient.getConversation().sendRaw(messageJson);
 
                 log.info("[{}] Greeting [{}] sent to user via ResponseCreate.", env.getExtensionName(), greeting);
@@ -422,7 +400,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
                 env.sendResult(joinResult);
             } catch (Exception e) {
                 log.error("[{}] Failed to send greeting via ResponseCreate: {}", env.getExtensionName(), e.getMessage(), e);
-                sendErrorResult(env, command, "发送问候语失败: " + e.getMessage());
+                sendErrorResult(env, command, "发送问候语失败: %s".formatted(e.getMessage()));
             }
         } else {
             CommandResult joinResult = CommandResult.success(command, "User joined, no greeting configured.");
@@ -482,7 +460,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
                 .voice(voice)
                 .inputAudioFormat("pcm_16")
                 .outputAudioFormat("pcm_16")
-                .instructions(systemPrompt + prompt)
+                .instructions(prompt)
                 .inputAudioTranscription(inputAudioTranscription)
                 .turnDetection(turnDetection)
                 .build();
