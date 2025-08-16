@@ -66,7 +66,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
     @Override
     public void onConfigure(TenEnv env, Map<String, Object> properties) {
         super.onConfigure(env, properties);
-        log.info("[qwen_omni_realtime] Extension configuring: {}", env.getExtensionName());
+        log.info("[{}] Extension configuring", env.getExtensionName());
 
         String apiKey = env.getPropertyString("api_key").orElse("");
         model = env.getPropertyString("model").orElse("qwen-omni-turbo-realtime-latest");
@@ -86,14 +86,14 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
         systemPrompt = env.getPropertyString("system_prompt").orElse("你是一个人工智能助手。请用清晰、简洁的语言回复我。在回答问题之前，请充分理解问题。\n");
         prompt = env.getPropertyString("prompt").orElse("");
 
-        log.info("[qwen_omni_realtime] Config: model={}, language={}, voice={}, sampleRate={}, audioOut={}"
+        log.info("[{}] Config: model={}, language={}, voice={}, sampleRate={}, audioOut={}"
                 + ", inputTranscript={}, serverVad={}, vadType={}, vadThreshold={}, vadPrefixPaddingMs={}"
                 + ", vadSilenceDurationMs={}, maxHistory={}, enableStorage={}",
-            model, language, voice, sampleRate, audioOut, inputTranscript, serverVad, vadType, vadThreshold,
+            env.getExtensionName(), model, language, voice, sampleRate, audioOut, inputTranscript, serverVad, vadType, vadThreshold,
             vadPrefixPaddingMs, vadSilenceDurationMs, maxHistory, enableStorage);
 
         if (apiKey.isEmpty()) {
-            log.error("[qwen_omni_realtime] API Key is not set. Please configure in manifest.json/property.json.");
+            log.error("[{}] API Key is not set. Please configure in manifest.json/property.json.", env.getExtensionName());
         }
 
         this.chatMemory = new ChatMemory(maxHistory); // Initialize chat memory after all properties are read
@@ -102,13 +102,13 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
     @Override
     public void onInit(TenEnv env) {
         super.onInit(env);
-        log.info("[qwen_omni_realtime] Extension initialized: {}", env.getExtensionName());
+        log.info("[{}] Extension initialized", env.getExtensionName());
     }
 
     @Override
     public void onStart(TenEnv env) {
         super.onStart(env);
-        log.info("[qwen_omni_realtime] Extension starting: {}", env.getExtensionName());
+        log.info("[{}] Extension starting", env.getExtensionName());
         sessionStartTimestampMs = System.currentTimeMillis(); // Initialize session start timestamp here
 
         // Link ChatMemory callbacks
@@ -122,9 +122,9 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
                     itemDelete.put("type", "conversation.item.delete");
                     itemDelete.put("item_id", itemId);
                     realtimeClient.getConversation().sendRaw(objectMapper.writeValueAsString(itemDelete));
-                    log.info("[qwen_omni_realtime] Sent ItemDelete for expired memory: {}", itemId);
+                    log.info("[{}] Sent ItemDelete for expired memory: {}", env.getExtensionName(), itemId);
                 } catch (Exception e) {
-                    log.error("[qwen_omni_realtime] Failed to send ItemDelete for expired memory: {}", e.getMessage(), e);
+                    log.error("[{}] Failed to send ItemDelete for expired memory: {}", env.getExtensionName(), e.getMessage(), e);
                 }
             }
         });
@@ -137,13 +137,13 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
                     DataMessage dataMessage = DataMessage.create("append");
                     dataMessage.setData(objectMapper.writeValueAsBytes(message));
                     env.sendData(dataMessage);
-                    log.debug("[qwen_omni_realtime] Sent Data.create(\"append\") for chat memory.");
+                    log.debug("[{}] Sent Data.create(\"append\") for chat memory.", env.getExtensionName());
                 } catch (Exception e) {
-                    log.error("[qwen_omni_realtime] Failed to send Data.create(\"append\") for chat memory: {}",
-                        e.getMessage(), e);
+                    log.error("[{}] Failed to send Data.create(\"append\") for chat memory: {}",
+                        env.getExtensionName(), e.getMessage(), e);
                 }
             } else {
-                log.debug("[qwen_omni_realtime] Chat memory appended: {} (storage disabled)", message);
+                log.debug("[{}] Chat memory appended: {} (storage disabled)", env.getExtensionName(), message);
             }
         });
 
@@ -154,7 +154,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
             // Pass the event to the BaseFlushExtension's streamProcessor
             streamProcessor.onNext(new StreamPayload<>(Flowable.just(realtimeEvent), null));
         }, throwable -> {
-            log.error("[qwen_omni_realtime] Error from Realtime API event stream: {}", throwable.getMessage(), throwable);
+            log.error("[{}] Error from Realtime API event stream: {}", env.getExtensionName(), throwable.getMessage(), throwable);
             sendErrorResult(env, null, MessageType.DATA, "RealtimeEventStreamError",
                 "Realtime事件流异常: %s".formatted(throwable.getMessage()));
         });
@@ -163,7 +163,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
     @Override
     public void onStop(TenEnv env) {
         super.onStop(env);
-        log.info("[qwen_omni_realtime] Extension stopping: {}", env.getExtensionName());
+        log.info("[{}] Extension stopping", env.getExtensionName());
         if (realtimeClient != null && realtimeClient.isConnected()) {
             realtimeClient.disconnect(1000, "Extension stopped"); // Use client's disconnect
         }
@@ -175,7 +175,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
     @Override
     public void onDeinit(TenEnv env) {
         super.onDeinit(env);
-        log.info("[qwen_omni_realtime] Extension de-initialized: {}", env.getExtensionName());
+        log.info("[{}] Extension de-initialized", env.getExtensionName());
         if (realtimeClient != null && realtimeClient.isConnected()) {
             realtimeClient.disconnect(1000, "Extension de-initialized"); // Use client's disconnect
         }
@@ -203,12 +203,12 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
 
             realtimeClient = new QwenOmniRealtimeClient(param);
             realtimeClient.connect();
-            log.info("[qwen_omni_realtime] Realtime API connected.");
+            log.info("[{}] Realtime API connected.", env.getExtensionName());
         } catch (NoApiKeyException e) {
-            log.error("[qwen_omni_realtime] DashScope API Key not found: {}", e.getMessage(), e);
+            log.error("[{}] DashScope API Key not found: {}", env.getExtensionName(), e.getMessage(), e);
             throw new RuntimeException("DashScope API Key not found.", e);
         } catch (Exception e) {
-            log.error("[qwen_omni_realtime] Failed to connect to Realtime API: {}", e.getMessage(), e);
+            log.error("[{}] Failed to connect to Realtime API: {}", env.getExtensionName(), e.getMessage(), e);
             throw new RuntimeException("Failed to connect to Realtime API.", e);
         }
     }
@@ -246,14 +246,14 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
                 String eventId = UUID.randomUUID().toString(); // Generate a unique event_id
                 String messageJson = objectMapper.writeValueAsString(buildResponseCreateMessage(text, eventId));
                 realtimeClient.getConversation().sendRaw(messageJson); // 使用 sendRaw 发送构建好的 JSON 字符串
-                log.info("[qwen_omni_realtime] Sent text as ResponseCreate to Realtime API: eventId={}, text={}", eventId, text);
+                log.info("[{}] Sent text as ResponseCreate to Realtime API: eventId={}, text={}", env.getExtensionName(), eventId, text);
             } catch (Exception e) {
-                log.error("[qwen_omni_realtime] Failed to send ResponseCreate message to Realtime API: {}", e.getMessage(), e);
+                log.error("[{}] Failed to send ResponseCreate message to Realtime API: {}", env.getExtensionName(), e.getMessage(), e);
                 sendErrorResult(env, originalMessage.getId(), originalMessage.getType(), originalMessage.getName(),
                     "发送文本到Realtime API失败: %s".formatted(e.getMessage()));
             }
         } else {
-            log.warn("[qwen_omni_realtime] Realtime client not connected, cannot send text: {}", text);
+            log.warn("[{}] Realtime client not connected, cannot send text: {}", env.getExtensionName(), text);
         }
     }
 
@@ -261,30 +261,29 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
     protected void onSendAudioToRealtime(TenEnv env, byte[] audioData, Message originalMessage) {
         if (realtimeClient != null && realtimeClient.isConnected()) {
             try {
-                log.debug("[qwen_omni_realtime] Sending audio frame size: {}", audioData.length);
+                log.debug("[{}] Sending audio frame size: {}", env.getExtensionName(), audioData.length);
                 String audioBase64 = java.util.Base64.getEncoder().encodeToString(audioData);
                 realtimeClient.getConversation().appendAudio(audioBase64);
-                //log.info("[qwen_omni_realtime] Sent audio frame to Realtime API, size: {}", audioData.length);
             } catch (Exception e) {
-                log.error("[qwen_omni_realtime] Failed to send audio to Realtime API: {}", e.getMessage(), e);
+                log.error("[{}] Failed to send audio to Realtime API: {}", env.getExtensionName(), e.getMessage(), e);
                 sendErrorResult(env, originalMessage.getId(), originalMessage.getType(), originalMessage.getName(),
                     "发送音频到Realtime API失败: %s".formatted(e.getMessage()));
             }
         } else {
-            log.warn("[qwen_omni_realtime] Realtime client not connected, cannot send audio.");
+            log.warn("[{}] Realtime client not connected, cannot send audio.", env.getExtensionName());
         }
     }
 
     @Override
     protected void processRealtimeEvent(TenEnv env, RealtimeEvent event, Message originalMessage) {
         if (event == null) {
-            log.warn("[qwen_omni_realtime] Received null RealtimeEvent.");
+            log.warn("[{}] Received null RealtimeEvent.", env.getExtensionName());
             return;
         }
 
         String typeString = event.getType();
-        RealtimeEventType eventType = RealtimeEventType.fromValue(typeString); // Convert string to enum
-        log.debug("[qwen_omni_realtime] Processing RealtimeEvent of type: {} (Enum: {})", typeString, eventType);
+        RealtimeEventType eventType = RealtimeEventType.fromValue(typeString);
+        log.debug("[{}] Processing RealtimeEvent of type: {} (Enum: {})", env.getExtensionName(), typeString, eventType);
 
         switch (eventType) {
             case SESSION_CREATED:
@@ -354,17 +353,17 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
                 handleResponseTextDone(env, (ResponseTextDoneEvent) event);
                 break;
             case UNKNOWN:
-                log.warn("[qwen_omni_realtime] Received unknown Realtime event type.");
+                log.warn("[{}] Received unknown Realtime event type.", env.getExtensionName());
                 break;
             default:
-                log.warn("[qwen_omni_realtime] Unhandled Realtime event type: {}", typeString);
+                log.warn("[{}] Unhandled Realtime event type: {}", env.getExtensionName(), typeString);
                 break;
         }
     }
 
     @Override
     protected void onCancelRealtime(TenEnv env) {
-        log.info("[qwen_omni_realtime] Cancelling current Realtime API request.");
+        log.info("[{}] Cancelling current Realtime API request.", env.getExtensionName());
         disconnectFromRealtimeApi(1000, "Cancelled by extension");
     }
 
@@ -380,7 +379,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
                 handleUserLeft(env, command);
                 break;
             default:
-                log.warn("[qwen_omni_realtime] Unhandled command: {}", commandName);
+                log.warn("[{}] Unhandled command: {}", env.getExtensionName(), commandName);
                 CommandResult result = CommandResult.fail(command, "Realtime: 未知命令.");
                 env.sendResult(result);
                 break;
@@ -388,7 +387,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
     }
 
     private void handleUserJoined(TenEnv env, Command command) {
-        log.info("[qwen_omni_realtime] User joined. Sending greeting if configured.");
+        log.info("[{}] User joined. Sending greeting if configured.", env.getExtensionName());
         String greeting = command.getPropertyString("greeting").orElse("");
         if (!greeting.isEmpty()) {
             try {
@@ -418,11 +417,11 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
                 // realtimeClient.getConversation().send(responseCreateJson.toString());
                 realtimeClient.getConversation().sendRaw(messageJson);
 
-                log.info("[qwen_omni_realtime] Greeting [{}] sent to user via ResponseCreate.", greeting);
+                log.info("[{}] Greeting [{}] sent to user via ResponseCreate.", env.getExtensionName(), greeting);
                 CommandResult joinResult = CommandResult.success(command, "User joined, greeting handled.");
                 env.sendResult(joinResult);
             } catch (Exception e) {
-                log.error("[qwen_omni_realtime] Failed to send greeting via ResponseCreate: {}", e.getMessage(), e);
+                log.error("[{}] Failed to send greeting via ResponseCreate: {}", env.getExtensionName(), e.getMessage(), e);
                 sendErrorResult(env, command, "发送问候语失败: " + e.getMessage());
             }
         } else {
@@ -432,7 +431,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
     }
 
     private void handleUserLeft(TenEnv env, Command command) {
-        log.info("[qwen_omni_realtime] User left. No specific action for now.");
+        log.info("[{}] User left. No specific action for now.", env.getExtensionName());
         CommandResult leftResult = CommandResult.success(command, "User left.");
         env.sendResult(leftResult);
     }
@@ -466,7 +465,6 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
                 turnDetection = TurnDetection.builder()
                     .type(vadType)
                     .build();
-                // Add eagerness if available in config and supported by API
             }
 
             // Input Audio Transcription
@@ -490,25 +488,17 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
                 .build();
 
             // TODO: Tools need to be passed from TenEnv as a property. This is a complex
-            // part.
-            // The Python code retrieves available_tools. This needs a mechanism to get
-            // registered tools in Java.
-            // For now, skip tools, but this is a critical part for full functionality.
-
-            // Construct the final session.update JSON object
             SessionUpdateMessage sessionUpdateMessage = SessionUpdateMessage.builder()
                 .type("session.update")
                 .session(sessionParams)
                 .build();
 
             // TODO: Re-enable send after clarifying OmniRealtimeConversation's send
-            // mechanism
-            // realtimeClient.getConversation().send(sessionUpdateJson.toString());
             String messageJson = objectMapper.writeValueAsString(sessionUpdateMessage);
             realtimeClient.getConversation().sendRaw(messageJson);
-            log.info("[qwen_omni_realtime] Sent initial session update using structured objects.");
+            log.info("[{}] Sent initial session update using structured objects.", env.getExtensionName());
         } catch (Exception e) {
-            log.error("[qwen_omni_realtime] Failed to send initial session update: {}", e.getMessage(), e);
+            log.error("[{}] Failed to send initial session update: {}", env.getExtensionName(), e.getMessage(), e);
             sendErrorResult(env, null, MessageType.DATA, "SessionUpdateError", e.getMessage());
         }
     }
@@ -517,7 +507,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
 
     private void handleSessionCreated(TenEnv env, SessionCreatedEvent event) {
         String sessionId = event.getSession().getId();
-        log.info("[qwen_omni_realtime] Session Created: {}", sessionId);
+        log.info("[{}] Session Created: {}", env.getExtensionName(), sessionId);
         // TODO: Send session update based on configuration (voice, modalities, VAD,
         // tools)
         // This involves constructing a SessionUpdateParams and sending it via
@@ -525,9 +515,9 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
         try {
             sendInitialSessionUpdate(env); // Reuse the method to send session update
 
-            log.info("[qwen_omni_realtime] Sent session update after session creation.");
+            log.info("[{}] Sent session update after session creation.", env.getExtensionName());
         } catch (Exception e) {
-            log.error("[qwen_omni_realtime] Failed to send session update after creation: {}", e.getMessage(), e);
+            log.error("[{}] Failed to send session update after creation: {}", env.getExtensionName(), e.getMessage(), e);
             sendErrorResult(env, null, MessageType.DATA, "SessionUpdateError", e.getMessage());
         }
     }
@@ -535,7 +525,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
     private void handleSessionUpdated(TenEnv env, SessionUpdatedEvent event) {
         String eventId = event.getEventId();
         String sessionId = event.getSession().getId();
-        log.info("[qwen_omni_realtime] Session Updated event received: eventId={}, sessionId={}", eventId, sessionId);
+        log.info("[{}] Session Updated event received: eventId={}, sessionId={}", env.getExtensionName(), eventId, sessionId);
         // 根据需要处理 session.updated 事件。例如，更新内部状态或记录信息。
         // 目前，我们只记录日志。在未来，可以根据实际需求添加更复杂的逻辑。
         // 例如，如果 session.updated 包含新的配置或状态信息，可以将其更新到扩展的属性中。
@@ -546,7 +536,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
         String transcript = event.getTranscript();
         boolean isFinal = true; // Transcription completed implies final
         sendAudioTranscriptionText(env, eventId, transcript, isFinal); // Send ASR result as text output
-        log.info("[qwen_omni_realtime] Input Audio Transcription Completed: eventId={}, transcript={}", eventId, transcript);
+        log.info("[{}] Input Audio Transcription Completed: eventId={}, transcript={}", env.getExtensionName(), eventId, transcript);
         chatMemory.put("user", transcript);
     }
 
@@ -556,7 +546,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
         String delta = event.getDelta();
         boolean isFinal = false;
         sendTextOutput(env, eventId, responseId, delta, isFinal);
-        log.debug("[qwen_omni_realtime] Response Text Delta: eventId={}, responseId={}, delta={}", eventId, responseId, delta);
+        log.debug("[{}] Response Text Delta: eventId={}, responseId={}, delta={}", env.getExtensionName(), eventId, responseId, delta);
     }
 
     private void handleResponseTextDone(TenEnv env, ResponseTextDoneEvent event) {
@@ -565,7 +555,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
         String text = event.getText();
         boolean isFinal = true;
         sendTextOutput(env, eventId, responseId, text, isFinal);
-        log.info("[qwen_omni_realtime] Response Text Done: eventId={}, responseId={}, text={}", eventId, responseId, text);
+        log.info("[{}] Response Text Done: eventId={}, responseId={}, text={}", env.getExtensionName(), eventId, responseId, text);
         // TODO: Update chat memory with assistant message
         chatMemory.put("assistant", text);
     }
@@ -577,7 +567,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
         // Assuming 24000 sample rate, 2 bytes per sample, 1 channel for now based on
         // Python config
         sendAudioOutput(env, eventId, responseId, audioData, sampleRate, 2, 1);
-        log.debug("[qwen_omni_realtime] Response Audio Delta received: eventId={}, responseId={}, size={}", eventId, responseId, audioData.length);
+        log.debug("[{}] Response Audio Delta received: eventId={}, responseId={}, size={}", env.getExtensionName(), eventId, responseId, audioData.length);
     }
 
     private void handleResponseAudioDone(TenEnv env, ResponseAudioDoneEvent event) {
@@ -586,7 +576,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
         // Python: self._send_response_done()
         // This means the audio stream from the LLM is complete.
         // No direct action required here other than logging or state update.
-        log.info("[qwen_omni_realtime] Response Audio Done: eventId={}, responseId={}", eventId, responseId);
+        log.info("[{}] Response Audio Done: eventId={}, responseId={}", env.getExtensionName(), eventId, responseId);
     }
 
     private void handleInputAudioBufferCommitted(TenEnv env, InputAudioBufferCommittedEvent event) {
@@ -594,13 +584,13 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
         String id = event.getId();
         Long audioStartMs = event.getAudioStartMs(); // Assuming this is needed or still present
         Long audioEndMs = event.getAudioEndMs(); // Assuming this is needed or still present
-        log.info("[qwen_omni_realtime] Input Audio Buffer Committed: eventId={}, id={}, audioStartMs={}, audioEndMs={}", eventId, id, audioStartMs, audioEndMs);
+        log.info("[{}] Input Audio Buffer Committed: eventId={}, id={}, audioStartMs={}, audioEndMs={}", env.getExtensionName(), eventId, id, audioStartMs, audioEndMs);
     }
 
     private void handleItemCreated(TenEnv env, ItemCreatedEvent event) {
         String eventId = event.getEventId();
         String itemId = event.getItemId();
-        log.info("[qwen_omni_realtime] Conversation Item Created: eventId={}, itemId={}", eventId, itemId);
+        log.info("[{}] Conversation Item Created: eventId={}, itemId={}", env.getExtensionName(), eventId, itemId);
         lastItemId = itemId;
         lastContentIndex = 0; // Reset content index for new item
     }
@@ -609,7 +599,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
         String eventId = event.getEventId();
         String responseId = event.getResponseId();
         String itemId = event.getItemId();
-        log.info("[qwen_omni_realtime] Response Created: eventId={}, responseId={}, itemId={}", eventId, responseId, itemId);
+        log.info("[{}] Response Created: eventId={}, responseId={}, itemId={}", env.getExtensionName(), eventId, responseId, itemId);
     }
 
     private void handleResponseOutputItemAdded(TenEnv env, ResponseOutputItemAddedEvent event) {
@@ -619,8 +609,8 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
         String outputIndex = event.getOutputIndex();
         String outputType = event.getOutputType();
         List<Object> contentParts = event.getContentParts();
-        log.info("[qwen_omni_realtime] Response Output Item Added: eventId={}, responseId={}, itemId={}, outputIndex={}, outputType={}, contentParts={}",
-            eventId, responseId, itemId, outputIndex, outputType, contentParts);
+        log.info("[{}] Response Output Item Added: eventId={}, responseId={}, itemId={}, outputIndex={}, outputType={}, contentParts={}",
+            env.getExtensionName(), eventId, responseId, itemId, outputIndex, outputType, contentParts);
         // This event signifies that a new item (e.g., message, function call) has been added to the response output.
         // In Python, this might trigger _send_response_output_item_start(item_json).
         // For now, just logging as the subsequent delta/done events will carry content.
@@ -634,8 +624,8 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
         String contentIndex = event.getContentIndex();
         String contentType = event.getContentType();
         String content = event.getContent();
-        log.info("[qwen_omni_realtime] Response Content Part Added: eventId={}, responseId={}, itemId={}, outputIndex={}, contentIndex={}, contentType={}, content={}",
-            eventId, responseId, itemId, outputIndex, contentIndex, contentType, content);
+        log.info("[{}] Response Content Part Added: eventId={}, responseId={}, itemId={}, outputIndex={}, contentIndex={}, contentType={}, content={}",
+            env.getExtensionName(), eventId, responseId, itemId, outputIndex, contentIndex, contentType, content);
         // This event is typically followed by delta events for the content part.
         // Python's _send_response_content_part_start is called here.
         // For now, logging, as the content will come via delta events.
@@ -647,7 +637,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
         String delta = event.getDelta();
         String itemId = event.getItemId();
         boolean isFinal = false; // Delta implies not final
-        log.debug("[qwen_omni_realtime] Response Audio Transcript Delta: eventId={}, responseId={}, itemId={}, delta={}", eventId, responseId, itemId, delta);
+        log.debug("[{}] Response Audio Transcript Delta: eventId={}, responseId={}, itemId={}, delta={}", env.getExtensionName(), eventId, responseId, itemId, delta);
         // Send this as an ASR result to the client.
         sendTextOutput(env, eventId, responseId, delta, isFinal); // Reusing sendTextOutput for transcript deltas
     }
@@ -657,7 +647,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
         String responseId = event.getResponseId();
         String itemId = event.getItemId();
         boolean isFinal = true;
-        log.info("[qwen_omni_realtime] Response Audio Transcript Done: eventId={}, responseId={}, itemId={}, isFinal={}", eventId, responseId, itemId, isFinal);
+        log.info("[{}] Response Audio Transcript Done: eventId={}, responseId={}, itemId={}, isFinal={}", env.getExtensionName(), eventId, responseId, itemId, isFinal);
         // This event signifies the end of the audio transcription stream.
         // No direct action required here, as transcription is handled by delta events.
     }
@@ -666,7 +656,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
         String eventId = event.getEventId();
         String responseId = event.getResponseId();
         boolean isFinal = true;
-        log.info("[qwen_omni_realtime] Response Content Part Done: eventId={}, responseId={}, isFinal={}", eventId, responseId, isFinal);
+        log.info("[{}] Response Content Part Done: eventId={}, responseId={}, isFinal={}", env.getExtensionName(), eventId, responseId, isFinal);
         // This event signifies the end of the content part stream.
         // No direct action required here, as content is handled by delta events.
     }
@@ -675,7 +665,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
         String eventId = event.getEventId();
         String responseId = event.getResponseId();
         boolean isFinal = true;
-        log.info("[qwen_omni_realtime] Response Output Item Done: eventId={}, responseId={}, isFinal={}", eventId, responseId, isFinal);
+        log.info("[{}] Response Output Item Done: eventId={}, responseId={}, isFinal={}", env.getExtensionName(), eventId, responseId, isFinal);
         // This event signifies the end of the output item stream.
         // No direct action required here, as output items are handled by delta events.
     }
@@ -684,19 +674,19 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
         String eventId = event.getEventId();
         String responseId = event.getResponseId();
         boolean isFinal = true;
-        log.info("[qwen_omni_realtime] Response Done: eventId={}, responseId={}, isFinal={}", eventId, responseId, isFinal);
+        log.info("[{}] Response Done: eventId={}, responseId={}, isFinal={}", env.getExtensionName(), eventId, responseId, isFinal);
         // This event signifies the end of the response stream.
         // No direct action required here, as response is handled by delta events.
     }
 
     private void handleConnectionOpened(TenEnv env, ConnectionOpenedEvent event) {
-        log.info("[qwen_omni_realtime] Realtime Connection Opened.");
+        log.info("[{}] Realtime Connection Opened.", env.getExtensionName());
         // You can add logic here for what happens when the connection is opened,
         // e.g., send initial session update, or set a flag.
     }
 
     private void handleConnectionClosed(TenEnv env, ConnectionClosedEvent event) {
-        log.info("[qwen_omni_realtime] Realtime Connection Closed. Code: {}, Reason: {}", event.getCode(),
+        log.info("[{}] Realtime Connection Closed. Code: {}, Reason: {}", env.getExtensionName(), event.getCode(),
             event.getReason());
         // You can add logic here for what happens when the connection is closed,
         // e.g., clean up resources, attempt to reconnect (if not handled by client).
@@ -709,7 +699,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
         String toolName = event.getToolName();
         String functionName = event.getFunctionName();
         Map<String, Object> arguments = event.getArguments();
-        log.info("[qwen_omni_realtime] Function Call Arguments Done: eventId={}, responseId={}, toolName={}, functionName={}, arguments={}", eventId, responseId, toolName, functionName, arguments);
+        log.info("[{}] Function Call Arguments Done: eventId={}, responseId={}, toolName={}, functionName={}, arguments={}", env.getExtensionName(), eventId, responseId, toolName, functionName, arguments);
 
         try {
             // 1. Convert arguments to a Map for the command. (Already Map<String, Object>)
@@ -758,10 +748,10 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
             String responseCreateJson = objectMapper.writeValueAsString(responseCreate);
             realtimeClient.getConversation().sendRaw(responseCreateJson);
 
-            log.info("[qwen_omni_realtime] Tool call handling complete: toolName={}, functionName={}, arguments={}", toolName, functionName, arguments);
+            log.info("[{}] Tool call handling complete: toolName={}, functionName={}, arguments={}", env.getExtensionName(), toolName, functionName, arguments);
 
         } catch (Exception e) {
-            log.error("[qwen_omni_realtime] Failed to handle function call: {}", e.getMessage(), e);
+            log.error("[{}] Failed to handle function call: {}", env.getExtensionName(), e.getMessage(), e);
             sendErrorResult(env, originalMessage.getId(), originalMessage.getType(), originalMessage.getName(),
                 "处理工具调用失败: " + e.getMessage());
         }
@@ -771,7 +761,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
         String eventId = event.getEventId();
         String id = event.getId();
         Long audioStartMs = event.getAudioStartMs();
-        log.info("[qwen_omni_realtime] Input Audio Buffer Speech Started: eventId={}, id={}, audioStartMs={}", eventId, id, audioStartMs);
+        log.info("[{}] Input Audio Buffer Speech Started: eventId={}, id={}, audioStartMs={}", env.getExtensionName(), eventId, id, audioStartMs);
 
         long currentMs = System.currentTimeMillis();
         long audioEndMs = currentMs - sessionStartTimestampMs;
@@ -788,10 +778,10 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
                 String messageJson = objectMapper.writeValueAsString(itemTruncateMessage);
                 realtimeClient.getConversation().sendRaw(messageJson);
 
-                log.info("[qwen_omni_realtime] Sent ItemTruncate for itemId={}, audioEndMs={}", lastItemId,
+                log.info("[{}] Sent ItemTruncate for itemId={}, audioEndMs={}", env.getExtensionName(), lastItemId,
                     audioEndMs);
             } catch (Exception e) {
-                log.error("[qwen_omni_realtime] Failed to send ItemTruncate: {}", e.getMessage(), e);
+                log.error("[{}] Failed to send ItemTruncate: {}", env.getExtensionName(), e.getMessage(), e);
             }
         }
 
@@ -802,9 +792,9 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
             Command flushCommand = GenericCommand.create(ExtensionConstants.CMD_IN_FLUSH);
             try {
                 env.sendCmd(flushCommand);
-                log.info("[qwen_omni_realtime] Sent flush command due to server VAD speech started.");
+                log.info("[{}] Sent flush command due to server VAD speech started.", env.getExtensionName());
             } catch (Exception e) {
-                log.error("[qwen_omni_realtime] Failed to send flush command: {}", e.getMessage(), e);
+                log.error("[{}] Failed to send flush command: {}", env.getExtensionName(), e.getMessage(), e);
             }
         }
     }
@@ -812,12 +802,12 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
     private void handleInputAudioBufferSpeechStopped(TenEnv env, InputAudioBufferSpeechStoppedEvent event) {
         String eventId = event.getEventId();
         Long audioEndMs = event.getAudioEndMs();
-        log.info("[qwen_omni_realtime] Input Audio Buffer Speech Stopped: eventId={}, audioEndMs={}", eventId, audioEndMs);
+        log.info("[{}] Input Audio Buffer Speech Stopped: eventId={}, audioEndMs={}", env.getExtensionName(), eventId, audioEndMs);
         // TODO: Potentially trigger a flush or other post-speech processing.
 
         // Python: session_start_ms = int(time.time() * 1000) - message.audio_end_ms
         sessionStartTimestampMs = System.currentTimeMillis() - audioEndMs;
-        log.info("[qwen_omni_realtime] sessionStartTimestampMs updated to: {}", sessionStartTimestampMs);
+        log.info("[{}] sessionStartTimestampMs updated to: {}", env.getExtensionName(), sessionStartTimestampMs);
 
         // Python has a _flush() call here sometimes, but it's already handled in
         // handleInputAudioBufferSpeechStarted if serverVad is true.
