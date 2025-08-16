@@ -9,13 +9,11 @@ import com.alibaba.dashscope.audio.omni.OmniRealtimeParam;
 import com.alibaba.dashscope.exception.NoApiKeyException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.JsonNode; // Add JsonNode for flexible JSON handling
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.bailian.realtime.events.*;
-import source.hanger.core.extension.bailian.realtime.messages.InputTextContent;
 import source.hanger.core.extension.bailian.realtime.messages.ItemCreateMessage;
-import source.hanger.core.extension.bailian.realtime.messages.UserMessageItem;
 import source.hanger.core.extension.bailian.realtime.messages.ResponseCreateMessage;
 import source.hanger.core.extension.bailian.realtime.messages.ResponseCreateParams;
 import source.hanger.core.extension.bailian.realtime.messages.SessionUpdateMessage;
@@ -54,6 +52,8 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
     private int vadPrefixPaddingMs;
     private int vadSilenceDurationMs;
     private boolean enableStorage; // New: Enable storage from config
+    private String systemPrompt; // New: System prompt from config
+    private String prompt; // New: Prompt from config
 
     private ChatMemory chatMemory; // New: Chat memory instance
     private String lastItemId = ""; // New: To store the item_id for truncation
@@ -83,6 +83,8 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
         // New: Max history from config
         int maxHistory = env.getPropertyInt("max_history").orElse(20);
         enableStorage = env.getPropertyBool("enable_storage").orElse(false);
+        systemPrompt = env.getPropertyString("system_prompt").orElse("你是一个人工智能助手。请用清晰、简洁的语言回复我。在回答问题之前，请充分理解问题。\n");
+        prompt = env.getPropertyString("prompt").orElse("");
 
         log.info("[qwen_omni_realtime] Config: model={}, language={}, voice={}, sampleRate={}, audioOut={}"
                 + ", inputTranscript={}, serverVad={}, vadType={}, vadThreshold={}, vadPrefixPaddingMs={}"
@@ -116,9 +118,9 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
             String itemId = (String) memoryEntry.get("id"); // 'id' is the key for item_id in the map
             if (itemId != null && !itemId.isEmpty()) {
                 try {
-                    JsonNode itemDelete = objectMapper.createObjectNode();
-                    ((com.fasterxml.jackson.databind.node.ObjectNode) itemDelete).put("type", "conversation.item.delete");
-                    ((com.fasterxml.jackson.databind.node.ObjectNode) itemDelete).put("item_id", itemId);
+                    ObjectNode itemDelete = objectMapper.createObjectNode();
+                    itemDelete.put("type", "conversation.item.delete");
+                    itemDelete.put("item_id", itemId);
                     realtimeClient.getConversation().sendRaw(objectMapper.writeValueAsString(itemDelete));
                     log.info("[qwen_omni_realtime] Sent ItemDelete for expired memory: {}", itemId);
                 } catch (Exception e) {
@@ -218,36 +220,37 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
         }
     }
 
+    private ResponseCreateMessage buildResponseCreateMessage(String text, String eventId) {
+        List<String> modalities = new ArrayList<>();
+        modalities.add("text");
+        if (audioOut) {
+            modalities.add("audio");
+        }
+
+        ResponseCreateParams responseParams = ResponseCreateParams.builder()
+            .instructions(text)
+            .modalities(modalities)
+            .build();
+        return ResponseCreateMessage.builder()
+            .type("response.create")
+            .response(responseParams)
+            .eventId(eventId)
+            .build();
+    }
+
     @Override
     protected void onSendTextToRealtime(TenEnv env, String text, Message originalMessage) {
         if (realtimeClient != null && realtimeClient.isConnected()) {
             try {
-                InputTextContent inputTextContent = InputTextContent.builder()
-                    .type("input_text")
-                    .text(text)
-                    .build();
-
-                UserMessageItem userMessageItem = UserMessageItem.builder()
-                    .type("message")
-                    .role("user")
-                    .content(java.util.Collections.singletonList(inputTextContent))
-                    .build();
-
-                ItemCreateMessage itemCreateMessage = ItemCreateMessage.builder()
-                    .type("conversation.item.create")
-                    .item(userMessageItem)
-                    .build();
-
                 // 使用 Jackson 将对象转换为 JSON 字符串
-                String messageJson = objectMapper.writeValueAsString(itemCreateMessage);
-
+                String eventId = UUID.randomUUID().toString(); // Generate a unique event_id
+                String messageJson = objectMapper.writeValueAsString(buildResponseCreateMessage(text, eventId));
                 realtimeClient.getConversation().sendRaw(messageJson); // 使用 sendRaw 发送构建好的 JSON 字符串
-                log.info("[qwen_omni_realtime] Sent user message to Realtime API: {}", text);
-
+                log.info("[qwen_omni_realtime] Sent text as ResponseCreate to Realtime API: eventId={}, text={}", eventId, text);
             } catch (Exception e) {
-                log.error("[qwen_omni_realtime] Failed to send structured message to Realtime API: {}", e.getMessage(), e);
+                log.error("[qwen_omni_realtime] Failed to send ResponseCreate message to Realtime API: {}", e.getMessage(), e);
                 sendErrorResult(env, originalMessage.getId(), originalMessage.getType(), originalMessage.getName(),
-                    "发送文本到Realtime API失败: " + e.getMessage());
+                    "发送文本到Realtime API失败: %s".formatted(e.getMessage()));
             }
         } else {
             log.warn("[qwen_omni_realtime] Realtime client not connected, cannot send text: {}", text);
@@ -481,6 +484,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
                 .voice(voice)
                 .inputAudioFormat("pcm_16")
                 .outputAudioFormat("pcm_16")
+                .instructions(systemPrompt + prompt)
                 .inputAudioTranscription(inputAudioTranscription)
                 .turnDetection(turnDetection)
                 .build();
@@ -591,32 +595,14 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
         Long audioStartMs = event.getAudioStartMs(); // Assuming this is needed or still present
         Long audioEndMs = event.getAudioEndMs(); // Assuming this is needed or still present
         log.info("[qwen_omni_realtime] Input Audio Buffer Committed: eventId={}, id={}, audioStartMs={}, audioEndMs={}", eventId, id, audioStartMs, audioEndMs);
-        // TODO: Handle this event based on Python implementation if needed.
-        // Python side typically updates chat memory or sends Data.create("append") if storage is enabled.
-        // Since we already send ItemCreate and manage chatMemory in onSendTextToRealtime/onSendAudioToRealtime,
-        // this event might be for confirmation or specific memory management logic.
-        if (enableStorage) {
-            // Python equivalent: await self._send_conversation_item_create(item)
-            // This means we might need to fetch the item details and then send Data.create("append").
-            // For now, just logging as the item is usually created earlier.
-        }
     }
 
     private void handleItemCreated(TenEnv env, ItemCreatedEvent event) {
         String eventId = event.getEventId();
         String itemId = event.getItemId();
         log.info("[qwen_omni_realtime] Conversation Item Created: eventId={}, itemId={}", eventId, itemId);
-        // Python: self._chat_memory.put(message.item.role, message.item.to_json())
-        // Python handles agent message here for memory. This is for the LLM's own message.
-        // We don't have the full item object here directly, but we can store the itemId or fetch it if needed.
-        // For simplicity, let's just log and update lastItemId for truncation.
-
-        // Set lastItemId and lastContentIndex for potential future truncation
         lastItemId = itemId;
         lastContentIndex = 0; // Reset content index for new item
-
-        // If you need to store the item in chat memory, you'd need to reconstruct or fetch it.
-        // For now, assume chatMemory.put is for actual assistant responses (text/audio done events).
     }
 
     private void handleResponseCreated(TenEnv env, ResponseCreatedEvent event) {

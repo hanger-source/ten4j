@@ -2,7 +2,9 @@ package source.hanger.server.controller;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -35,14 +37,16 @@ public class GraphController {
                         String name = entry.getName();
                         boolean autoStart = entry.isAutoStart();
 
-                        graphs.add(new GraphInfo(uuid, name, autoStart));
+                        graphs.add(new GraphInfo(uuid, name, entry.getIndex(), autoStart));
                     } else {
                         log.warn("Invalid PredefinedGraphEntry found, skipping: {}", entry);
                     }
                 }
             }
 
-            return objectMapper.writeValueAsString(graphs);
+            return objectMapper.writeValueAsString(graphs.stream()
+                .sorted(Comparator.comparing(GraphInfo::getIndex))
+                .collect(Collectors.toList()));
         } catch (IOException e) {
             log.error("Error loading or serializing graphs: {}", e.getMessage(), e);
             return "Internal Server Error: %s".formatted(e.getMessage());
@@ -56,6 +60,7 @@ public class GraphController {
         // Getter 方法（Jackson 序列化需要）
         public String uuid;
         public String name;
+        public Integer index;
         public boolean autoStart;
     }
 }

@@ -21,6 +21,9 @@ public class PredefinedGraphEntry {
     @JsonProperty("auto_start")
     private boolean autoStart;
 
+    @JsonProperty("index")
+    private Integer index;
+
     /**
      * 图的原始 JSON 定义字符串。
      * 对应 property.json 中的 "graph" 字段。

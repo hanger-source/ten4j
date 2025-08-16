@@ -16,4 +16,7 @@ public class ResponseCreateMessage {
 
     @JsonProperty("response")
     private ResponseCreateParams response;
+
+    @JsonProperty("event_id")
+    private String eventId;
 }

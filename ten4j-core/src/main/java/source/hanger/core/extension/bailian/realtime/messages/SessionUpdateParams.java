@@ -28,6 +28,9 @@ public class SessionUpdateParams {
     @JsonProperty("output_audio_format")
     private String outputAudioFormat;
 
+    @JsonProperty("instructions")
+    private String instructions;
+
     @JsonProperty("input_audio_transcription")
     private InputAudioTranscription inputAudioTranscription;
 

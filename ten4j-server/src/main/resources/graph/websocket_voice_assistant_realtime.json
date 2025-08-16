@@ -1,6 +1,7 @@
 {
   "name": "即时响应",
   "auto_start": true,
+  "index": 1,
   "graph": {
     "nodes": [
       {

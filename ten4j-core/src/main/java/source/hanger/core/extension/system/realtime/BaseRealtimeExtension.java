@@ -1,6 +1,5 @@
 package source.hanger.core.extension.system.realtime;
 
-import io.reactivex.processors.PublishProcessor;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.bailian.realtime.events.RealtimeEvent;
@@ -20,12 +19,6 @@ import source.hanger.core.util.MessageUtils;
  */
 @Slf4j
 public abstract class BaseRealtimeExtension extends BaseFlushExtension<RealtimeEvent> {
-
-    /**
-     * 定义一个 publishProcessor 来处理 RealtimeEvent 流。
-     * 子类可以订阅此处理器以接收和处理 Realtime API 事件。
-     */
-    protected final PublishProcessor<RealtimeEvent> realtimeEventProcessor = PublishProcessor.create();
 
     public BaseRealtimeExtension() {
         super();
