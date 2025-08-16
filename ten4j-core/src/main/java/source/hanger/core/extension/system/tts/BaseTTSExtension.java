@@ -110,7 +110,7 @@ public abstract class BaseTTSExtension extends BaseFlushExtension<byte[]> {
         int sampleRate, int bytesPerSample,
         int numberOfChannels) {
         try {
-            AudioFrameMessage audioFrame = AudioFrameMessage.create("audio_frame");
+            AudioFrameMessage audioFrame = AudioFrameMessage.create("pcm_frame");
             audioFrame.setId(originalMessage.getId()); // 使用原始消息的ID
             audioFrame.setSampleRate(sampleRate);
             audioFrame.setBytesPerSample(bytesPerSample);

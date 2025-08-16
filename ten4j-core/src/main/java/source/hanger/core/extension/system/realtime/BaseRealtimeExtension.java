@@ -202,7 +202,7 @@ public abstract class BaseRealtimeExtension extends BaseFlushExtension<RealtimeE
     protected void sendAudioOutput(TenEnv env, Message originalMessage, byte[] audioData,
         int sampleRate, int bytesPerSample, int numberOfChannels) {
         try {
-            AudioFrameMessage audioFrame = AudioFrameMessage.create("audio_frame");
+            AudioFrameMessage audioFrame = AudioFrameMessage.create("pcm_frame");
             audioFrame.setId(originalMessage.getId());
             audioFrame.setSampleRate(sampleRate);
             audioFrame.setBytesPerSample(bytesPerSample);

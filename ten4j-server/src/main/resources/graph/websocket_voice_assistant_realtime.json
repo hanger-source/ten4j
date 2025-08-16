@@ -1,0 +1,99 @@
+{
+  "name": "即时响应",
+  "auto_start": true,
+  "graph": {
+    "nodes": [
+      {
+        "type": "extension",
+        "name": "client_connection",
+        "addon": "source.hanger.core.extension.system.ClientConnectionExtension",
+        "extension_group": "default",
+        "property": {}
+      },
+      {
+        "type": "extension",
+        "name": "v2v",
+        "addon": "source.hanger.core.extension.bailian.realtime.QwenOmniRealtimeExtension",
+        "extension_group": "v2v_group",
+        "property": {
+          "api_key": "{{env:BAILIAN_DASHSCOPE_API_KEY}}",
+          "base_uri": "wss://dashscope.aliyuncs.com/api-ws",
+          "vad_type": "server_vad",
+          "temperature": 0.9,
+          "prompt": "{{prompt}}",
+          "greeting": "{{greeting}}",
+          "max_tokens": 2048,
+          "voice": "Chelsie",
+          "language": "zh-CN",
+          "server_vad": true,
+          "max_history": 10
+        }
+      },
+      {
+        "type": "extension",
+        "name": "interrupt_detector",
+        "addon": "source.hanger.core.extension.system.InterruptDetectorExtension",
+        "extension_group": "default",
+        "property": {
+        }
+      }
+    ],
+    "connections": [
+      {
+        "extension": "client_connection",
+        "cmd": [
+          {
+            "name": "on_user_joined",
+            "dest": [
+              {
+                "extension": "v2v"
+              }
+            ]
+          }
+        ],
+        "data": [
+          {
+            "name": "text_data",
+            "dest": [
+              {
+                "extension": "v2v"
+              }
+            ]
+          }
+        ],
+        "audio_frame": [
+          {
+            "name": "pcm_frame",
+            "dest": [
+              {
+                "extension": "v2v"
+              }
+            ]
+          }
+        ]
+      },{
+        "extension": "v2v",
+        "data": [
+          {
+            "name": "text_data",
+            "dest": [
+              {
+                "extension": "client_connection"
+              }
+            ]
+          }
+        ],
+        "audio_frame": [
+          {
+            "name": "pcm_frame",
+            "dest": [
+              {
+                "extension": "client_connection"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

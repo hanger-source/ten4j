@@ -83,7 +83,7 @@
         ],
         "audio_frame": [
           {
-            "name": "audio_frame",
+            "name": "pcm_frame",
             "dest": [
               {
                 "extension": "asr"
@@ -161,7 +161,7 @@
         "extension": "tts",
         "audio_frame": [
           {
-            "name": "audio_frame",
+            "name": "pcm_frame",
             "dest": [
               {
                 "extension": "client_connection"
