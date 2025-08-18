@@ -25,7 +25,7 @@
         "addon": "source.hanger.core.extension.bailian.llm.QwenLLMExtension",
         "extension_group": "llm_group",
         "property": {
-          "api_key": "{{env:BAILIAN_DASHSCOPE_API_KEY}}",
+          "api_key": "{{env:bailian.dashscope.api.key}}",
           "prompt": "{{prompt}}",
           "greeting": "{{greeting}}",
           "model": "qwen-turbo"
@@ -37,7 +37,7 @@
         "addon": "source.hanger.core.extension.bailian.tts.QwenTtsExtension",
         "extension_group": "tts_group",
         "property": {
-          "api_key": "{{env:BAILIAN_DASHSCOPE_API_KEY}}",
+          "api_key": "{{env:bailian.dashscope.api.key}}",
           "voice_name": "Cherry"
         }
       },
@@ -47,7 +47,7 @@
         "addon": "source.hanger.core.extension.bailian.asr.ParaformerASRExtension",
         "extension_group": "asr_group",
         "property": {
-          "api_key": "{{env:BAILIAN_DASHSCOPE_API_KEY}}",
+          "api_key": "{{env:bailian.dashscope.api.key}}",
           "model": "paraformer-realtime-v2"
         }
       },

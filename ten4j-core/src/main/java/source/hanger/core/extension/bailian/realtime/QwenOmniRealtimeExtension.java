@@ -187,7 +187,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension {
         try {
             // Initialize the QwenOmniRealtimeClient
             String apiKey = env.getPropertyString("api_key")
-                .orElse(System.getenv("BAILIAN_DASHSCOPE_API_KEY")); // Fallback to system environment variable
+                .orElse(System.getProperty("bailian.dashscope.api.key")); // Fallback to system environment variable
             String model = (String)this.configuration.getOrDefault("model", "qwen-omni-turbo-realtime-latest");
             int sampleRate = (Integer)this.configuration.getOrDefault("sample_rate", 16000);
 

@@ -122,12 +122,11 @@ public class GraphLoader {
             }
 
             // If not a {{key}} placeholder, try to match {{env:VAR_NAME}} from
-            // System.getenv
             java.util.regex.Matcher envMatcher = java.util.regex.Pattern.compile(
-                    "\\{\\{\\s*env:([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\}\\}").matcher(str);
+                "\\{\\{\\s*env:([a-zA-Z0-9_.]*)\\s*\\}\\}").matcher(str);
             if (envMatcher.matches()) {
                 String varName = envMatcher.group(1);
-                String envValue = System.getenv(varName);
+                String envValue = System.getProperty(varName);
                 if (envValue != null) {
                     log.debug("Resolved environment variable: {} -> ***", varName);
                     return envValue;
