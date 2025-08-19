@@ -1,7 +1,6 @@
 package source.hanger.core.engine;
 
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +15,7 @@ import source.hanger.core.message.VideoFrameMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.runloop.Runloop;
 import source.hanger.core.tenenv.TenEnv;
+import source.hanger.core.tenenv.RunloopFuture;
 
 /**
  * EngineEnvImpl 是 Engine 级别的 TenEnv 实现。
@@ -37,12 +37,17 @@ public class EngineEnvImpl implements TenEnv {
     }
 
     @Override
+    public Runloop getRunloop() {
+        return engineRunloop;
+    }
+
+    @Override
     public void postTask(Runnable task) {
         engineRunloop.postTask(task);
     }
 
     @Override
-    public CompletableFuture<CommandResult> sendAsyncCmd(Command command) {
+    public RunloopFuture<CommandResult> sendAsyncCmd(Command command) {
         return engine.submitCommand(command);
     }
 

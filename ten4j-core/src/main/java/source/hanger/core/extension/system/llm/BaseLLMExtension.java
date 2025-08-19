@@ -217,56 +217,53 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
                 llmHistoryManager.onOtherMsg(toolCallMessage); // 直接传递 Message 对象
 
                 // [{}] 使用 env.sendAsyncCmd 并处理其 CompletableFuture 回调
+                // 现在 sendAsyncCmd 返回 RunloopFuture，其回调已在 Runloop 线程中执行
                 env.sendAsyncCmd(toolCallCommand)
                     .whenComplete((cmdResult, cmdThrowable) -> {
-                        env.postTask(() -> { // 确保在 Runloop 线程中执行后续操作
-                            try {
-                                if (cmdThrowable != null) {
-                                    log.error("[{}] 工具调用命令执行失败: toolName={}, toolCallId={}, error={}",env.getExtensionName(),
-                                        functionName, toolCallId, cmdThrowable.getMessage(), cmdThrowable);
-                                    // 将失败结果添加到历史
-                                    com.alibaba.dashscope.common.Message toolErrorMsg = com.alibaba.dashscope.common.Message.builder()
-                                        .role(Role.TOOL.getValue())
-                                        .content("工具执行失败: %s".formatted(cmdThrowable.getMessage()))
-                                        .toolCallId(toolCallId)
-                                        .build();
-                                    llmHistoryManager.onOtherMsg(toolErrorMsg); // 直接传递 Message 对象
-                                } else if (cmdResult != null && cmdResult.isSuccess()) {
-                                    String toolResultJson = cmdResult.getProperty(ExtensionConstants.CMD_PROPERTY_RESULT, String.class);
-                                    log.info("[{}] 工具调用命令执行成功: toolName={}, toolCallId={}, result={}",env.getExtensionName(),
-                                        functionName, toolCallId, toolResultJson);
-                                    // 将工具执行结果添加到历史
-                                    com.alibaba.dashscope.common.Message toolOutputMsg = com.alibaba.dashscope.common.Message.builder()
-                                        .role(Role.TOOL.getValue())
-                                        .content(toolResultJson)
-                                        .toolCallId(toolCallId)
-                                        .build();
-                                    llmHistoryManager.onOtherMsg(toolOutputMsg); // 直接传递 Message 对象
-                                } else {
-                                    //String errorMsg = cmdResult != null ? cmdResult.getMessage() : "未知错误";
-                                    String errorMsg = "";
-                                    log.error("[{}] 工具调用命令执行失败（非异常）: toolName={}, toolCallId={}, message={}",env.getExtensionName(),
-                                        functionName, toolCallId, errorMsg);
-                                    // 将失败结果添加到历史
-                                    com.alibaba.dashscope.common.Message toolErrorMsg = com.alibaba.dashscope.common.Message.builder()
-                                        .role(Role.TOOL.getValue())
-                                        .content("工具执行失败: %s".formatted(errorMsg))
-                                        .toolCallId(toolCallId)
-                                        .build();
-                                    llmHistoryManager.onOtherMsg(toolErrorMsg); // 直接传递 Message 对象
-                                }
-                                // 收到工具结果后，再次调用LLM
-                                // 将其通过 streamProcessor 处理，以确保流式输出和取消机制正常工作
-                                streamProcessor.onNext(new StreamPayload<>(
-                                    onRequestLLM(env, llmHistoryManager.getMessagesForLLM(), registeredFunctions),
-                                    originalMessage // 使用原始消息作为 payload 的 data
-                                ));
-                            } catch (Exception e) {
-                                log.error("[{}] 处理工具调用CompletableFuture回调异常: toolName={}, toolCallId={}, error={}",env.getExtensionName(),
-                                    functionName, toolCallId, e.getMessage(), e);
-                                sendErrorResult(env, originalMessage.getId(), originalMessage.getType(), originalMessage.getName(), "处理工具回调失败: %s".formatted(e.getMessage()));
+                        try {
+                            if (cmdThrowable != null) {
+                                log.error("[{}] 工具调用命令执行失败: toolName={}, toolCallId={}, error={}", env.getExtensionName(),
+                                    functionName, toolCallId, cmdThrowable.getMessage(), cmdThrowable);
+                                // 将失败结果添加到历史
+                                com.alibaba.dashscope.common.Message toolErrorMsg = com.alibaba.dashscope.common.Message.builder()
+                                    .role(Role.TOOL.getValue())
+                                    .content("工具执行失败: %s".formatted(cmdThrowable.getMessage()))
+                                    .toolCallId(toolCallId)
+                                    .build();
+                                llmHistoryManager.onOtherMsg(toolErrorMsg);
+                            } else if (cmdResult != null && cmdResult.isSuccess()) {
+                                String toolResultJson = cmdResult.getProperty(ExtensionConstants.CMD_PROPERTY_RESULT, String.class);
+                                log.info("[{}] 工具调用命令执行成功: toolName={}, toolCallId={}, result={}", env.getExtensionName(),
+                                    functionName, toolCallId, toolResultJson);
+                                // 将工具执行结果添加到历史
+                                com.alibaba.dashscope.common.Message toolOutputMsg = com.alibaba.dashscope.common.Message.builder()
+                                    .role(Role.TOOL.getValue())
+                                    .content(toolResultJson)
+                                    .toolCallId(toolCallId)
+                                    .build();
+                                llmHistoryManager.onOtherMsg(toolOutputMsg);
+                            } else {
+                                String errorMsg = "";
+                                log.error("[{}] 工具调用命令执行失败（非异常）: toolName={}, toolCallId={}, message={}", env.getExtensionName(),
+                                    functionName, toolCallId, errorMsg);
+                                // 将失败结果添加到历史
+                                com.alibaba.dashscope.common.Message toolErrorMsg = com.alibaba.dashscope.common.Message.builder()
+                                    .role(Role.TOOL.getValue())
+                                    .content("工具执行失败: %s".formatted(errorMsg))
+                                    .toolCallId(toolCallId)
+                                    .build();
+                                llmHistoryManager.onOtherMsg(toolErrorMsg);
                             }
-                        });
+                            // 收到工具结果后，再次调用LLM
+                            streamProcessor.onNext(new StreamPayload<>(
+                                onRequestLLM(env, llmHistoryManager.getMessagesForLLM(), registeredFunctions),
+                                originalMessage
+                            ));
+                        } catch (Exception e) {
+                            log.error("[{}] 处理工具调用CompletableFuture回调异常: toolName={}, toolCallId={}, error={}", env.getExtensionName(),
+                                functionName, toolCallId, e.getMessage(), e);
+                            sendErrorResult(env, originalMessage.getId(), originalMessage.getType(), originalMessage.getName(), "处理工具回调失败: %s".formatted(e.getMessage()));
+                        }
                     });
 
                 log.info("[{}] LLM请求工具调用，已发送异步命令: toolName={}, arguments={}, toolCallId={}", env.getExtensionName(),functionName, arguments, toolCallId);

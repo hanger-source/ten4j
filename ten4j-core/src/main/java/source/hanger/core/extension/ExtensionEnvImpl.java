@@ -2,7 +2,6 @@ package source.hanger.core.extension;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +15,8 @@ import source.hanger.core.message.VideoFrameMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.runloop.Runloop;
 import source.hanger.core.tenenv.TenEnv;
+import source.hanger.core.tenenv.RunloopFuture;
+import source.hanger.core.tenenv.DefaultRunloopFuture;
 
 /**
  * `ExtensionEnvImpl` 是 `Extension` 组件的 `TenEnv` 接口实现。
@@ -54,19 +55,24 @@ public class ExtensionEnvImpl implements TenEnv {
     }
 
     @Override
+    public Runloop getRunloop() {
+        return extensionRunloop;
+    }
+
+    @Override
     public void postTask(Runnable task) {
         extensionRunloop.postTask(task);
     }
 
     @Override
-    public CompletableFuture<CommandResult> sendAsyncCmd(Command command) {
+    public RunloopFuture<CommandResult> sendAsyncCmd(Command command) {
         // Extension 发送命令，通过 commandSubmitter 委托给 Engine 处理
         if (commandSubmitter != null) {
             return commandSubmitter.submitCommandFromExtension(command, extensionName);
         } else {
-            return CompletableFuture.failedFuture(new IllegalStateException(
+            return DefaultRunloopFuture.failedFuture(new IllegalStateException(
                 "ExtensionCommandSubmitter is null, cannot send command for Extension: %s"
-                    .formatted(extensionName)));
+                    .formatted(extensionName)), extensionRunloop);
         }
     }
 

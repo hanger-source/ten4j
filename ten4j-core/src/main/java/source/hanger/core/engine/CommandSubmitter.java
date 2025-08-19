@@ -2,8 +2,7 @@ package source.hanger.core.engine;
 
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.command.Command;
-
-import java.util.concurrent.CompletableFuture;
+import source.hanger.core.tenenv.RunloopFuture;
 
 /**
  * `CommandSubmitter` 接口定义了将命令提交到 `Engine` 的能力。
@@ -18,7 +17,7 @@ public interface CommandSubmitter {
      * @return 返回一个 `CompletableFuture`，当命令处理完成时，该 Future 将被完成，包含命令执行的结果。
      *         如果命令处理失败，Future 将以异常方式完成。
      */
-    CompletableFuture<CommandResult> submitCommand(Command command);
+    RunloopFuture<CommandResult> submitCommand(Command command);
 
     /**
      * 提交一个命令结果。

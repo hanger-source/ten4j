@@ -1,7 +1,6 @@
 package source.hanger.core.app;
 
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +14,7 @@ import source.hanger.core.message.VideoFrameMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.runloop.Runloop;
 import source.hanger.core.tenenv.TenEnv;
+import source.hanger.core.tenenv.RunloopFuture;
 
 /**
  * AppEnvImpl 是 App 级别的 TenEnv 实现。
@@ -37,12 +37,17 @@ public class AppEnvImpl implements TenEnv {
     }
 
     @Override
+    public Runloop getRunloop() {
+        return appRunloop;
+    }
+
+    @Override
     public void postTask(Runnable task) {
         appRunloop.postTask(task);
     }
 
     @Override
-    public CompletableFuture<CommandResult> sendAsyncCmd(Command command) {
+    public RunloopFuture<CommandResult> sendAsyncCmd(Command command) {
         return app.submitCommand(command);
     }
 

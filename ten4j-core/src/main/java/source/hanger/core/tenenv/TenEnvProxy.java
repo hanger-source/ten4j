@@ -1,7 +1,6 @@
 package source.hanger.core.tenenv;
 
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.app.AppEnvImpl;
@@ -27,6 +26,11 @@ public record TenEnvProxy<T extends TenEnv>(
     T targetEnv,
     String signature) implements TenEnv, MessageSubmitter {
 
+    @Override
+    public Runloop getRunloop() {
+        return targetRunloop;
+    }
+
     /**
      * 提交一个任务到代理的目标 Runloop。
      * 这是确保所有操作都在正确的线程上下文中执行的关键。
@@ -40,27 +44,14 @@ public record TenEnvProxy<T extends TenEnv>(
 
     // Proxy methods, delegating to targetEnv
     @Override
-    public CompletableFuture<CommandResult> sendAsyncCmd(Command command) {
-        CompletableFuture<CommandResult> future = new CompletableFuture<>();
-        targetRunloop.postTask(() -> {
-            try {
-                // TenEnvProxy 始终委托给 targetEnv 的 sendCmd 方法。
-                // 无论是 AppEnvImpl、EngineEnvImpl 还是 ExtensionEnvImpl，其 sendCmd 都是出站命令。
-                targetEnv.sendAsyncCmd(command)
-                    .whenComplete((result, throwable) -> {
-                        targetRunloop.postTask(() -> {
-                            if (throwable != null) {
-                                future.completeExceptionally(throwable);
-                            } else {
-                                future.complete(result);
-                            }
-                        });
-                    });
-            } catch (Exception e) {
-                future.completeExceptionally(e);
-            }
-        });
-        return future;
+    public RunloopFuture<CommandResult> sendAsyncCmd(Command command) {
+        // 如果当前线程不是目标 Runloop 线程，则异步提交任务
+        if (targetRunloop.isNotCurrentThread()) {
+            return DefaultRunloopFuture.supplyRunloopAsync(() -> targetEnv.sendAsyncCmd(command), targetRunloop);
+        } else {
+            // 如果已经在目标 Runloop 线程，则直接调用
+            return targetEnv.sendAsyncCmd(command);
+        }
     }
 
     @Override // Implements TenEnv.sendMessage
@@ -225,7 +216,7 @@ public record TenEnvProxy<T extends TenEnv>(
             return engineEnv.getEngine().submitInboundMessage(message, connection);
         } else if (targetEnv instanceof ExtensionEnvImpl extensionEnv) {
             // 委托给 ExtensionEnvImpl 关联的 EngineExtensionContext 所持有的 Engine
-            return extensionEnv.getExtensionContext().getEngine().submitInboundMessage(message, null);
+            return ((ExtensionEnvImpl)targetEnv).getExtensionContext().getEngine().submitInboundMessage(message, null);
         }
         log.warn("TenEnvProxy {}: 无法处理 submitInboundMessage，未知目标环境类型: {}", signature,
             targetEnv.getClass().getName());

@@ -10,6 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.connection.AbstractConnection;
 import source.hanger.core.message.Message;
 import source.hanger.core.runloop.Runloop;
+import source.hanger.core.tenenv.RunloopFuture;
+import source.hanger.core.tenenv.DefaultRunloopFuture;
 
 /**
  * NettyConnection 是 Connection 接口的实现，用于封装 Netty Channel。
@@ -36,8 +38,8 @@ public class NettyConnection extends AbstractConnection {
     }
 
     @Override
-    protected CompletableFuture<Void> sendOutboundMessageInternal(Message message) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
+    protected RunloopFuture<Void> sendOutboundMessageInternal(Message message) {
+        CompletableFuture<Void> completableFuture = new CompletableFuture<>();
         if (channel.isActive()) {
             ChannelFuture writeFuture = channel.writeAndFlush(message);
             writeFuture.addListener(f -> {
@@ -45,12 +47,12 @@ public class NettyConnection extends AbstractConnection {
                     log.debug("NettyConnection {}: 消息 {} (类型: {} name: {}) 发送成功。", getConnectionId(),
                         message.getId(),
                         message.getType(), message.getName());
-                    future.complete(null);
+                    completableFuture.complete(null);
                 } else {
                     log.error("NettyConnection {}: 消息 {} (类型: {} name: {}) 发送失败: {}", getConnectionId(),
                         message.getId(),
                         message.getType(), message.getName(), f.cause().getMessage());
-                    future.completeExceptionally(f.cause());
+                    completableFuture.completeExceptionally(f.cause());
                 }
             });
         } else {
@@ -58,9 +60,9 @@ public class NettyConnection extends AbstractConnection {
                 message.getId(),
                 message.getType(),
                 message.getName());
-            future.completeExceptionally(new IllegalStateException("Channel is not active."));
+            completableFuture.completeExceptionally(new IllegalStateException("Channel is not active."));
         }
-        return future;
+        return DefaultRunloopFuture.wrapCompletableFuture(completableFuture, currentRunloop);
     }
 
     @Override

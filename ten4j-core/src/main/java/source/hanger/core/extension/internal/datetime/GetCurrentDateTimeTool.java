@@ -16,7 +16,7 @@ public class GetCurrentDateTimeTool implements LLMTool {
     public ToolMetadata getToolMetadata() {
         return ToolMetadata.builder()
                 .name("get_current_datetime")
-                .description("获取当前的日期和时间，精确到秒。")
+                .description("获取当前最新的日期和时间，精确到秒。")
                 .parameters(Collections.emptyList())
                 .build();
     }

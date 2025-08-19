@@ -2,7 +2,9 @@ package source.hanger.core.tenenv;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
 
+import org.slf4j.LoggerFactory;
 import source.hanger.core.extension.Extension;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
@@ -15,21 +17,28 @@ import source.hanger.core.message.command.Command;
  * 它提供了在组件自身的 Runloop 线程上执行操作的方法，以及与框架核心交互的接口。
  * 这是 `ten_env_t` 和 Python `TenEnv` 的 Java 对应。
  */
-public interface TenEnv {
+public interface TenEnv extends Env {
+
+    // --- 消息发送方法（从当前 TenEnv 向外发送） ---
+    // 这些方法将保留在 TenEnv 中，因为它们是与消息传递紧密相关的。
 
     /**
-     * 提交一个任务到当前 TenEnv 关联的 Runloop。
-     * 这是确保所有操作都在正确的线程上下文中执行的关键。
+     * 从当前 Env 向目标 Extension 或 Remote 发送一个异步命令，并返回一个 RunloopFuture
+     * 以便跟踪命令结果。
      *
-     * @param task 要执行的任务。
+     * @param command 要发送的命令。
+     * @return 一个 RunloopFuture，当命令处理完成并返回结果时，它将被完成。
      */
-    void postTask(Runnable task);
-
-    // region 消息发送方法（从当前 TenEnv 向外发送）
-    CompletableFuture<CommandResult> sendAsyncCmd(Command command);
+    RunloopFuture<CommandResult> sendAsyncCmd(Command command);
 
     default void sendCmd(Command command) {
-        sendMessage(command);
+        sendAsyncCmd(command).whenComplete((commandResult, throwable) -> {
+            if (throwable != null) {
+                LoggerFactory.getLogger(TenEnv.class).warn("[{}] Fire-and-forget command {} (ID: {}) failed with exception: {}",
+                    getAttachedExtension() != null ? getAttachedExtension().getClass().getSimpleName() : "Unknown",
+                    command.getName(), command.getId(), throwable.getMessage());
+            }
+        });
     }
 
     void sendResult(CommandResult result);

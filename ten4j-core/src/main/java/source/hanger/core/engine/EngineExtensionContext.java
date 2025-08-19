@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 import lombok.Getter;
@@ -28,6 +27,7 @@ import source.hanger.core.message.command.Command;
 import source.hanger.core.path.PathTable;
 import source.hanger.core.util.MessageConverter;
 import source.hanger.core.util.ReflectionUtils;
+import source.hanger.core.tenenv.RunloopFuture;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
@@ -516,7 +516,7 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
 
     // 实现 ExtensionCommandSubmitter 接口方法
     @Override
-    public CompletableFuture<CommandResult> submitCommandFromExtension(Command command, String sourceExtensionName) {
+    public RunloopFuture<CommandResult> submitCommandFromExtension(Command command, String sourceExtensionName) {
         // 命令从 Extension 提交，委托给 Engine 的 commandSubmitter
         log.info("ExtensionContext: Extension {} 提交命令 {} 到 Engine。", sourceExtensionName, command.getId());
         // 修改 srcLoc 以反映真实的真实来源 Extension

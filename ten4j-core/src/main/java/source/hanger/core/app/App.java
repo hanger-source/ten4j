@@ -34,14 +34,14 @@ import source.hanger.core.message.Location;
 import source.hanger.core.message.Message;
 import source.hanger.core.message.MessageType;
 import source.hanger.core.message.command.Command;
-import source.hanger.core.message.command.StartGraphCommand;
 import source.hanger.core.path.PathIn;
 import source.hanger.core.path.PathTable;
 import source.hanger.core.path.PathTableAttachedTo;
 import source.hanger.core.remote.Remote;
 import source.hanger.core.runloop.Runloop;
 import source.hanger.core.tenenv.TenEnvProxy;
-import source.hanger.core.util.MessageUtils;
+import source.hanger.core.tenenv.RunloopFuture;
+import source.hanger.core.tenenv.DefaultRunloopFuture;
 
 /**
  * App 类作为 Ten 框架的顶层容器和协调器。
@@ -52,7 +52,6 @@ import source.hanger.core.util.MessageUtils;
 @Getter
 public class App implements Agent, MessageReceiver { // 修正：添加 MessageReceiver 接口
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private final Map<String, Engine> engines; // 管理所有活跃的 Engine 实例，key 为 graphId
     private final List<Connection> orphanConnections; // 尚未绑定到 Engine 的连接
     private final PathTable pathTable; // App 级别 PathTable - 恢复 App 级别 PathTable
@@ -81,7 +80,7 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
      * @return 存储命令 ID 到 CompletableFuture 的映射。
      */
     @Getter
-    private final Map<String, CompletableFuture<CommandResult>> commandFutures; // App 自身的 CompletableFuture 映射
+    private final Map<String, RunloopFuture<CommandResult>> commandFutures; // App 自身的 CompletableFuture 映射
     // 新增：存储运行时预定义图信息
     private final Map<String, PredefinedGraphRuntimeInfo> predefinedGraphRuntimeInfos;
     private final GraphConfig appConfig; // 新增：App 的整体配置，对应 property.json
@@ -239,8 +238,16 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
         engines.values().forEach(Engine::stop);
         engines.clear();
 
+        // 清理所有命令的 RunloopFuture
+        commandFutures.values().forEach(future -> {
+            if (!future.toCompletableFuture().isDone()) {
+                future.toCompletableFuture().completeExceptionally(new IllegalStateException("App %s stopped.".formatted(appUri)));
+            }
+        });
+        commandFutures.clear();
+
         // 关闭所有远程连接
-        remotes.values().forEach(remote -> remote.shutdown()); // 修正：使用 lambda 表达式
+        remotes.values().forEach(Remote::shutdown); // 修正：使用 lambda 表达式
         remotes.clear();
 
         // 清理孤立连接
@@ -518,22 +525,25 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
      * @param command 要提交的命令。
      * @return 一个 CompletableFuture，当命令处理完成并返回结果时，它将被完成。
      */
-    public CompletableFuture<CommandResult> submitCommand(Command command) {
-        CompletableFuture<CommandResult> future = new CompletableFuture<>();
+    public RunloopFuture<CommandResult> submitCommand(Command command) {
+        // Create a CompletableFuture internally, but expose a RunloopFuture
+        CompletableFuture<CommandResult> completableFuture = new CompletableFuture<>();
+        RunloopFuture<CommandResult> runloopFuture = DefaultRunloopFuture.wrapCompletableFuture(completableFuture, appRunloop);
+
         // 确保在 App 的 Runloop 线程中执行
         if (appRunloop.isNotCurrentThread()) {
             appRunloop.postTask(() -> {
                 // 将 CompletableFuture 放入 commandFutures 映射
-                commandFutures.put(command.getId(), future);
+                commandFutures.put(command.getId(), runloopFuture);
                 // 提交命令到消息队列
                 handleInboundMessage(command, null); // 使用已有的 handleInboundMessage
             });
         } else {
             // 如果已经在 Runloop 线程，则直接执行
-            commandFutures.put(command.getId(), future);
+            commandFutures.put(command.getId(), runloopFuture);
             handleInboundMessage(command, null); // 使用已有的 handleInboundMessage
         }
-        return future;
+        return runloopFuture;
     }
 
     // 内部类，用于包装消息和其来源连接

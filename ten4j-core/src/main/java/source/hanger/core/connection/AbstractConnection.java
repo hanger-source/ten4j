@@ -1,7 +1,6 @@
 package source.hanger.core.connection;
 
 import java.net.SocketAddress;
-import java.util.concurrent.CompletableFuture;
 
 import io.netty.channel.Channel;
 import lombok.Getter;
@@ -16,6 +15,8 @@ import source.hanger.core.message.Message;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.remote.Remote;
 import source.hanger.core.runloop.Runloop;
+import source.hanger.core.tenenv.RunloopFuture;
+import source.hanger.core.tenenv.DefaultRunloopFuture;
 
 /**
  * AbstractConnection 提供了 Connection 接口的骨架实现，
@@ -134,10 +135,10 @@ public abstract class AbstractConnection implements Connection {
     }
 
     // 抽象方法，由具体实现类发送出站消息
-    protected abstract CompletableFuture<Void> sendOutboundMessageInternal(Message message);
+    protected abstract RunloopFuture<Void> sendOutboundMessageInternal(Message message);
 
     @Override
-    public CompletableFuture<Void> sendOutboundMessage(Message message) {
+    public RunloopFuture<Void> sendOutboundMessage(Message message) {
         // 检查连接是否活跃再发送
         if (getChannel() != null && getChannel().isActive()) {
             log.debug("Connection {}: 发送消息到远程客户端: type={}, id={}", connectionId, message.getType(),
@@ -146,7 +147,7 @@ public abstract class AbstractConnection implements Connection {
         } else {
             log.warn("Connection {}: 连接不活跃，无法发送消息: type={}, id={}", connectionId, message.getType(),
                     message.getId());
-            return CompletableFuture.failedFuture(new IllegalStateException("Connection is not active."));
+            return DefaultRunloopFuture.failedFuture(new IllegalStateException("Connection is not active."), currentRunloop);
         }
     }
 

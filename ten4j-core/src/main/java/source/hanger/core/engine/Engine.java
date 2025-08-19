@@ -35,6 +35,8 @@ import source.hanger.core.path.PathTableAttachedTo;
 import source.hanger.core.remote.Remote;
 import source.hanger.core.runloop.Runloop;
 import source.hanger.core.tenenv.TenEnvProxy;
+import source.hanger.core.tenenv.RunloopFuture;
+import source.hanger.core.tenenv.DefaultRunloopFuture;
 
 import static source.hanger.core.message.MessageType.CMD_TIMEOUT;
 import static source.hanger.core.message.MessageType.CMD_TIMER;
@@ -62,8 +64,8 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
     private final App app; // 引用所属的 App 实例
     @Getter
     private final TenEnvProxy<EngineEnvImpl> engineEnvProxy; // 新增：Engine 自身的 TenEnvProxy 实例
-    private final ConcurrentMap<String, CompletableFuture<CommandResult>> commandFutures;
-    // Engine 自身的 CompletableFuture
+    private final ConcurrentMap<String, RunloopFuture<CommandResult>> commandFutures;
+    // Engine 自身的 RunloopFuture
     // 映射
     private volatile boolean isReadyToHandleMsg = false;
     private volatile boolean isClosing = false;
@@ -182,16 +184,16 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
         // 停止所有 Extension
         engineExtensionContext.unloadAllExtensions(); // Call unloadAllExtensions instead of cleanup
 
-        // 清理所有命令的 CompletableFuture
+        // 清理所有命令的 RunloopFuture
         commandFutures.values().forEach(future -> {
-            if (!future.isDone()) {
-                future.completeExceptionally(new IllegalStateException("Engine %s stopped.".formatted(graphId)));
+            if (!future.toCompletableFuture().isDone()) {
+                future.toCompletableFuture().completeExceptionally(new IllegalStateException("Engine %s stopped.".formatted(graphId)));
             }
         });
         commandFutures.clear();
 
         // 关闭所有远程连接
-        remotes.values().forEach(remote -> remote.shutdown()); // 修正：使用 lambda 表达式
+        remotes.values().forEach(Remote::shutdown); // 修正：使用 lambda 表达式
         remotes.clear();
 
         // 清理孤立连接
@@ -225,18 +227,18 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
      * @param message 待路由的消息，必须包含唯一的目的地 Remote URI。
      * @return 一个 CompletableFuture，表示消息发送的结果。
      */
-    private CompletableFuture<Void> routeMessageToRemote(Message message) {
+    private RunloopFuture<Void> routeMessageToRemote(Message message) {
         if (message.getDestLocs() == null || message.getDestLocs().size() != 1) {
             log.warn("Engine {}: 消息 {} 没有单一的 Remote 目的地，无法通过 Remote 路由。",
                 graphId, message.getId());
-            return CompletableFuture.completedFuture(null); // 返回一个已完成的 Future，表示未发送
+            return DefaultRunloopFuture.completedFuture(null, runloop);
         }
 
         String destUri = message.getDestLocs().getFirst().getAppUri();
         if (destUri == null || destUri.isEmpty()) {
             log.warn("Engine {}: 消息 {} 的目的地 Remote URI 为空，无法路由。",
                 graphId, message.getId());
-            return CompletableFuture.completedFuture(null); // 返回一个已完成的 Future，表示未发送
+            return DefaultRunloopFuture.completedFuture(null, runloop);
         }
 
         Remote remote = remotes.get(destUri);
@@ -246,7 +248,7 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
         } else {
             log.warn("Engine {}: 找不到目标 Remote {}，消息 {} 无法发送。",
                 graphId, destUri, message.getId());
-            return CompletableFuture.completedFuture(null); // 返回一个已完成的 Future，表示未发送
+            return DefaultRunloopFuture.completedFuture(null, runloop);
         }
     }
 
@@ -258,13 +260,21 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
      */
     public void processMessage(Message message, Connection connection) { // 增加 connection 参数
         if (!isReadyToHandleMsg && !isMessageAllowedWhenClosing(message)) {
-            log.warn("Engine {}: 在非活跃状态下收到消息 {} (Type: {})，已忽略。",
-                graphId, message.getId(), message.getType());
-            // 如果是命令，返回失败结果
-            if (message instanceof Command command) {
-                submitCommandResult(
-                    CommandResult.fail(command.getId(), command.getType(), command.getName(),
-                        "Engine not ready to handle messages."));
+            // 如果 Engine 未就绪，且消息不是允许在关闭时处理的命令结果，则尝试重新入队
+            boolean offered = inMsgs.offer(new QueuedMessage(message, connection));
+            if (offered) {
+                log.warn("[{}] Engine {}: 未就绪，消息 {} (Type: {}) 已重新入队，等待处理。",
+                    "Engine", graphId, message.getId(), message.getType());
+                runloop.wakeup(); // 唤醒 Runloop 线程，以便它能处理重新入队的消息
+            } else {
+                log.warn("[{}] Engine {}: 未就绪且内部队列已满，消息 {} (Type: {}) 被丢弃。",
+                    "Engine", graphId, message.getId(), message.getType());
+                // 如果队列已满，对于命令，返回失败结果以通知发送方
+                if (message instanceof Command command) {
+                    submitCommandResult(
+                        CommandResult.fail(command.getId(), command.getType(), command.getName(),
+                            "Engine not ready and queue full. Message dropped."));
+                }
             }
             return;
         }
@@ -315,8 +325,7 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
                             graphId, message.getId(), message.getType());
                     }
                 } else {
-                    log.warn("Engine {}: 消息 {} (Type: {}) 没有目的地，无法处理。",
-                        graphId, message.getId(), message.getType());
+                    log.warn("Engine {}: 消息 {} (Type: {}) 没有目的地，无法处理。", message.getId(), message.getType());
                 }
             }
         } else { // 对于非命令和非命令结果的消息，尝试路由到目标 Extension 或 Remote
@@ -516,12 +525,12 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
         String originalCommandId = commandResult.getOriginalCommandId();
         // 这里的 CompletableFuture<Object> 应该与 C 端 ten_cmd_t 预期返回的类型对齐
         // 而不是固定为 CommandResult
-        CompletableFuture<CommandResult> future = commandFutures.remove(originalCommandId);
+        RunloopFuture<CommandResult> future = commandFutures.remove(originalCommandId);
         if (future != null) {
             if (commandResult.getStatusCode() == StatusCode.OK) { // 修改比较方式
-                future.complete(commandResult);
+                future.toCompletableFuture().complete(commandResult);
             } else {
-                future.completeExceptionally(new RuntimeException(
+                future.toCompletableFuture().completeExceptionally(new RuntimeException(
                     "Command failed with status: %d, Detail: %s".formatted(commandResult.getStatusCode().getValue(),
                         commandResult.getDetail())));
             }
@@ -554,17 +563,20 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
      * 该方法是线程安全的，会将命令提交到 Engine 的 Runloop 线程进行处理。
      *
      * @param command 要提交的命令。
-     * @return 一个 CompletableFuture，当命令处理完成并返回结果时，它将被完成。
+     * @return 一个 RunloopFuture，当命令处理完成并返回结果时，它将被完成。
      */
     @Override
-    public CompletableFuture<CommandResult> submitCommand(Command command) {
-        CompletableFuture<CommandResult> future = new CompletableFuture<>();
+    public RunloopFuture<CommandResult> submitCommand(Command command) {
+        // Create a CompletableFuture internally, but expose a RunloopFuture
+        CompletableFuture<CommandResult> completableFuture = new CompletableFuture<>();
+        RunloopFuture<CommandResult> runloopFuture = DefaultRunloopFuture.wrapCompletableFuture(completableFuture, runloop);
+
         // 确保在 Engine 的 Runloop 线程中执行
         if (runloop.isNotCurrentThread()) {
             runloop.postTask(() -> {
                 // 将 CompletableFuture 放入 commandFutures 映射
                 try {
-                    commandFutures.put(command.getId(), future);
+                    commandFutures.put(command.getId(), runloopFuture);
                 } catch (Throwable throwable) {
                     log.warn("Engine {}: 尝试提交命令 {}，但无法将 CompletableFuture 放入 commandFutures 映射。",
                         graphId, command.getId(), throwable);
@@ -574,10 +586,10 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
             });
         } else {
             // 如果已经在 Runloop 线程，则直接执行
-            commandFutures.put(command.getId(), future);
+            commandFutures.put(command.getId(), runloopFuture);
             submitInboundMessage(command, null); // 更新这里
         }
-        return future;
+        return runloopFuture;
     }
 
     public boolean submitInboundMessage(Message message, Connection connection) {
