@@ -453,7 +453,7 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
             }
         }
 
-        log.info(
+        log.debug(
             "{} 累积工具调用参数: key={}, toolCallId={}, arguments_fragment='{}', current_total='{}', finish_reason={}",
             LOG_PREFIX, requestId, toolCallId, currentArgumentsFragment,
             accumulator.getAccumulatedArguments().toString(),
