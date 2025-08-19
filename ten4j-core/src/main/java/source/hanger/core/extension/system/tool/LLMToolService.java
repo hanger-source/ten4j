@@ -25,21 +25,21 @@ public class LLMToolService {
 
             LLMTool tool = ToolRegistry.getInstance().getTool(toolName);
             if (tool == null) {
-                String errorMessage = String.format("[LLM_REFACTOR] 未找到工具: %s (可能未注册到ToolRegistry)", toolName);
+                String errorMessage = String.format("[llm_tool_service] 未找到工具: %s (可能未注册到ToolRegistry)", toolName);
                 log.error(errorMessage);
                 throw new RuntimeException(errorMessage); // 抛出运行时异常，由调用方捕获并处理为CommandResult.fail
             }
 
             LLMToolResult result = tool.runTool(env, toolArgs);
             if (result != null) {
-                log.info("[LLM_REFACTOR] 工具 {} 执行成功", toolName);
+                log.info("[llm_tool_service] 工具 {} 执行成功", toolName);
                 return result;
             } else {
-                log.warn("[LLM_REFACTOR] 工具 {} 执行但未返回结果，将返回空结果给LLM", toolName);
+                log.warn("[llm_tool_service] 工具 {} 执行但未返回结果，将返回空结果给LLM", toolName);
                 return new LLMToolResult.LLMResult(""); // 返回空LLMResult，表示成功但无内容
             }
         } catch (Exception e) {
-            String errorMessage = String.format("[LLM_REFACTOR] 处理工具调用命令失败: %s", e.getMessage());
+            String errorMessage = String.format("[llm_tool_service] 处理工具调用命令失败: %s", e.getMessage());
             log.error(errorMessage, e);
             throw e; // 将异常重新抛出，由调用方负责处理
         }

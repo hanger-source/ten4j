@@ -255,6 +255,7 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
                                 llmHistoryManager.onOtherMsg(toolErrorMsg);
                             }
                             // 收到工具结果后，再次调用LLM
+                            log.info("[{}] LLM请求工具调用，已收到异步命令结果，开始调用LLM: toolName={}, toolCallId={}", env.getExtensionName(), functionName, toolCallId);
                             streamProcessor.onNext(new StreamPayload<>(
                                 onRequestLLM(env, llmHistoryManager.getMessagesForLLM(), registeredFunctions),
                                 originalMessage

@@ -68,7 +68,7 @@ public abstract class BaseLLMToolExtension extends BaseExtension {
                     LLMToolResult toolResult = llmToolService.handleToolCallCommand(command);
                     String toolResultJson = objectMapper.writeValueAsString(toolResult);
 
-                    // [LLM_REFACTOR] 修正：将工具结果放入 CMD_PROPERTY_RESULT 属性中
+                    // 将工具结果放入 CMD_PROPERTY_RESULT 属性中
                     Map<String, Object> properties = new java.util.HashMap<>();
                     properties.put(ExtensionConstants.CMD_PROPERTY_RESULT, toolResultJson);
 
