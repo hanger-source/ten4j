@@ -13,6 +13,7 @@ import lombok.experimental.Accessors;
 import source.hanger.core.message.Location;
 import source.hanger.core.message.Message;
 import source.hanger.core.message.MessageType;
+import source.hanger.core.util.MessageUtils;
 
 /**
  * 所有命令消息的抽象基类，继承自 Message。

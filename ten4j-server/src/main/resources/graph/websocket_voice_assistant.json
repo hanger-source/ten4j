@@ -58,6 +58,13 @@
         "extension_group": "default",
         "property": {
         }
+      },{
+        "type": "extension",
+        "name": "get_current_datetime",
+        "addon": "source.hanger.core.extension.internal.datetime.GetCurrentDateTimeExtension",
+        "extension_group": "default",
+        "property": {
+        }
       }
     ],
     "connections": [
@@ -143,6 +150,14 @@
                 "extension": "tts"
               }
             ]
+          },
+          {
+            "name": "tool_call",
+            "dest": [
+              {
+                "extension": "get_current_datetime"
+              }
+            ]
           }
         ],
         "data": [
@@ -164,6 +179,28 @@
         "audio_frame": [
           {
             "name": "pcm_frame",
+            "dest": [
+              {
+                "extension": "client_connection"
+              }
+            ]
+          }
+        ]
+      },{
+        "extension": "get_current_datetime",
+        "cmd": [
+          {
+            "name": "tool_register",
+            "dest": [
+              {
+                "extension": "llm"
+              }
+            ]
+          }
+        ],
+        "data": [
+          {
+            "name": "content_data",
             "dest": [
               {
                 "extension": "client_connection"

@@ -120,6 +120,21 @@ public abstract class Message implements Cloneable { // 实现 Cloneable
         return properties.get(path);
     }
 
+    /**
+     * 获取指定路径的属性值，并尝试转换为指定类型。
+     * @param path 属性路径
+     * @param clazz 期望的类型
+     * @param <T> 期望的类型
+     * @return 转换后的属性值，如果不存在或类型不匹配则返回null
+     */
+    public <T> T getProperty(String path, Class<T> clazz) {
+        Object value = properties.get(path);
+        if (value != null && clazz.isInstance(value)) {
+            return clazz.cast(value);
+        }
+        return null;
+    }
+
     public void setProperty(String path, Object value) {
         // TODO: 实现对嵌套路径的支持
         if (properties == null) {

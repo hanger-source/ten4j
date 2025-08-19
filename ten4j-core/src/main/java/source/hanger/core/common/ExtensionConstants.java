@@ -21,10 +21,15 @@ public final class ExtensionConstants {
     public static final String CMD_IN_ON_USER_LEFT = "on_user_left";
 
     // Tooling related constants
+    public static final String CMD_TOOL_REGISTER = "tool_register"; // [LLM_REFACTOR] 新增：工具注册命令
+    public static final String CMD_PROPERTY_TOOL = "tool"; // [LLM_REFACTOR] 新增：工具属性键
     public static final String CMD_TOOL_CALL = "tool_call";
     public static final String CMD_TOOL_CALL_PROPERTY_NAME = "name";
     public static final String CMD_TOOL_CALL_PROPERTY_ARGUMENTS = "arguments";
     public static final String CMD_PROPERTY_RESULT = "result";
+
+    public static final String CMD_SUCCESS = "success"; // [LLM_REFACTOR] 新增：命令成功状态
+    public static final String CMD_FAIL = "fail";     // [LLM_REFACTOR] 新增：命令失败状态
 
     private ExtensionConstants() {
         // Prevent instantiation

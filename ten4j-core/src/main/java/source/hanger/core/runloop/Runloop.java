@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
@@ -17,6 +18,7 @@ import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.ManyToOneConcurrentArrayQueue;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Runloop 类负责线程管理和任务调度，对齐 C 语言的 ten_runloop。
@@ -62,8 +64,21 @@ public class Runloop {
         this.workAgent = workAgent;
         this.coreAgent = new LoopAgent(name);
         tasks = new CopyOnWriteArrayList<>();
-        this.virtualThreadExecutor = Executors
-                .newSingleThreadExecutor(Thread.ofVirtual().name("Runloop-%s-vt".formatted(name), 0).factory());
+        this.virtualThreadExecutor = Executors.newSingleThreadExecutor(new ThreadFactory() {
+            private final ThreadFactory defaultFactory = Thread.ofVirtual().name("Runloop-%s-vt".formatted(name), 0).factory();
+            @Override
+            public Thread newThread(@NotNull Runnable r) {
+                // 在虚拟线程中设置 ThreadLocal
+                return defaultFactory.newThread(() -> {
+                    currentRunloopThreadLocal.set(Runloop.this); // 在虚拟线程中设置 ThreadLocal
+                    try {
+                        r.run();
+                    } finally {
+                        currentRunloopThreadLocal.remove();
+                    }
+                });
+            }
+        });
     }
 
     public static Runloop createRunloopWithWorker(String name, Agent workAgent) {
@@ -143,7 +158,7 @@ public class Runloop {
     }
 
     public boolean isNotCurrentThread() {
-        return Thread.currentThread() != coreThread;
+        return currentRunloopThreadLocal.get() != this;
     }
 
     private boolean canAcceptTask() {
