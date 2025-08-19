@@ -170,7 +170,7 @@ public abstract class BaseRealtimeExtension extends BaseFlushExtension<RealtimeE
      */
     protected void sendTextOutput(TenEnv env, String eventId, String groupId, String text, boolean endOfSegment, String role) {
         try {
-            DataMessage outputData = DataMessage.create(ExtensionConstants.LLM_DATA_OUT_NAME); // Define this
+            DataMessage outputData = DataMessage.create(ExtensionConstants.TEXT_DATA_OUT_NAME); // Define this
             // constant
             outputData.setId(eventId);
             outputData.setProperty(ExtensionConstants.DATA_OUT_PROPERTY_TEXT, text);
@@ -219,6 +219,7 @@ public abstract class BaseRealtimeExtension extends BaseFlushExtension<RealtimeE
     }
 
     // 发送错误结果
+    @Override
     protected void sendErrorResult(TenEnv env, String messageId, MessageType messageType, String messageName,
         String errorMessage) {
         String finalMessageId = (messageId != null && !messageId.isEmpty()) ? messageId

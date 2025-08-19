@@ -34,9 +34,9 @@ import source.hanger.core.path.PathTable;
 import source.hanger.core.path.PathTableAttachedTo;
 import source.hanger.core.remote.Remote;
 import source.hanger.core.runloop.Runloop;
-import source.hanger.core.tenenv.TenEnvProxy;
-import source.hanger.core.tenenv.RunloopFuture;
 import source.hanger.core.tenenv.DefaultRunloopFuture;
+import source.hanger.core.tenenv.RunloopFuture;
+import source.hanger.core.tenenv.TenEnvProxy;
 
 import static source.hanger.core.message.MessageType.CMD_TIMEOUT;
 import static source.hanger.core.message.MessageType.CMD_TIMER;
@@ -169,6 +169,10 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
                 }
             }
         }
+
+        // 统一触发 ExtensionGroup 生命周期方法
+        engineExtensionContext.startExtensionGroups();
+
         isReadyToHandleMsg = true;
         log.info("Engine {}: 已启动。", graphId);
     }
@@ -325,7 +329,8 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
                             graphId, message.getId(), message.getType());
                     }
                 } else {
-                    log.warn("Engine {}: 消息 {} (Type: {}) 没有目的地，无法处理。", message.getId(), message.getType());
+                    log.warn("Engine {}: 消息 {} (Type: {}) 没有目的地，无法处理。", graphId, message.getId(),
+                        message.getType());
                 }
             }
         } else { // 对于非命令和非命令结果的消息，尝试路由到目标 Extension 或 Remote
@@ -378,7 +383,8 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
                         // 如果 Engine 没有注册处理器，且命令是针对 App 的，则重新路由回 App
                         // 例如：StopGraphCommand 应该由 App 处理
                         if (app.getAppCommandHandlers().containsKey(command.getType())) { // 检查 App 是否有此命令的处理器
-                            log.debug("Engine {}: 将 App 级别的命令 {} 重新路由回 App。", graphId, command.getId());
+                            log.debug("Engine {}: 将 App 级别的命令 {} 重新路由回 App。", graphId,
+                                command.getId());
                             app.handleInboundMessage(command, null); // 重新提交给 App 的队列
                         } else {
                             log.warn("Engine {}: 未知 Engine 级别命令类型或没有注册处理器: {}", graphId,
@@ -502,7 +508,8 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
         // 如果存在初始连接且该连接是 Engine 的孤立连接，将其链接到新创建的 Remote。
         // 模拟 C 语言中 ten_engine_link_orphan_connection_to_remote 的行为。
         orphanConnections.remove(initialConnection);
-        log.info("Engine {}: 将孤立连接 {} 链接到新创建的 Remote {}。", graphId, initialConnection.getConnectionId(),
+        log.info("Engine {}: 将孤立连接 {} 链接到新创建的 Remote {}。", graphId,
+            initialConnection.getConnectionId(),
             targetAppUri);
         return newRemote;
     }
@@ -535,7 +542,8 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
                         commandResult.getDetail())));
             }
         } else {
-            log.warn("Engine {}: 未找到与命令结果 {} 对应的 Future。", graphId, commandResult.getOriginalCommandId());
+            log.warn("Engine {}: 未找到与命令结果 {} 对应的 Future。", graphId,
+                commandResult.getOriginalCommandId());
         }
 
         // 如果命令结果有返回地址，可能需要向上路由或发送给 Remote
@@ -592,6 +600,7 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
         return runloopFuture;
     }
 
+    @Override
     public boolean submitInboundMessage(Message message, Connection connection) {
         if (message == null) {
             log.warn("Engine {}: 尝试提交空消息。", graphId);

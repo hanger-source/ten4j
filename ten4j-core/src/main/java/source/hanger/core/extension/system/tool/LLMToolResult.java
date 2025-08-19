@@ -15,6 +15,20 @@ import lombok.experimental.SuperBuilder;
 })
 public interface LLMToolResult {
 
+    // 静态工厂方法，用于创建 LLMResult 实例
+    static LLMToolResult llmResult(boolean success, String content) {
+        return LLMResult.builder().success(success).content(content).build();
+    }
+
+    static LLMToolResult llmResult(boolean success, String content, String groupId) {
+        return LLMResult.builder().success(success).content(content).groupId(groupId).build();
+    }
+
+    // 静态工厂方法，用于创建 Requery 实例
+    static LLMToolResult requery(String content) {
+        return Requery.builder().content(content).build();
+    }
+
     @Data @SuperBuilder @NoArgsConstructor @AllArgsConstructor @JsonTypeName("requery")
     class Requery implements LLMToolResult {
         private String content;
@@ -22,6 +36,8 @@ public interface LLMToolResult {
 
     @Data @SuperBuilder @NoArgsConstructor @AllArgsConstructor @JsonTypeName("llmresult")
     class LLMResult implements LLMToolResult {
+        private boolean success; // 新增：表示操作是否成功
         private String content;
+        private String groupId;
     }
 }

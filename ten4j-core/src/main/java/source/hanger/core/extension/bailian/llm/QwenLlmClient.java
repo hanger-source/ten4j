@@ -1,15 +1,14 @@
 package source.hanger.core.extension.bailian.llm;
 
 import java.util.List;
-import java.util.Map; // Import Map
 
 import com.alibaba.dashscope.aigc.generation.Generation;
 import com.alibaba.dashscope.aigc.generation.GenerationParam;
 import com.alibaba.dashscope.aigc.generation.GenerationParam.GenerationParamBuilder;
 import com.alibaba.dashscope.aigc.generation.GenerationResult;
 import com.alibaba.dashscope.common.Message;
-import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.exception.InputRequiredException;
+import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.tools.ToolFunction;
 
 import io.reactivex.Flowable;

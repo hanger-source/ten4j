@@ -11,12 +11,15 @@ import source.hanger.core.tenenv.TenEnv;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 
 @Slf4j
 public abstract class BaseLLMToolExtension extends BaseExtension {
 
     protected LLMToolService llmToolService;
     protected final ObjectMapper objectMapper = new ObjectMapper();
+    protected Set<String> registeredToolNames = new HashSet<>();
 
     public BaseLLMToolExtension() {
         super();
@@ -36,6 +39,7 @@ public abstract class BaseLLMToolExtension extends BaseExtension {
         if (tools != null && !tools.isEmpty()) {
             for (LLMTool tool : tools) {
                 ToolRegistry.getInstance().registerTool(tool);
+                registeredToolNames.add(tool.getToolName()); // Add to the set
                 try {
                     // 将工具元数据发送给LLM扩展
                     Command registerCmd = GenericCommand.create(ExtensionConstants.CMD_TOOL_REGISTER);
@@ -64,6 +68,12 @@ public abstract class BaseLLMToolExtension extends BaseExtension {
         try {
             String commandName = command.getName();
             if (ExtensionConstants.CMD_TOOL_CALL.equals(commandName)) {
+                String toolName = command.getProperty("name", String.class);
+                if (toolName == null || !registeredToolNames.contains(toolName)) {
+                    log.warn("[{}] 收到非本扩展的工具调用或工具名称为空，忽略。toolName={}", env.getExtensionName(), toolName);
+                    super.onCmd(env, command); // Pass to super to handle or ignore
+                    return;
+                }
                 try {
                     LLMToolResult toolResult = llmToolService.handleToolCallCommand(command);
                     String toolResultJson = objectMapper.writeValueAsString(toolResult);
@@ -72,11 +82,11 @@ public abstract class BaseLLMToolExtension extends BaseExtension {
                     Map<String, Object> properties = new java.util.HashMap<>();
                     properties.put(ExtensionConstants.CMD_PROPERTY_RESULT, toolResultJson);
 
-                    log.info("[{}] 工具 {} 执行并返回结果，发送成功命令。",env.getExtensionName(), command.getProperty("name"));
+                    log.info("[{}] 工具 {} 执行并返回结果，发送成功命令。",env.getExtensionName(), toolName);
                     env.sendResult(CommandResult.success(command, "Tool executed successfully.", properties)); // 使用带 properties 的重载
                 } catch (Exception e) {
                     String errorMessage = "工具执行失败: %s".formatted(e.getMessage());
-                    log.error("[{}] 工具 {} 执行失败，发送失败命令: {}",env.getExtensionName(), command.getProperty("name"), errorMessage, e);
+                    log.error("[{}] 工具 {} 执行失败，发送失败命令: {}",env.getExtensionName(), toolName, errorMessage, e);
                     env.sendResult(CommandResult.fail(command, errorMessage));
                 }
             } else {

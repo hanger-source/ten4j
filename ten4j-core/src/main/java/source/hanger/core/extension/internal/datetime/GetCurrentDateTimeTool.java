@@ -1,14 +1,15 @@
 package source.hanger.core.extension.internal.datetime;
 
-import source.hanger.core.extension.system.tool.LLMTool;
-import source.hanger.core.extension.system.tool.LLMToolResult;
-import source.hanger.core.extension.system.tool.ToolMetadata;
-import source.hanger.core.tenenv.TenEnv;
-
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.Map;
+
+import source.hanger.core.extension.system.tool.LLMTool;
+import source.hanger.core.extension.system.tool.LLMToolResult;
+import source.hanger.core.extension.system.tool.ToolMetadata;
+import source.hanger.core.message.command.Command;
+import source.hanger.core.tenenv.TenEnv;
 
 public class GetCurrentDateTimeTool implements LLMTool {
 
@@ -22,11 +23,11 @@ public class GetCurrentDateTimeTool implements LLMTool {
     }
 
     @Override
-    public LLMToolResult runTool(TenEnv env, Map<String, Object> args) {
+    public LLMToolResult runTool(TenEnv env, Command command, Map<String, Object> args) {
         LocalDateTime now = LocalDateTime.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         String formattedDateTime = now.format(formatter);
-        return new LLMToolResult.LLMResult("当前日期和时间是: %s".formatted(formattedDateTime));
+        return LLMToolResult.llmResult(true, "当前日期和时间是: %s".formatted(formattedDateTime));
     }
 
     @Override

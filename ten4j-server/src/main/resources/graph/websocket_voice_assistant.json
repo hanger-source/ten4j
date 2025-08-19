@@ -65,6 +65,15 @@
         "extension_group": "default",
         "property": {
         }
+      },
+      {
+        "type": "extension",
+        "name": "image_generate",
+        "addon": "source.hanger.core.extension.bailian.image.ImageSynthesisExtension",
+        "extension_group": "default",
+        "property": {
+          "api_key": "{{env:bailian.dashscope.api.key}}"
+        }
       }
     ],
     "connections": [
@@ -156,6 +165,9 @@
             "dest": [
               {
                 "extension": "get_current_datetime"
+              },
+              {
+                "extension": "image_generate"
               }
             ]
           }
@@ -188,6 +200,19 @@
         ]
       },{
         "extension": "get_current_datetime",
+        "cmd": [
+          {
+            "name": "tool_register",
+            "dest": [
+              {
+                "extension": "llm"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "extension": "image_generate",
         "cmd": [
           {
             "name": "tool_register",

@@ -1,12 +1,12 @@
 package source.hanger.core.extension.system.tool;
 
+import java.util.Map;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.common.ExtensionConstants;
-import source.hanger.core.tenenv.TenEnv;
 import source.hanger.core.message.command.Command;
-
-import java.util.Map;
+import source.hanger.core.tenenv.TenEnv;
 
 @Slf4j
 public class LLMToolService {
@@ -30,13 +30,13 @@ public class LLMToolService {
                 throw new RuntimeException(errorMessage); // 抛出运行时异常，由调用方捕获并处理为CommandResult.fail
             }
 
-            LLMToolResult result = tool.runTool(env, toolArgs);
+            LLMToolResult result = tool.runTool(env, command, toolArgs);
             if (result != null) {
                 log.info("[llm_tool_service] 工具 {} 执行成功", toolName);
                 return result;
             } else {
                 log.warn("[llm_tool_service] 工具 {} 执行但未返回结果，将返回空结果给LLM", toolName);
-                return new LLMToolResult.LLMResult(""); // 返回空LLMResult，表示成功但无内容
+                return LLMToolResult.llmResult(true, ""); // 返回空LLMResult，表示成功但无内容
             }
         } catch (Exception e) {
             String errorMessage = String.format("[llm_tool_service] 处理工具调用命令失败: %s", e.getMessage());

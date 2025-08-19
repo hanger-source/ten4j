@@ -13,7 +13,7 @@ import source.hanger.core.tenenv.TenEnv;
 import source.hanger.core.util.MessageUtils;
 
 import static source.hanger.core.common.ExtensionConstants.ASR_DATA_OUT_NAME;
-import static source.hanger.core.common.ExtensionConstants.LLM_DATA_OUT_NAME;
+import static source.hanger.core.common.ExtensionConstants.TEXT_DATA_OUT_NAME;
 
 @Slf4j
 public class InterruptDetectorExtension extends BaseExtension {
@@ -102,7 +102,7 @@ public class InterruptDetectorExtension extends BaseExtension {
     public void onDataMessage(TenEnv env, DataMessage data) {
         log.info("[{}] Received data message: {}", env.getExtensionName(), data.getName());
 
-        if (LLM_DATA_OUT_NAME.equals(data.getName())
+        if (TEXT_DATA_OUT_NAME.equals(data.getName())
             || ASR_DATA_OUT_NAME.equals(data.getName())) { // Check for text_data
             String text = (String)data.getProperty(TEXT_DATA_TEXT_FIELD);
             Boolean isFinal = (Boolean)data.getProperty(TEXT_DATA_FINAL_FIELD);
@@ -124,9 +124,9 @@ public class InterruptDetectorExtension extends BaseExtension {
         }
 
         if (ASR_DATA_OUT_NAME.equals(data.getName())) {
-            // Change the name to LLM_DATA_OUT_NAME
+            // Change the name to TEXT_DATA_OUT_NAME
             data.setDestLocs(new ArrayList<>());
-            data.setName(LLM_DATA_OUT_NAME);
+            data.setName(TEXT_DATA_OUT_NAME);
         }
 
         // Forward the original data message to downstream

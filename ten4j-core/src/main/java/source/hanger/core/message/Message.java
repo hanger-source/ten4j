@@ -129,7 +129,7 @@ public abstract class Message implements Cloneable { // 实现 Cloneable
      */
     public <T> T getProperty(String path, Class<T> clazz) {
         Object value = properties.get(path);
-        if (value != null && clazz.isInstance(value)) {
+        if (clazz.isInstance(value)) {
             return clazz.cast(value);
         }
         return null;
