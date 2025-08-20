@@ -430,21 +430,10 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
      */
     private boolean processToolCallStreamFragment(String requestId, TenEnv env,
         ToolCallFunction currentToolCallFragment, String finishReason) {
-        if ("tool_calls".equals(finishReason)) {
-            return true;
-        }
-        // Modified: 优先使用toolCallId作为key，如果toolCallId不存在，则使用requestId
-        String toolCallId = currentToolCallFragment.getId();
+        boolean isFinished = "tool_calls".equals(finishReason);
 
-        if (requestId == null || requestId.isEmpty()) {
-            log.warn("[{}] 收到没有 toolCallId 也没有 requestId 的工具调用片段，忽略",
-                env.getExtensionName()); // LOG_DEBUG
-            return false;
-        }
-
-        // Modified: 根据 accumulatorKey 获取或创建累加器
         ToolCallAccumulator accumulator = accumulatingToolCalls.computeIfAbsent(requestId,
-            k -> new ToolCallAccumulator(currentToolCallFragment, requestId)); // 传入requestId
+            k -> new ToolCallAccumulator(currentToolCallFragment, requestId));
 
         String currentArgumentsFragment = currentToolCallFragment.getFunction() != null
             ? currentToolCallFragment.getFunction().getArguments() : null;
@@ -452,15 +441,16 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
             accumulator.getAccumulatedArguments().append(currentArgumentsFragment);
             log.debug("[{}] 累积参数片段: key={}, arguments_fragment='{}', current_total='{}'", env.getExtensionName(),
                 requestId, currentArgumentsFragment,
-                accumulator.getAccumulatedArguments().toString()); // LOG_DEBUG
+                accumulator.getAccumulatedArguments().toString());
         }
 
         log.debug(
-            "[{}] 累积工具调用参数: key={}, toolCallId={}, arguments_fragment='{}', current_total='{}', finish_reason={}",
-            env.getExtensionName(), requestId, toolCallId, currentArgumentsFragment,
+            "[{}] 累积工具调用参数: key={}, arguments_fragment='{}', current_total='{}', finish_reason={}",
+            env.getExtensionName(), requestId, currentArgumentsFragment,
             accumulator.getAccumulatedArguments().toString(),
-            finishReason); // LOG_DEBUG
-        return false;
+            finishReason);
+
+        return isFinished;
     }
 
     /**
