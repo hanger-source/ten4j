@@ -3,6 +3,7 @@ package source.hanger.core.extension.system.llm;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -23,6 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.system.BaseFlushExtension;
 import source.hanger.core.extension.system.llm.history.LLMHistoryManager;
+import source.hanger.core.extension.system.llm.history.LLMHistoryManagerRegistry;
 import source.hanger.core.extension.system.tool.LLMToolService;
 import source.hanger.core.extension.system.tool.ToolMetadata;
 import source.hanger.core.message.AudioFrameMessage;
@@ -76,19 +78,23 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
         super.onConfigure(env, properties);
         // 初始化LLMToolService
         llmToolService = new LLMToolService(env);
-
-        // 初始化 LLMHistoryManager
-        llmHistoryManager = new LLMHistoryManager(this::getSystemPrompt); // 传入 ObjectMapper 和获取系统提示词的 Supplier
-
-        if (properties.containsKey("max_memory_length")) { // 允许从配置中读取maxHistory
-            llmHistoryManager.setMaxHistory((int) properties.get("max_memory_length"));
-        }
     }
 
     @Override
     public void onInit(TenEnv env) {
         super.onInit(env);
         log.info("[{}] LLM扩展初始化阶段", env.getExtensionName());
+        Objects.requireNonNull(env.getGraphId(), "Graph ID must not be null for LLM extensions.");
+        llmToolService = new LLMToolService(env);
+        llmHistoryManager = LLMHistoryManagerRegistry.getInstance().getOrCreateHistoryManager(env.getGraphId(),
+            this::getSystemPrompt); // 传入 ObjectMapper 和获取系统提示词的 Supplier
+
+        // 移动 max_memory_length 配置到这里
+        if (env.hasProperty("max_memory_length")) { // 从 env.getProperties() 获取配置
+            llmHistoryManager.setMaxHistory(env.getPropertyInt("max_memory_length").orElse(20));
+        }
+
+        log.info("[{}] LLM 扩展初始化完成，Graph ID: {}", env.getExtensionName(), env.getGraphId());
     }
 
     @Override
@@ -107,6 +113,18 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
     public void onDeinit(TenEnv env) {
         super.onDeinit(env);
         log.info("[{}] LLM扩展清理阶段", env.getExtensionName());
+    }
+
+    @Override
+    public void onDestroy(TenEnv env) {
+        super.onDestroy(env);
+        if (env.getGraphId() != null) {
+            LLMHistoryManagerRegistry.getInstance().removeHistoryManager(env.getGraphId());
+            log.info("[{}] LLM 扩展销毁，已从注册中心移除 LLMHistoryManager for graphId: {}", env.getExtensionName(),
+                env.getGraphId());
+        } else {
+            log.warn("[{}] LLM 扩展销毁时 Graph ID 为空，未能从注册中心移除 LLMHistoryManager.", env.getExtensionName());
+        }
     }
 
     @Override
