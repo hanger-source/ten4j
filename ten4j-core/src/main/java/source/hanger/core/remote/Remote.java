@@ -11,8 +11,7 @@ import source.hanger.core.message.Location;
 import source.hanger.core.message.Message;
 import source.hanger.core.message.command.StopGraphCommand;
 import source.hanger.core.runloop.Runloop;
-import source.hanger.core.tenenv.RunloopFuture;
-import source.hanger.core.tenenv.DefaultRunloopFuture;
+import java.util.concurrent.CompletableFuture; // 新增导入
 
 /**
  * Remote 代表 TEN Framework 中的一个远程实体（例如另一个 App 或客户端）。
@@ -77,15 +76,15 @@ public class Remote implements MessageReceiver {
      * @param message 要发送的消息。
      * @return 消息是否成功发送。
      */
-    public RunloopFuture<Void> sendOutboundMessage(Message message) { // 修正返回类型为 RunloopFuture<Void>
+    public void sendOutboundMessage(Message message) {
         if (message == null) {
             log.warn("Remote {}: 尝试发送空消息。", uri);
-            return DefaultRunloopFuture.completedFuture(null, runloop); // 返回一个已完成的 RunloopFuture
+            return;
         }
 
         if (connection == null || !connection.getChannel().isActive()) {
             log.warn("Remote {}: 关联连接不活跃或已关闭，无法发送消息。", uri);
-            return DefaultRunloopFuture.completedFuture(null, runloop); // 返回一个已完成的 RunloopFuture
+            return;
         }
 
         // 对齐 C 语言中 ten_remote_send_msg 的逻辑：在发送前设置消息的源 URI 为 Remote 的 URI
@@ -97,7 +96,7 @@ public class Remote implements MessageReceiver {
         }
 
         // 调用 Connection 的发送方法
-        return connection.sendOutboundMessage(message);
+        connection.sendOutboundMessage(message);
     }
 
     /**

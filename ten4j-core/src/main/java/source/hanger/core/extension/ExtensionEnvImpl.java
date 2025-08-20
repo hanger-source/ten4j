@@ -9,14 +9,13 @@ import source.hanger.core.engine.EngineExtensionContext;
 import source.hanger.core.extension.submitter.ExtensionCommandSubmitter;
 import source.hanger.core.extension.submitter.ExtensionMessageSubmitter;
 import source.hanger.core.message.AudioFrameMessage;
+import source.hanger.core.message.CommandExecutionHandle;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
 import source.hanger.core.message.VideoFrameMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.runloop.Runloop;
 import source.hanger.core.tenenv.TenEnv;
-import source.hanger.core.tenenv.RunloopFuture;
-import source.hanger.core.tenenv.DefaultRunloopFuture;
 
 /**
  * `ExtensionEnvImpl` 是 `Extension` 组件的 `TenEnv` 接口实现。
@@ -65,14 +64,22 @@ public class ExtensionEnvImpl implements TenEnv {
     }
 
     @Override
-    public RunloopFuture<CommandResult> sendAsyncCmd(Command command) {
+    public CommandExecutionHandle<CommandResult> sendAsyncCmd(Command command) {
         // Extension 发送命令，通过 commandSubmitter 委托给 Engine 处理
         if (commandSubmitter != null) {
-            return commandSubmitter.submitCommandFromExtension(command, extensionName);
+            // 获取 Engine 返回的原始 CommandExecutionHandle
+            CommandExecutionHandle<CommandResult> engineHandle = commandSubmitter.submitCommandFromExtension(command,
+                extensionName);
+            // 将其调度迁移到 Extension 自身的 Runloop，并返回新的 handle
+            return engineHandle.onRunloop(extensionRunloop);
         } else {
-            return DefaultRunloopFuture.failedFuture(new IllegalStateException(
+            // 如果 commandSubmitter 为空，立即返回一个带有异常的 CommandExecutionHandle
+            CommandExecutionHandle<CommandResult> handle = new CommandExecutionHandle<>(extensionRunloop);
+            RuntimeException ex = new IllegalStateException(
                 "ExtensionCommandSubmitter is null, cannot send command for Extension: %s"
-                    .formatted(extensionName)), extensionRunloop);
+                    .formatted(extensionName));
+            handle.closeExceptionally(ex);
+            return handle;
         }
     }
 

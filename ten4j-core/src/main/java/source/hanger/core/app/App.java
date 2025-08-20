@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap; // 显式导入 ConcurrentMap
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -42,6 +43,11 @@ import source.hanger.core.runloop.Runloop;
 import source.hanger.core.tenenv.TenEnvProxy;
 import source.hanger.core.tenenv.RunloopFuture;
 import source.hanger.core.tenenv.DefaultRunloopFuture;
+import source.hanger.core.message.CommandExecutionHandle; // 新增导入
+import java.util.concurrent.SubmissionPublisher; // 新增导入
+import java.util.ArrayList; // 新增导入
+import java.util.concurrent.Flow; // 新增导入
+import source.hanger.core.common.StatusCode; // 修正导入
 
 /**
  * App 类作为 Ten 框架的顶层容器和协调器。
@@ -79,8 +85,7 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
      *
      * @return 存储命令 ID 到 CompletableFuture 的映射。
      */
-    @Getter
-    private final Map<String, RunloopFuture<CommandResult>> commandFutures; // App 自身的 CompletableFuture 映射
+    private final ConcurrentMap<String, CommandExecutionHandle<CommandResult>> commandHandles; // 管理所有命令的 CommandExecutionHandle
     // 新增：存储运行时预定义图信息
     private final Map<String, PredefinedGraphRuntimeInfo> predefinedGraphRuntimeInfos;
     private final GraphConfig appConfig; // 新增：App 的整体配置，对应 property.json
@@ -124,7 +129,7 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
 
         // 初始化 App 自身的 TenEnvProxy 实例
         appEnvProxy = new TenEnvProxy<>(appRunloop, new AppEnvImpl(this, appRunloop, appConfig), "App-" + appUri);
-        commandFutures = new ConcurrentHashMap<>(); // 初始化 commandFutures
+        commandHandles = new ConcurrentHashMap<>(); // 初始化 commandHandles
         this.predefinedGraphRuntimeInfos = new ConcurrentHashMap<>(); // 初始化 predefinedGraphRuntimeInfos
 
         this.pathTable = new PathTable(PathTableAttachedTo.APP, this, appEnvProxy); // <-- 将 this 替换为 appEnvProxy
@@ -238,13 +243,13 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
         engines.values().forEach(Engine::stop);
         engines.clear();
 
-        // 清理所有命令的 RunloopFuture
-        commandFutures.values().forEach(future -> {
-            if (!future.toCompletableFuture().isDone()) {
-                future.toCompletableFuture().completeExceptionally(new IllegalStateException("App %s stopped.".formatted(appUri)));
+        // 清理所有命令的 CommandExecutionHandle
+        commandHandles.values().forEach(handle -> {
+            if (!handle.toCompletedFuture().isDone()) {
+                handle.closeExceptionally(new IllegalStateException("App %s stopped.".formatted(appUri)));
             }
         });
-        commandFutures.clear();
+        commandHandles.clear();
 
         // 关闭所有远程连接
         remotes.values().forEach(Remote::shutdown); // 修正：使用 lambda 表达式
@@ -460,37 +465,36 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
                     }
                 }
             } else if (message instanceof CommandResult commandResult) { // 新增：处理 CommandResult
-                // 检查是否是需要通过 PathTable 回溯的 CommandResult
-                if (commandResult.getOriginalCommandId() != null && !commandResult.getOriginalCommandId().isEmpty()) {
-                    Optional<PathIn> pathInOpt = pathTable.getInPath(commandResult.getOriginalCommandId());
-                    if (pathInOpt.isPresent()) {
-                        PathIn pathIn = pathInOpt.get();
-                        Connection originalConnection = pathIn.getSourceConnection(); // 获取原始连接
+                // App 收到 CommandResult 后，尝试将其发布到对应的 CommandExecutionHandle
+                String originalCommandId = commandResult.getOriginalCommandId();
+                CommandExecutionHandle<CommandResult> handle = commandHandles.get(originalCommandId);
 
-                        if (originalConnection != null) {
-                            log.debug("App: 路由命令结果 {} 到原始连接 {}。", commandResult.getId(),
-                                    originalConnection.getConnectionId());
-                            originalConnection.sendOutboundMessage(commandResult);
+                if (handle != null) {
+                    log.debug("[{}] App {}：提交 CommandResult {} 到 CommandExecutionHandle。isFinal={}, isCompleted={}",
+                        "CommandResultProcessor", appUri, commandResult.getId(), commandResult.isFinal(), commandResult.isCompleted());
+                    handle.submit(commandResult);
+
+                    // 如果命令结果表示已完成或出错，则关闭 CommandExecutionHandle
+                    if (commandResult.isCompleted() || commandResult.getStatusCode() == StatusCode.ERROR) {
+                        log.info("[{}] App {}：CommandResult {} 表示命令已完成或出错，关闭 CommandExecutionHandle。",
+                            "CommandResultProcessor", appUri, commandResult.getId());
+                        commandHandles.remove(originalCommandId); // 移除 handle
+                        if (commandResult.getStatusCode() == StatusCode.ERROR) {
+                            handle.closeExceptionally(new RuntimeException(
+                                "Command failed with status: %d, Detail: %s".formatted(commandResult.getStatusCode().getValue(),
+                                    commandResult.getDetail())));
                         } else {
-                            log.warn("App: 原始连接为空，无法路由命令结果 {}。", commandResult.getId());
-                        }
-                        pathTable.removeInPath(commandResult.getOriginalCommandId()); // <-- 移除 PathIn
-                    } else {
-                        log.warn("App: 未找到与命令结果 {} 对应的 PathIn。可能已超时或已被处理。",
-                                commandResult.getOriginalCommandId());
-                        // 如果没有 PathIn，则尝试按照 destLocs 路由
-                        if (commandResult.getDestLocs() != null && !commandResult.getDestLocs().isEmpty()) {
-                            routeMessageToDestination(commandResult, connection); // 对于没有 PathIn 的结果，尝试按目的地路由
-                        } else if (connection != null) { // 如果有来源连接 (例如来自 Engine 的内部结果)，则直接回传给它
-                            // 否则，如果没有 destLocs 且有来源 connection，则尝试直接回传
-                            connection.sendOutboundMessage(commandResult);
+                            handle.close();
                         }
                     }
-                } else { // 对于没有 originalCommandId 的 CommandResult，或者其他非命令消息
-                    if (message.getDestLocs() != null && !message.getDestLocs().isEmpty()) {
-                        routeMessageToDestination(message, connection);
-                    } else {
-                        log.warn("App: 消息 {} (Type: {}) 没有目的地，无法处理。", message.getId(), message.getType());
+                } else {
+                    log.warn("[{}] App {}：未找到与命令结果 {} 对应的 CommandExecutionHandle。可能已超时或已被处理。",
+                        "CommandResultProcessor", appUri, originalCommandId);
+                    // 如果没有 handle，则尝试按照 destLocs 路由
+                    if (commandResult.getDestLocs() != null && !commandResult.getDestLocs().isEmpty()) {
+                        routeMessageToDestination(commandResult, connection); // 对于没有 handle 的结果，尝试按目的地路由
+                    } else if (connection != null) { // 如果有来源连接 (例如来自 Engine 的内部结果)，则直接回传给它
+                        connection.sendOutboundMessage(commandResult);
                     }
                 }
             } else { // 对于非命令消息，尝试路由到目标 Engine 或 Remote
@@ -525,25 +529,21 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
      * @param command 要提交的命令。
      * @return 一个 CompletableFuture，当命令处理完成并返回结果时，它将被完成。
      */
-    public RunloopFuture<CommandResult> submitCommand(Command command) {
-        // Create a CompletableFuture internally, but expose a RunloopFuture
-        CompletableFuture<CommandResult> completableFuture = new CompletableFuture<>();
-        RunloopFuture<CommandResult> runloopFuture = DefaultRunloopFuture.wrapCompletableFuture(completableFuture, appRunloop);
+    public CommandExecutionHandle<CommandResult> submitCommand(Command command) {
+        CommandExecutionHandle<CommandResult> handle = new CommandExecutionHandle<>(appRunloop);
+        commandHandles.put(command.getId(), handle);
 
-        // 确保在 App 的 Runloop 线程中执行
+        // 确保在 App 的 Runloop 线程中执行命令提交
         if (appRunloop.isNotCurrentThread()) {
             appRunloop.postTask(() -> {
-                // 将 CompletableFuture 放入 commandFutures 映射
-                commandFutures.put(command.getId(), runloopFuture);
                 // 提交命令到消息队列
                 handleInboundMessage(command, null); // 使用已有的 handleInboundMessage
             });
         } else {
             // 如果已经在 Runloop 线程，则直接执行
-            commandFutures.put(command.getId(), runloopFuture);
-            handleInboundMessage(command, null); // 使用已有的 handleInboundMessage
+            handleInboundMessage(command, null);
         }
-        return runloopFuture;
+        return handle; // 返回新的 CommandExecutionHandle
     }
 
     // 内部类，用于包装消息和其来源连接

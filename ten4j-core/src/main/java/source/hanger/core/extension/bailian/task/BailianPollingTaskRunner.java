@@ -60,7 +60,7 @@ public class BailianPollingTaskRunner {
 
         // 并发回调（每个回调一个虚拟线程）
         this.callbackExecutor = Executors.newThreadPerTaskExecutor(
-            Thread.ofVirtual().name("BailianPollingTaskRunner-%s-Callback-%s".formatted(name, "%d")).factory()
+            Thread.ofVirtual().name("BailianPollingTaskRunner-%s-Callback".formatted(name)).factory()
         );
 
         this.pollingAgent = new PollingAgent(name);
@@ -296,6 +296,11 @@ public class BailianPollingTaskRunner {
         }
     }
 
+    private enum TimeoutType {
+        POLLING_INTERVAL,
+        TOTAL_TIMEOUT
+    }
+
     /**
      * 封装轮询任务的执行结果。
      * @param <T> 任务结果类型
@@ -345,11 +350,6 @@ public class BailianPollingTaskRunner {
      */
     private record TaskWrapper<T>(BailianPollingTask<T> task, String taskId, Duration pollingInterval) {
 
-    }
-
-    private enum TimeoutType {
-        POLLING_INTERVAL,
-        TOTAL_TIMEOUT
     }
 
     private class PollingAgent implements Agent {

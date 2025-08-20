@@ -16,6 +16,7 @@ import source.hanger.core.message.Message;
 import source.hanger.core.message.VideoFrameMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.runloop.Runloop;
+import source.hanger.core.message.CommandExecutionHandle; // 新增导入
 
 /**
  * @param targetEnv Renamed method Renamed to targetEnv, type is TenEnv
@@ -44,14 +45,9 @@ public record TenEnvProxy<T extends TenEnv>(
 
     // Proxy methods, delegating to targetEnv
     @Override
-    public RunloopFuture<CommandResult> sendAsyncCmd(Command command) {
-        // 如果当前线程不是目标 Runloop 线程，则异步提交任务
-        if (targetRunloop.isNotCurrentThread()) {
-            return DefaultRunloopFuture.supplyRunloopAsync(() -> targetEnv.sendAsyncCmd(command), targetRunloop);
-        } else {
-            // 如果已经在目标 Runloop 线程，则直接调用
-            return targetEnv.sendAsyncCmd(command);
-        }
+    public CommandExecutionHandle<CommandResult> sendAsyncCmd(Command command) {
+        // 直接委托给目标 TenEnv，CommandExecutionHandle 内部已包含线程调度逻辑
+        return targetEnv.sendAsyncCmd(command);
     }
 
     @Override // Implements TenEnv.sendMessage

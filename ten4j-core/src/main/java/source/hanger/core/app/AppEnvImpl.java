@@ -14,7 +14,7 @@ import source.hanger.core.message.VideoFrameMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.runloop.Runloop;
 import source.hanger.core.tenenv.TenEnv;
-import source.hanger.core.tenenv.RunloopFuture;
+import source.hanger.core.message.CommandExecutionHandle;
 
 /**
  * AppEnvImpl 是 App 级别的 TenEnv 实现。
@@ -47,7 +47,7 @@ public class AppEnvImpl implements TenEnv {
     }
 
     @Override
-    public RunloopFuture<CommandResult> sendAsyncCmd(Command command) {
+    public CommandExecutionHandle<CommandResult> sendAsyncCmd(Command command) {
         return app.submitCommand(command);
     }
 

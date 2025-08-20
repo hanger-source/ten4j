@@ -198,8 +198,6 @@ public class ImageSynthesisTool implements LLMTool {
 
     public void shutdown() {
         log.info("[{}] Shutting down ImageSynthesisTool.", getToolName());
-        if (taskRunner != null) {
-            taskRunner.shutdown();
-        }
+        taskRunner.shutdown();
     }
 }

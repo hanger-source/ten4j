@@ -10,7 +10,6 @@ import source.hanger.core.message.Location;
 import source.hanger.core.message.Message;
 import source.hanger.core.remote.Remote;
 import source.hanger.core.runloop.Runloop;
-import source.hanger.core.tenenv.RunloopFuture;
 import source.hanger.core.engine.Engine; // 新增：导入 Engine 类
 
 /**
@@ -45,7 +44,7 @@ public interface Connection {
 
     void onMessageReceived(Message message);
 
-    RunloopFuture<Void> sendOutboundMessage(Message message);
+    void sendOutboundMessage(Message message);
 
     void close();
 

@@ -333,7 +333,7 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
             try {
                 llmHistoryManager.onMsg("assistant", greeting); // 调用 LLMHistoryManager
                 sendTextOutput(env, command, greeting, true);
-                log.info("[{}] Greeting sent to user.", env.getExtensionName(), greeting);
+                log.info("[{}] Greeting {} sent to user.", env.getExtensionName(), greeting);
             } catch (Exception e) {
                 log.error("[{}] Failed to send greeting [{}], error: {}",env.getExtensionName(), greeting, e.getMessage(), e);
             }
@@ -509,7 +509,8 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
 
         // 使用 env.sendAsyncCmd 并处理其 CompletableFuture 回调
         env.sendAsyncCmd(toolCallCommand)
-            .whenComplete((cmdResult, cmdThrowable) -> {
+            .toCompletedFuture() // 获取 CompletableFuture<List<CommandResult>>
+            .whenComplete((cmdResults, cmdThrowable) -> {
                 try {
                     if (cmdThrowable != null) {
                         log.error("[{}] 工具调用命令执行失败: toolName={}, toolCallId={}, error={}",
@@ -523,31 +524,46 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
                                 .toolCallId(toolCallId)
                                 .build();
                         llmHistoryManager.onOtherMsg(toolErrorMsg);
-                    } else if (cmdResult != null && cmdResult.isSuccess()) {
-                        String toolResultJson =
-                            cmdResult.getProperty(ExtensionConstants.CMD_PROPERTY_RESULT, String.class);
-                        log.info("[{}] 工具调用命令执行成功: toolName={}, toolCallId={}, result={}",
-                            env.getExtensionName(), functionName, toolCallId, toolResultJson); // LOG_DEBUG
-                        // 将工具执行结果添加到历史
-                        com.alibaba.dashscope.common.Message toolOutputMsg =
-                            com.alibaba.dashscope.common.Message.builder()
-                                .role(Role.TOOL.getValue())
-                                .content(toolResultJson)
-                                .toolCallId(toolCallId)
-                                .build();
-                        llmHistoryManager.onOtherMsg(toolOutputMsg);
+                    } else if (cmdResults != null && !cmdResults.isEmpty()) {
+                        // 找到最后一个 isCompleted=true 的 CommandResult，或者最后一个结果
+                        CommandResult finalCmdResult = cmdResults.stream()
+                            .filter(CommandResult::isCompleted) // 优先找 isCompleted=true 的结果
+                            .findFirst() // 如果有多个，取第一个
+                            .orElse(cmdResults.getLast()); // 如果没有 isCompleted=true，则取列表的最后一个
+
+                        if (finalCmdResult.isSuccess()) {
+                            String toolResultJson =
+                                finalCmdResult.getProperty(ExtensionConstants.CMD_PROPERTY_RESULT, String.class);
+                            log.info("[{}] 工具调用命令执行成功: toolName={}, toolCallId={}, result={}",
+                                env.getExtensionName(), functionName, toolCallId, toolResultJson); // LOG_DEBUG
+                            // 将工具执行结果添加到历史
+                            com.alibaba.dashscope.common.Message toolOutputMsg =
+                                com.alibaba.dashscope.common.Message.builder()
+                                    .role(Role.TOOL.getValue())
+                                    .content(toolResultJson)
+                                    .toolCallId(toolCallId)
+                                    .build();
+                            llmHistoryManager.onOtherMsg(toolOutputMsg);
+                        } else {
+                            String errorMsg = finalCmdResult.getDetail() != null ? finalCmdResult.getDetail()
+                                : "未知错误";
+                            log.error("[{}] 工具调用命令执行失败（非异常）: toolName={}, toolCallId={}, message={}",
+                                env.getExtensionName(), functionName, toolCallId, errorMsg); // LOG_DEBUG
+                            // 将失败结果添加到历史
+                            com.alibaba.dashscope.common.Message toolErrorMsg =
+                                com.alibaba.dashscope.common.Message.builder()
+                                    .role(Role.TOOL.getValue())
+                                    .content("工具执行失败: %s".formatted(errorMsg))
+                                    .toolCallId(toolCallId)
+                                    .build();
+                            llmHistoryManager.onOtherMsg(toolErrorMsg);
+                        }
                     } else {
-                        String errorMsg = cmdResult != null ? cmdResult.getDetail() : "未知错误";
-                        log.error("[{}] 工具调用命令执行失败（非异常）: toolName={}, toolCallId={}, message={}",
-                            env.getExtensionName(), functionName, toolCallId, errorMsg); // LOG_DEBUG
-                        // 将失败结果添加到历史
-                        com.alibaba.dashscope.common.Message toolErrorMsg =
-                            com.alibaba.dashscope.common.Message.builder()
-                                .role(Role.TOOL.getValue())
-                                .content("工具执行失败: %s".formatted(errorMsg))
-                                .toolCallId(toolCallId)
-                                .build();
-                        llmHistoryManager.onOtherMsg(toolErrorMsg);
+                        // 这种情况通常不应该发生，因为即使没有成功的 CommandResult，也应该有一个结果列表
+                        log.error("[{}] 工具调用命令执行完成但未返回任何结果: toolName={}, toolCallId={}",
+                            env.getExtensionName(), functionName, toolCallId);
+                        sendErrorResult(env, originalMessage.getId(), originalMessage.getType(),
+                            originalMessage.getName(), "工具调用未返回任何结果");
                     }
                     // 收到工具结果后，再次调用LLM
                     log.info("[{}] LLM请求工具调用，已收到异步命令结果，开始调用LLM: toolName={}, toolCallId={}",

@@ -117,7 +117,7 @@ public class CommandResult extends Message implements Cloneable { // 实现 Clon
     // 用于内部创建的简化构造函数，匹配新的 Message 基类构造
     // 此构造函数将不再对外直接暴露，而是通过静态工厂方法调用
     private CommandResult(String originalCommandId, MessageType originalCmdType, String originalCmdName,
-            StatusCode statusCode, String detailOrError) {
+            StatusCode statusCode, String detailOrError, boolean isFinal, boolean isCompleted) {
         super(MessageUtils.generateUniqueId(), MessageType.CMD_RESULT, new Location(), Collections.emptyList()); // 自动生成
         // id，默认
         // srcLoc
@@ -127,8 +127,8 @@ public class CommandResult extends Message implements Cloneable { // 实现 Clon
         this.originalCmdType = originalCmdType;
         this.originalCmdName = originalCmdName;
         this.statusCode = statusCode;
-        this.isFinal = true; // 假设结果是最终的
-        this.isCompleted = true; // 假设结果是完成的
+        this.isFinal = isFinal;
+        this.isCompleted = isCompleted;
 
         // 根据状态码，将 detailOrError 放入不同的 properties 键中
         if (detailOrError != null) {
@@ -159,12 +159,14 @@ public class CommandResult extends Message implements Cloneable { // 实现 Clon
                 originalCommand.getType(), // 原始命令的类型
                 originalCommand.getName(), // 原始命令的名称
                 statusCode,
-                detailOrError);
+                detailOrError,
+                true, // 假设结果是最终的
+                true); // 假设结果是完成的
     }
 
     public static CommandResult success(String originalCommandId, MessageType originalCmdType, String originalCmdName,
             String detail) {
-        return new CommandResult(originalCommandId, originalCmdType, originalCmdName, StatusCode.OK, detail); // 使用
+        return new CommandResult(originalCommandId, originalCmdType, originalCmdName, StatusCode.OK, detail, true, true); // 使用
         // StatusCode.OK
     }
 
@@ -177,7 +179,7 @@ public class CommandResult extends Message implements Cloneable { // 实现 Clon
     public static CommandResult success(String originalCommandId, MessageType originalCmdType, String originalCmdName,
             String detail, Map<String, Object> properties) {
         CommandResult result = new CommandResult(originalCommandId, originalCmdType, originalCmdName, StatusCode.OK,
-                detail);
+                detail, true, true);
         if (properties != null) {
             result.getProperties().putAll(properties);
         }
@@ -196,7 +198,7 @@ public class CommandResult extends Message implements Cloneable { // 实现 Clon
     public static CommandResult fail(String originalCommandId, MessageType originalCmdType, String originalCmdName,
             String errorMessage) {
         return new CommandResult(originalCommandId, originalCmdType, originalCmdName, StatusCode.ERROR,
-                errorMessage); // 使用
+                errorMessage, true, true); // 使用
         // StatusCode.ERROR
     }
 

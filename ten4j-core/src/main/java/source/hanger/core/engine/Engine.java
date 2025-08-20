@@ -10,6 +10,8 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Flow;
+import java.util.concurrent.SubmissionPublisher;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +27,7 @@ import source.hanger.core.connection.Connection;
 import source.hanger.core.graph.GraphDefinition;
 import source.hanger.core.graph.NodeDefinition;
 import source.hanger.core.message.CommandResult;
+import source.hanger.core.message.CommandExecutionHandle;
 import source.hanger.core.message.Location;
 import source.hanger.core.message.Message;
 import source.hanger.core.message.MessageType;
@@ -34,8 +37,6 @@ import source.hanger.core.path.PathTable;
 import source.hanger.core.path.PathTableAttachedTo;
 import source.hanger.core.remote.Remote;
 import source.hanger.core.runloop.Runloop;
-import source.hanger.core.tenenv.DefaultRunloopFuture;
-import source.hanger.core.tenenv.RunloopFuture;
 import source.hanger.core.tenenv.TenEnvProxy;
 
 import static source.hanger.core.message.MessageType.CMD_TIMEOUT;
@@ -59,12 +60,12 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
     private final Map<MessageType, EngineCommandHandler> commandHandlers; // 新增命令处理器映射
     private final ManyToOneConcurrentArrayQueue<QueuedMessage> inMsgs; // 消息输入队列, 类型改为 QueuedMessage
     private final boolean hasOwnLoop; // 是否拥有自己的 Runloop
-    private final List<Connection> orphanConnections; // 存储未被 Remote 认领的 Connection
+    private final List<Connection> orphanConnections; // 存储未被 Remote 认领的连接
     private final Map<String, Remote> remotes; // 管理 Remote 实例
     private final App app; // 引用所属的 App 实例
     @Getter
     private final TenEnvProxy<EngineEnvImpl> engineEnvProxy; // 新增：Engine 自身的 TenEnvProxy 实例
-    private final ConcurrentMap<String, RunloopFuture<CommandResult>> commandFutures;
+    private final ConcurrentMap<String, CommandExecutionHandle<CommandResult>> commandHandles; // 管理所有命令的 CommandExecutionHandle
     // Engine 自身的 RunloopFuture
     // 映射
     private volatile boolean isReadyToHandleMsg = false;
@@ -91,7 +92,7 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
             runloop = app.getAppRunloop(); // 使用 App 的 Runloop
         }
 
-        commandFutures = new ConcurrentHashMap<>(); // 确保这里已经初始化
+        commandHandles = new ConcurrentHashMap<>(); // 初始化 CommandExecutionHandle 映射
 
         // 修正 pathTable 的初始化，使用 Engine 自身作为 MessageSubmitter 和 CommandSubmitter
         pathTable = new PathTable(PathTableAttachedTo.ENGINE, this, this); // Update
@@ -103,7 +104,7 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
         // 初始化消息派发器
         // DefaultExtensionMessageDispatcher 期望 ExtensionContext 和 ConcurrentMap<Long,
         messageDispatcher = new DefaultExtensionMessageDispatcher(engineExtensionContext,
-            (ConcurrentMap)commandFutures); // Cast
+            (ConcurrentMap) commandHandles); // Cast
 
         inMsgs = new ManyToOneConcurrentArrayQueue<>(Runloop.DEFAULT_INTERNAL_QUEUE_CAPACITY); // 初始化消息输入队列
         orphanConnections = Collections.synchronizedList(new ArrayList<>());
@@ -188,13 +189,14 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
         // 停止所有 Extension
         engineExtensionContext.unloadAllExtensions(); // Call unloadAllExtensions instead of cleanup
 
-        // 清理所有命令的 RunloopFuture
-        commandFutures.values().forEach(future -> {
-            if (!future.toCompletableFuture().isDone()) {
-                future.toCompletableFuture().completeExceptionally(new IllegalStateException("Engine %s stopped.".formatted(graphId)));
+        // 清理所有命令的 CommandExecutionHandle
+        commandHandles.values().forEach(handle -> {
+            if (!handle.toCompletedFuture().isDone()) {
+                handle.closeExceptionally(
+                    new IllegalStateException("Engine %s stopped.".formatted(graphId)));
             }
         });
-        commandFutures.clear();
+        commandHandles.clear();
 
         // 关闭所有远程连接
         remotes.values().forEach(Remote::shutdown); // 修正：使用 lambda 表达式
@@ -231,28 +233,28 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
      * @param message 待路由的消息，必须包含唯一的目的地 Remote URI。
      * @return 一个 CompletableFuture，表示消息发送的结果。
      */
-    private RunloopFuture<Void> routeMessageToRemote(Message message) {
+    private void routeMessageToRemote(Message message) {
         if (message.getDestLocs() == null || message.getDestLocs().size() != 1) {
             log.warn("Engine {}: 消息 {} 没有单一的 Remote 目的地，无法通过 Remote 路由。",
                 graphId, message.getId());
-            return DefaultRunloopFuture.completedFuture(null, runloop);
+            return;
         }
 
         String destUri = message.getDestLocs().getFirst().getAppUri();
         if (destUri == null || destUri.isEmpty()) {
             log.warn("Engine {}: 消息 {} 的目的地 Remote URI 为空，无法路由。",
                 graphId, message.getId());
-            return DefaultRunloopFuture.completedFuture(null, runloop);
+            return;
         }
 
         Remote remote = remotes.get(destUri);
         if (remote != null) {
             log.debug("Engine {}: 路由消息 {} 到 Remote {}。", graphId, message.getId(), destUri);
-            return remote.sendOutboundMessage(message);
+            remote.sendOutboundMessage(message);
         } else {
             log.warn("Engine {}: 找不到目标 Remote {}，消息 {} 无法发送。",
                 graphId, destUri, message.getId());
-            return DefaultRunloopFuture.completedFuture(null, runloop);
+            return;
         }
     }
 
@@ -528,21 +530,26 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
             return;
         }
 
-        // 如果命令结果有原始命令 ID，则完成对应的 CompletableFuture
+        // 如果命令结果有原始命令 ID，则完成对应的 CommandExecutionHandle
         String originalCommandId = commandResult.getOriginalCommandId();
-        // 这里的 CompletableFuture<Object> 应该与 C 端 ten_cmd_t 预期返回的类型对齐
-        // 而不是固定为 CommandResult
-        RunloopFuture<CommandResult> future = commandFutures.remove(originalCommandId);
-        if (future != null) {
-            if (commandResult.getStatusCode() == StatusCode.OK) { // 修改比较方式
-                future.toCompletableFuture().complete(commandResult);
-            } else {
-                future.toCompletableFuture().completeExceptionally(new RuntimeException(
-                    "Command failed with status: %d, Detail: %s".formatted(commandResult.getStatusCode().getValue(),
-                        commandResult.getDetail())));
+        CommandExecutionHandle<CommandResult> handle = commandHandles.get(originalCommandId);
+        if (handle != null) {
+            handle.submit(commandResult);
+            // 如果命令结果表示已完成或出错，则关闭 CommandExecutionHandle
+            if (commandResult.isCompleted() || commandResult.getStatusCode() == StatusCode.ERROR) {
+                log.info("[{}] Engine {}：CommandResult {} 表示命令已完成或出错，关闭 CommandExecutionHandle。",
+                    "CommandResultProcessor", graphId, commandResult.getId());
+                commandHandles.remove(originalCommandId); // 移除 handle
+                if (commandResult.getStatusCode() == StatusCode.ERROR) {
+                    handle.closeExceptionally(new RuntimeException(
+                        "Command failed with status: %d, Detail: %s".formatted(commandResult.getStatusCode().getValue(),
+                            commandResult.getDetail())));
+                } else {
+                    handle.close();
+                }
             }
         } else {
-            log.warn("Engine {}: 未找到与命令结果 {} 对应的 Future。", graphId,
+            log.warn("Engine {}: 未找到与命令结果 {} 对应的 CommandExecutionHandle。可能已超时或已被处理。", graphId,
                 commandResult.getOriginalCommandId());
         }
 
@@ -574,30 +581,22 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
      * @return 一个 RunloopFuture，当命令处理完成并返回结果时，它将被完成。
      */
     @Override
-    public RunloopFuture<CommandResult> submitCommand(Command command) {
-        // Create a CompletableFuture internally, but expose a RunloopFuture
-        CompletableFuture<CommandResult> completableFuture = new CompletableFuture<>();
-        RunloopFuture<CommandResult> runloopFuture = DefaultRunloopFuture.wrapCompletableFuture(completableFuture, runloop);
+    public CommandExecutionHandle<CommandResult> submitCommand(Command command) {
+        CommandExecutionHandle<CommandResult> handle = new CommandExecutionHandle<>(runloop);
+        commandHandles.put(command.getId(), handle);
 
         // 确保在 Engine 的 Runloop 线程中执行
         if (runloop.isNotCurrentThread()) {
             runloop.postTask(() -> {
-                // 将 CompletableFuture 放入 commandFutures 映射
-                try {
-                    commandFutures.put(command.getId(), runloopFuture);
-                } catch (Throwable throwable) {
-                    log.warn("Engine {}: 尝试提交命令 {}，但无法将 CompletableFuture 放入 commandFutures 映射。",
-                        graphId, command.getId(), throwable);
-                }
                 // 提交命令到消息队列，这里因为命令是内部生成，所以 connection 为 null
                 submitInboundMessage(command, null); // 更新这里
             });
         } else {
             // 如果已经在 Runloop 线程，则直接执行
-            commandFutures.put(command.getId(), runloopFuture);
             submitInboundMessage(command, null); // 更新这里
         }
-        return runloopFuture;
+        // 返回 CommandExecutionHandle
+        return handle;
     }
 
     @Override

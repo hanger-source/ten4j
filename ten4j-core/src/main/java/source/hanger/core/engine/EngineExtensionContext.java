@@ -20,12 +20,12 @@ import source.hanger.core.extension.submitter.ExtensionCommandSubmitter;
 import source.hanger.core.extension.submitter.ExtensionMessageSubmitter;
 import source.hanger.core.graph.AllMessageDestInfo;
 import source.hanger.core.message.CommandResult;
+import source.hanger.core.message.CommandExecutionHandle;
 import source.hanger.core.message.Location;
 import source.hanger.core.message.Message;
 import source.hanger.core.message.MessageConversionContext;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.path.PathTable;
-import source.hanger.core.tenenv.RunloopFuture;
 import source.hanger.core.util.MessageConverter;
 import source.hanger.core.util.ReflectionUtils;
 
@@ -528,7 +528,7 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
 
     // 实现 ExtensionCommandSubmitter 接口方法
     @Override
-    public RunloopFuture<CommandResult> submitCommandFromExtension(Command command, String sourceExtensionName) {
+    public CommandExecutionHandle<CommandResult> submitCommandFromExtension(Command command, String sourceExtensionName) {
         // 命令从 Extension 提交，委托给 Engine 的 commandSubmitter
         EngineExtensionContext.log.info("ExtensionContext: Extension {} 提交命令 {} 到 Engine。", sourceExtensionName,
             command.getId());
