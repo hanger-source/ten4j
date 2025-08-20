@@ -195,4 +195,11 @@ public class ImageSynthesisTool implements LLMTool {
         // 立即返回，表示异步任务已成功启动
         return LLMToolResult.llmResult(true, "图片生成已开始。");
     }
+
+    public void shutdown() {
+        log.info("[{}] Shutting down ImageSynthesisTool.", getToolName());
+        if (taskRunner != null) {
+            taskRunner.shutdown();
+        }
+    }
 }

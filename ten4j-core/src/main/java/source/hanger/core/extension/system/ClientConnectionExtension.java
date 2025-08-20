@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 
 import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.BaseExtension;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
@@ -17,7 +16,7 @@ import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
 
 import static java.util.Collections.singletonList;
-import static source.hanger.core.common.ExtensionConstants.*;
+import static source.hanger.core.common.ExtensionConstants.CMD_IN_ON_USER_JOINED;
 
 /**
  * @author fuhangbo.hanger.uhfun
@@ -54,7 +53,7 @@ public class ClientConnectionExtension extends BaseExtension {
     }
 
     @Override
-    public void destroy(TenEnv env) {
+    public void onDestroy(TenEnv env) {
         // 默认空实现
     }
 

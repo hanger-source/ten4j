@@ -2,14 +2,13 @@ package source.hanger.core.extension;
 
 import java.util.Map;
 
-import source.hanger.core.graph.GraphConfig;
+import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
 import source.hanger.core.message.VideoFrameMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * 控制器/注入器基础抽象类
@@ -49,8 +48,8 @@ public abstract class AbstractController extends BaseExtension {
     // }
 
     @Override
-    public void destroy(TenEnv env) {
-        super.destroy(env); // 调用父类方法
+    public void onDestroy(TenEnv env) {
+        super.onDestroy(env); // 调用父类方法
         log.info("AbstractController {} destroyed.", env.getExtensionName()); // 使用 env.getExtensionName()
     }
 

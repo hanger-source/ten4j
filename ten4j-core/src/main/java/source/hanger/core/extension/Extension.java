@@ -1,15 +1,13 @@
 package source.hanger.core.extension;
 
-import source.hanger.core.graph.GraphConfig;
+import java.util.Map;
+
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
 import source.hanger.core.message.VideoFrameMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
-
-import java.util.Map;
-import java.util.Optional;
 
 /**
  * `Extension` 接口定义了 ten-framework 中 Extension 的生命周期回调和消息处理方法。
@@ -69,7 +67,7 @@ public interface Extension {
      *
      * @param env 此 Extension 的 TenEnv 环境句柄。
      */
-    default void destroy(TenEnv env) {
+    default void onDestroy(TenEnv env) {
         // Default implementation
     }
 

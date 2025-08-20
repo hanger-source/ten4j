@@ -110,7 +110,7 @@ public class ExtensionGroup {
                             extensionEnv.toString());
                     extension.onStop(extensionEnv);
                     extension.onDeinit(extensionEnv);
-                    extension.destroy(extensionEnv);
+                    extension.onDestroy(extensionEnv);
                 } catch (Exception e) {
                     log.error("ExtensionGroup {}: Error triggering Extension {} de-lifecycle: {}",
                             name, extensionName, e.getMessage(), e);
@@ -186,7 +186,7 @@ public class ExtensionGroup {
                 // 调用生命周期回调
                 extension.onStop(extensionEnv);
                 extension.onDeinit(extensionEnv);
-                extension.destroy(extensionEnv); // 最终销毁
+                extension.onDestroy(extensionEnv); // 最终销毁
 
                 // 触发 ExtensionGroup 的 onDestroyExtensions 回调
                 if (tenEnv != null) {

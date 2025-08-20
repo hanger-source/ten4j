@@ -35,6 +35,7 @@ public abstract class BaseAsrExtension extends BaseExtension {
     protected TenEnv tenEnv;
     private Disposable asrStreamDisposable;
 
+    @Override
     public void onStart(TenEnv env) {
         log.info("[{}] ASR扩展启动", env.getExtensionName());
         stopped.set(false);
@@ -99,6 +100,7 @@ public abstract class BaseAsrExtension extends BaseExtension {
         log.info("[{}] Sent ASR transcription: {}", env.getExtensionName(), item.getSentence().getText());
     }
 
+    @Override
     public void onDeinit(TenEnv env) {
         disposeAsrStreamsInternal();
         log.info("[{}] ASR扩展清理，停止连接.", env.getExtensionName());

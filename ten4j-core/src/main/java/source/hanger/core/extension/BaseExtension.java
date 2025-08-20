@@ -28,13 +28,11 @@ import source.hanger.core.tenenv.TenEnv;
 @Slf4j
 public abstract class BaseExtension implements Extension {
 
-    protected volatile boolean isRunning = false; // Moved from BaseFlushExtension
-
     private final AtomicLong inboundMessageCounter = new AtomicLong(0);
     private final AtomicLong outboundMessageCounter = new AtomicLong(0);
     private final AtomicLong totalCommandReceived = new AtomicLong(0);
     private final AtomicLong errorCounter = new AtomicLong(0);
-
+    protected volatile boolean isRunning = false; // Moved from BaseFlushExtension
     // Removed engine and extensionContext fields as per previous refactoring
     // protected String extensionName;
     // protected String extensionId; // 新增：存储 Extension 的 ID
@@ -76,7 +74,7 @@ public abstract class BaseExtension implements Extension {
     }
 
     @Override
-    public void destroy(TenEnv env) {
+    public void onDestroy(TenEnv env) {
         log.info("[{}] Extension销毁阶段", env.getExtensionName());
     }
 
