@@ -2,9 +2,6 @@ package source.hanger.core.extension.bailian.image;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 import com.alibaba.dashscope.aigc.imagesynthesis.ImageSynthesis;
 import com.alibaba.dashscope.aigc.imagesynthesis.ImageSynthesisParam;
@@ -13,6 +10,8 @@ import com.alibaba.dashscope.exception.ApiException;
 import com.alibaba.dashscope.exception.NoApiKeyException;
 
 import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.extension.bailian.task.BailianPollingTask;
+import source.hanger.core.extension.bailian.task.BailianPollingTaskRunner;
 import source.hanger.core.extension.system.tool.LLMTool;
 import source.hanger.core.extension.system.tool.LLMToolResult;
 import source.hanger.core.extension.system.tool.ToolMetadata;
@@ -20,6 +19,8 @@ import source.hanger.core.message.DataMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
 
+import static java.time.Duration.ofMillis;
+import static java.time.Duration.ofSeconds;
 import static source.hanger.core.common.ExtensionConstants.CONTENT_DATA_OUT_NAME;
 import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_ROLE;
 
@@ -29,9 +30,13 @@ import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_ROL
 @Slf4j
 public class ImageSynthesisTool implements LLMTool {
 
-    private static final ScheduledExecutorService SCHEDULER = Executors.newSingleThreadScheduledExecutor(); // For polling
-    private static final int MAX_POLLING_ATTEMPTS = 30; // Max attempts to fetch result
-    private static final long POLLING_INTERVAL_SECONDS = 2; // Poll every 2 seconds
+    private static final long TOTAL_TASK_TIMEOUT_SECONDS = 10; // Total timeout for the image synthesis task
+    private static final long DEFAULT_POLLING_INTERVAL_MILLIS = 300; // Default polling interval in seconds
+    private final BailianPollingTaskRunner taskRunner;
+
+    public ImageSynthesisTool() {
+        this.taskRunner = new BailianPollingTaskRunner("ImageSynthesisTool");
+    }
 
     private static void sendImageData(TenEnv tenEnv, Command command, String imageUrl) {
         DataMessage dataMessage = DataMessage.create(CONTENT_DATA_OUT_NAME);
@@ -85,7 +90,7 @@ public class ImageSynthesisTool implements LLMTool {
 
         if (prompt == null || prompt.isEmpty()) {
             String errorMsg = "[%s] 图片生成工具：缺少 'prompt' 参数。".formatted(tenEnv.getExtensionName());
-            log.warn(errorMsg);
+            log.warn("[{}] {}", tenEnv.getExtensionName(), errorMsg); // 使用 {} 占位符
             return LLMToolResult.llmResult(false, errorMsg);
         }
 
@@ -93,7 +98,7 @@ public class ImageSynthesisTool implements LLMTool {
         String apiKey = tenEnv.getPropertyString("api_key").orElse(null);
         if (apiKey == null || apiKey.isEmpty()) {
             String errorMsg = "[%s] DashScope API Key 未设置，无法生成图片。".formatted(tenEnv.getExtensionName());
-            log.error(errorMsg);
+            log.error("[{}] {}", tenEnv.getExtensionName(), errorMsg); // 使用 {} 占位符
             return LLMToolResult.llmResult(false, errorMsg);
         }
 
@@ -115,77 +120,79 @@ public class ImageSynthesisTool implements LLMTool {
 
             if (taskId == null || taskId.isEmpty()) {
                 String errorMsg = "[%s] DashScope 异步调用返回结果中未找到 taskId。".formatted(tenEnv.getExtensionName());
-                log.error(errorMsg);
+                log.error("[{}] {}", tenEnv.getExtensionName(), errorMsg); // 使用 {} 占位符
                 return LLMToolResult.llmResult(false, errorMsg);
             }
             log.info("[{}] 图片生成任务已启动，taskId: {}", tenEnv.getExtensionName(), taskId);
 
-            // 开始 Polling 结果
-            pollImageSynthesisResult(taskId, apiKey, tenEnv, command, imageSynthesis, 0);
+            // 提交任务到 ImageSynthesisQueryTaskRunner 进行轮询
+            taskRunner.submit(new BailianPollingTask<String>() {
+                @Override
+                public BailianPollingTaskRunner.PollingResult<String> execute() throws Throwable {
+                    log.info("[{}] 开始轮询图片生成结果，taskId: {}", tenEnv.getExtensionName(), taskId);
+                    ImageSynthesisResult fetchedResult = imageSynthesis.fetch(taskId, apiKey);
+                    if (fetchedResult.getOutput() != null
+                        && fetchedResult.getOutput().getResults() != null
+                        && !fetchedResult.getOutput().getResults().isEmpty()) {
+                        // 任务完成，返回结果
+                        return BailianPollingTaskRunner.PollingResult.success(
+                            fetchedResult.getOutput().getResults().getFirst().get("url"));
+                    } else if (fetchedResult.getOutput() != null && !"SUCCEEDED".equals(
+                        fetchedResult.getOutput().getTaskStatus())) {
+                        // 任务未完成，需要继续轮询
+                        return BailianPollingTaskRunner.PollingResult.needsRepoll();
+                    } else {
+                        // 意外情况，视为失败
+                        throw new RuntimeException("Unexpected null fetchedResult or output for taskId: %s".formatted(
+                            fetchedResult.getRequestId())); // 直接抛出，由runner捕获
+                    }
+                }
+
+                @Override
+                public void onComplete(String imageUrl) {
+                    log.info("[{}] 图片生成成功，URL: {}", tenEnv.getExtensionName(), imageUrl);
+                    try {
+                        sendImageData(tenEnv, command, imageUrl);
+                        log.info("[{}] 已发送图片 URL 作为数据消息。", tenEnv.getExtensionName());
+                    } catch (Exception e) {
+                        log.error("[{}] 序列化图片数据失败: {}", tenEnv.getExtensionName(), e.getMessage(), e);
+                    }
+                }
+
+                @Override
+                public void onFailure(Throwable throwable) {
+                    if (throwable.getMessage().contains("Task not yet succeeded")) {
+                        // 如果是任务未完成导致的失败，则重新提交任务进行下一次轮询
+                        log.info("[{}] 任务未完成，重新提交任务进行轮询。 taskId: {}", tenEnv.getExtensionName(), taskId);
+                        taskRunner.submit(this, taskId, ofSeconds(TOTAL_TASK_TIMEOUT_SECONDS),
+                            ofMillis(DEFAULT_POLLING_INTERVAL_MILLIS)); // 重新提交自身，指定轮询间隔
+                    } else {
+                        log.error("[{}] 图片生成任务失败: {}", tenEnv.getExtensionName(), throwable.getMessage(),
+                            throwable);
+                    }
+                }
+
+                @Override
+                public void onTimeout() {
+                    // 整个任务已超时，不再进行重提交
+                    log.error("[{}] 图片生成任务总超时，任务终止。 taskId: {}", tenEnv.getExtensionName(), taskId);
+                    // 可以发送超时错误消息给用户
+                }
+            }, taskId, ofSeconds(TOTAL_TASK_TIMEOUT_SECONDS), ofMillis(DEFAULT_POLLING_INTERVAL_MILLIS)); // 传递默认轮询间隔
 
         } catch (ApiException | NoApiKeyException e) {
-            String errorMsg = "[%s] DashScope API 异步调用启动失败: %s".formatted(tenEnv.getExtensionName(), e.getMessage());
-            log.error(errorMsg, e);
+            String errorMsg = "[%s] DashScope API 异步调用启动失败: %s".formatted(tenEnv.getExtensionName(),
+                e.getMessage()); // 使用 %s 占位符
+            log.error("[{}] {}", tenEnv.getExtensionName(), errorMsg, e); // 使用 {} 占位符，并传入异常对象
             return LLMToolResult.llmResult(false, errorMsg);
         } catch (Exception e) {
-            String errorMsg = "[%s] 图片生成工具启动异常: %s".formatted(tenEnv.getExtensionName(), e.getMessage());
-            log.error(errorMsg, e);
+            String errorMsg = "[%s] 图片生成工具启动异常: %s".formatted(tenEnv.getExtensionName(),
+                e.getMessage()); // 使用 %s 占位符
+            log.error("[{}] {}", tenEnv.getExtensionName(), errorMsg, e); // 使用 {} 占位符，并传入异常对象
             return LLMToolResult.llmResult(false, errorMsg);
         }
 
         // 立即返回，表示异步任务已成功启动
         return LLMToolResult.llmResult(true, "图片生成已开始。");
-    }
-
-    private void pollImageSynthesisResult(String taskId, String apiKey, TenEnv tenEnv, Command command, ImageSynthesis imageSynthesis, int attempt) {
-        if (attempt >= ImageSynthesisTool.MAX_POLLING_ATTEMPTS) {
-            log.error("[{}] 图片生成任务 Polling 达到最大尝试次数，任务可能失败或超时。taskId: {}", tenEnv.getExtensionName(), taskId);
-            return;
-        }
-
-        ImageSynthesisTool.SCHEDULER.schedule(() -> {
-            try {
-                // Fetch the task result
-                ImageSynthesisResult fetchedResult = imageSynthesis.fetch(taskId, apiKey);
-
-                // 处理结果
-                if (fetchedResult.getOutput() != null
-                    && fetchedResult.getOutput().getResults() != null
-                    && !fetchedResult.getOutput().getResults().isEmpty()) {
-                    String imageUrl = fetchedResult.getOutput().getResults().getFirst().get("url");
-                    log.info("[{}] 图片生成成功，URL: {}", tenEnv.getExtensionName(), imageUrl);
-
-                    try {
-                        sendImageData(tenEnv, command, imageUrl);
-                        log.info("[{}] 已发送图片 URL 作为数据消息。", tenEnv.getExtensionName());
-                    } catch (Exception e) {
-                        String errorMsg = "[%s] 序列化图片数据失败: %s".formatted(tenEnv.getExtensionName(), e.getMessage());
-                        log.error(errorMsg, e);
-                    }
-                } else if (fetchedResult.getOutput() == null || !"SUCCEEDED".equals(
-                    fetchedResult.getOutput().getTaskStatus())) { // 检查 output 是否为 null 或未成功表示进行中
-                    // 任务未完成或没有结果，继续 Polling
-                    log.info("[{}] 图片生成任务进行中，继续Polling... taskId: {}, attempt: {}", tenEnv.getExtensionName(), fetchedResult.getOutput().getTaskId(), attempt + 1);
-                    pollImageSynthesisResult(fetchedResult.getOutput().getTaskId(), apiKey, tenEnv, command,
-                        imageSynthesis, attempt + 1);
-                } else {
-                    // 意外的 null 结果或其他问题
-                    String errorDetail = fetchedResult.getOutput() != null && fetchedResult.getOutput().getResults()
-                        .isEmpty() ?
-                            "Fetched result output is empty" : "Unexpected null fetchedResult or output for taskId: %s".formatted(
-                        fetchedResult.getRequestId());
-                    String errorMsg = "[%s] 图片生成失败: %s".formatted(tenEnv.getExtensionName(), errorDetail);
-                    log.error(errorMsg);
-                }
-            } catch (ApiException | NoApiKeyException e) {
-                // 处理 Fetch 过程中的 API 错误
-                String errorMsg = "[%s] DashScope API Fetch 调用失败: %s".formatted(tenEnv.getExtensionName(), e.getMessage());
-                log.error(errorMsg, e);
-            } catch (Exception e) {
-                // 处理 Polling 过程中的其他异常
-                String errorMsg = "[%s] 图片生成工具 Polling 异常: %s".formatted(tenEnv.getExtensionName(), e.getMessage());
-                log.error(errorMsg, e);
-            }
-        }, ImageSynthesisTool.POLLING_INTERVAL_SECONDS, TimeUnit.SECONDS); // 下一次 Polling 之前的延迟
     }
 }
