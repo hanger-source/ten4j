@@ -114,7 +114,7 @@ public class BailianPollingTaskRunner {
             commandQueue.offer(() -> {
                 if (running.get() && !shuttingDown.get()) { // 确保执行器仍然活跃
                     long timerId = timerWheel.scheduleTimer(deadlineMs);
-                    activeTimeouts.put(timerId, new DelayedTaskRequeue(taskId, task, new TaskWrapper<>(task, taskId, pollingInterval))); // 存储任务到activeTimeouts，使用新的记录
+                    activeTimeouts.put(timerId, new DelayedTaskRequeue(taskId, task, new TaskWrapper<>(task, taskId, pollingInterval), TimeoutType.TOTAL_TIMEOUT)); // 存储任务到activeTimeouts，使用新的记录
                     taskIdToTimerId.put(taskId, timerId); // 存储 taskId 到 timerId 的映射
                     log.debug("[BailianPollingTaskRunner] Scheduled timeout for taskId: {} with timerId: {}", taskId, timerId);
                 } else {
@@ -338,13 +338,18 @@ public class BailianPollingTaskRunner {
     }
 
     // 用于在 activeTimeouts 中存储 taskId 和 BailianPollingTask 的记录
-    private record DelayedTaskRequeue(String taskId, BailianPollingTask<?> task, TaskWrapper<?> originalTaskWrapper) {}
+    private record DelayedTaskRequeue(String taskId, BailianPollingTask<?> task, TaskWrapper<?> originalTaskWrapper, TimeoutType timeoutType) {}
 
     /**
      * @param pollingInterval 新增：轮询间隔
      */
     private record TaskWrapper<T>(BailianPollingTask<T> task, String taskId, Duration pollingInterval) {
 
+    }
+
+    private enum TimeoutType {
+        POLLING_INTERVAL,
+        TOTAL_TIMEOUT
     }
 
     private class PollingAgent implements Agent {
@@ -383,11 +388,16 @@ public class BailianPollingTaskRunner {
                     // 从 taskIdToTimerId 映射中也移除，因为计时器已到期
                     taskIdToTimerId.remove(delayedRequeue.taskId());
 
-                    log.debug("[BailianPollingTaskRunner] Re-queueing task {} after polling interval. Timer ID: {}", delayedRequeue.taskId(), timerId);
-                    // 将原始任务重新入队 taskQueue
-                    taskQueue.offer(delayedRequeue.originalTaskWrapper());
-                    wakeup(); // 唤醒以再次处理
-
+                    if (delayedRequeue.timeoutType() == TimeoutType.POLLING_INTERVAL) {
+                        log.debug("[BailianPollingTaskRunner] Re-queueing task {} after polling interval. Timer ID: {}", delayedRequeue.taskId(), timerId);
+                        // 将原始任务重新入队 taskQueue
+                        taskQueue.offer(delayedRequeue.originalTaskWrapper());
+                        wakeup(); // 唤醒以再次处理
+                    } else if (delayedRequeue.timeoutType() == TimeoutType.TOTAL_TIMEOUT) {
+                        log.warn("[BailianPollingTaskRunner] Task {} total timeout, calling onTimeout. Timer ID: {}", delayedRequeue.taskId(), timerId);
+                        // 总任务超时，触发 onTimeout 回调
+                        callbackExecutor.submit(() -> delayedRequeue.task().onTimeout());
+                    }
                     return true; // 消费计时器
                 }
                 log.debug("[BailianPollingTaskRunner] Expired timer with ID {} found but no corresponding delayed re-queue task. Already handled or cancelled?", timerId);
@@ -451,7 +461,7 @@ public class BailianPollingTaskRunner {
                                 }
                                 long timerId = timerWheel.scheduleTimer(reEnqueueDeadlineMs);
                                 // 存储原始的 TaskWrapper，以便在计时器到期时重新入队
-                                activeTimeouts.put(timerId, new DelayedTaskRequeue(taskId, task, taskWrapper));
+                                activeTimeouts.put(timerId, new DelayedTaskRequeue(taskId, task, taskWrapper, TimeoutType.POLLING_INTERVAL));
                                 // 更新 taskIdToTimerId 映射为新的延迟重新入队计时器 ID
                                 taskIdToTimerId.put(taskId, timerId);
                                 log.debug("[BailianPollingTaskRunner] Scheduled delayed re-queue for taskId: {} with timerId: {} (interval {}ms)", taskId, timerId, currentPollingInterval.toMillis());
