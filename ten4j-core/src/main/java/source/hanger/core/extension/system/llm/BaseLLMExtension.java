@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import com.alibaba.dashscope.aigc.generation.GenerationOutput.Choice;
 import com.alibaba.dashscope.aigc.generation.GenerationResult;
 import com.alibaba.dashscope.common.Role;
 import com.alibaba.dashscope.tools.FunctionDefinition;
@@ -53,8 +54,6 @@ import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_TEX
 @Slf4j
 public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResult> {
 
-    // LOG_DEBUG
-    protected static final String LOG_PREFIX = "[LLM_TOOL_STREAM]";
     protected final Map<String, Object> sessionState = new java.util.concurrent.ConcurrentHashMap<>();
     protected final List<ToolFunction> registeredFunctions = new CopyOnWriteArrayList<>();
     protected final ObjectMapper objectMapper = new ObjectMapper();
@@ -79,7 +78,7 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
         llmToolService = new LLMToolService(env);
 
         // 初始化 LLMHistoryManager
-        llmHistoryManager = new LLMHistoryManager(objectMapper, this::getSystemPrompt); // 传入 ObjectMapper 和获取系统提示词的 Supplier
+        llmHistoryManager = new LLMHistoryManager(this::getSystemPrompt); // 传入 ObjectMapper 和获取系统提示词的 Supplier
 
         if (properties.containsKey("max_memory_length")) { // 允许从配置中读取maxHistory
             llmHistoryManager.setMaxHistory((int) properties.get("max_memory_length"));
@@ -194,11 +193,14 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
         }
 
         // 获取第一个 Choice 的消息
-        com.alibaba.dashscope.common.Message llmMessage = item.getOutput().getChoices().get(0).getMessage();
+        Choice choice = item.getOutput().getChoices().getFirst();
+        com.alibaba.dashscope.common.Message llmMessage = choice.getMessage();
 
         // 检查是否有工具调用片段
-        if (llmMessage.getToolCalls() != null && !llmMessage.getToolCalls().isEmpty()) {
-            processLlmStreamToolCallOutput(item, originalMessage, env, llmMessage);
+        if (llmMessage.getToolCalls() != null
+            && !llmMessage.getToolCalls().isEmpty()) {
+            processLlmStreamToolCallOutput(item, originalMessage, env,
+                (ToolCallFunction)llmMessage.getToolCalls().getFirst(), choice.getFinishReason());
             return; // 总是返回，因为工具调用逻辑已处理或等待中
         }
 
@@ -207,17 +209,15 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
     }
 
     private void processLlmStreamToolCallOutput(GenerationResult item, Message originalMessage, TenEnv env,
-        com.alibaba.dashscope.common.Message llmMessage) {
+        ToolCallFunction toolCallFunction, String finishReason) {
+        String requestId = item.getRequestId();
         // 假设每次只处理一个工具调用，获取第一个工具调用片段
-        ToolCallFunction toolCallFunction = (ToolCallFunction)llmMessage.getToolCalls()
-            .getFirst();
         // 处理工具调用流片段，并判断是否完成
-        boolean isToolCallFinished = processToolCallStreamFragment(item, env, toolCallFunction);
+        boolean isToolCallFinished = processToolCallStreamFragment(requestId, env, toolCallFunction, finishReason);
 
         if (isToolCallFinished) {
             // Modified: 获取用于累加器的key，优先使用toolCallId，否则使用requestId
-            String requestId = item.getRequestId();
-            log.debug("{} 工具调用片段已完成, requestId: {}", LOG_PREFIX, requestId); // LOG_DEBUG
+            log.debug("[{}] 工具调用片段已完成, requestId: {}", env.getExtensionName(), requestId); // LOG_DEBUG
 
             ToolCallAccumulator accumulator = accumulatingToolCalls.get(requestId); // 获取已存在的累加器
             if (accumulator != null) {
@@ -225,19 +225,20 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
                 String functionName = accumulator.getInitialToolCall().getFunction().getName();
                 String finalArguments = accumulator.getAccumulatedArguments().toString();
 
-                log.debug("{} 准备处理已完成的工具调用: toolCallId={}, functionName={}, finalArguments={}",
-                    LOG_PREFIX, toolCallId, functionName, finalArguments); // LOG_DEBUG
+                log.debug("[{}] 准备处理已完成的工具调用: toolCallId={}, functionName={}, finalArguments={}",
+                    env.getExtensionName(), toolCallId, functionName, finalArguments); // LOG_DEBUG
 
                 // 工具调用完成，处理并移除累加器
                 accumulatingToolCalls.remove(requestId); // 使用key移除
                 handleCompletedToolCall(toolCallId, functionName, finalArguments, originalMessage, env);
             } else {
-                log.warn("{} 工具调用完成但未找到对应的累加器，key={}", LOG_PREFIX, requestId); // LOG_DEBUG
+                log.warn("[{}] 工具调用完成但未找到对应的累加器，key={}", env.getExtensionName(),
+                    requestId); // LOG_DEBUG
             }
         } else {
-            log.debug("{} 工具调用片段未完成，继续累积: requestId={}", LOG_PREFIX, item.getRequestId()); // LOG_DEBUG
+            log.debug("[{}] 工具调用片段未完成，继续累积: requestId={}", env.getExtensionName(),
+                item.getRequestId()); // LOG_DEBUG
         }
-        return;
     }
 
     @Override
@@ -421,19 +422,23 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
     /**
      * 处理工具调用流的片段，累积参数并判断是否完成。
      *
-     * @param item                    当前的 GenerationResult 项。
+     * @param requestId                    当前的 requestId 项。
      * @param env                     当前 TenEnv 环境。
      * @param currentToolCallFragment 当前接收到的工具调用片段。
+     * @param finishReason  结束原因
      * @return 如果工具调用已完成，返回 true；否则返回 false。
      */
-    private boolean processToolCallStreamFragment(GenerationResult item, TenEnv env,
-        ToolCallFunction currentToolCallFragment) {
+    private boolean processToolCallStreamFragment(String requestId, TenEnv env,
+        ToolCallFunction currentToolCallFragment, String finishReason) {
+        if ("tool_calls".equals(finishReason)) {
+            return true;
+        }
         // Modified: 优先使用toolCallId作为key，如果toolCallId不存在，则使用requestId
         String toolCallId = currentToolCallFragment.getId();
-        String requestId = item.getRequestId(); // 获取requestId
 
         if (requestId == null || requestId.isEmpty()) {
-            log.warn("{} 收到没有 toolCallId 也没有 requestId 的工具调用片段，忽略: {}", LOG_PREFIX, item); // LOG_DEBUG
+            log.warn("[{}] 收到没有 toolCallId 也没有 requestId 的工具调用片段，忽略",
+                env.getExtensionName()); // LOG_DEBUG
             return false;
         }
 
@@ -445,22 +450,17 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
             ? currentToolCallFragment.getFunction().getArguments() : null;
         if (currentArgumentsFragment != null) {
             accumulator.getAccumulatedArguments().append(currentArgumentsFragment);
-            log.debug("{} 累积参数片段: key={}, arguments_fragment='{}', current_total='{}'", LOG_PREFIX,
+            log.debug("[{}] 累积参数片段: key={}, arguments_fragment='{}', current_total='{}'", env.getExtensionName(),
                 requestId, currentArgumentsFragment,
                 accumulator.getAccumulatedArguments().toString()); // LOG_DEBUG
-            if ("{}".equals(currentArgumentsFragment)) {
-                return true;
-            }
         }
 
         log.debug(
-            "{} 累积工具调用参数: key={}, toolCallId={}, arguments_fragment='{}', current_total='{}', finish_reason={}",
-            LOG_PREFIX, requestId, toolCallId, currentArgumentsFragment,
+            "[{}] 累积工具调用参数: key={}, toolCallId={}, arguments_fragment='{}', current_total='{}', finish_reason={}",
+            env.getExtensionName(), requestId, toolCallId, currentArgumentsFragment,
             accumulator.getAccumulatedArguments().toString(),
-            item.getOutput().getChoices().get(0).getFinishReason()); // LOG_DEBUG
-
-        String finishReason = item.getOutput().getChoices().get(0).getFinishReason();
-        return "tool_calls".equals(finishReason) || "stop".equals(finishReason);
+            finishReason); // LOG_DEBUG
+        return false;
     }
 
     /**
@@ -496,7 +496,7 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
                 .build();
         llmHistoryManager.onOtherMsg(toolCallMessage); // 直接传递 Message 对象
 
-        log.debug("{} 发送工具调用命令: name={}, arguments={}, tool_call_id={}", LOG_PREFIX, functionName,
+        log.debug("[{}] 发送工具调用命令: name={}, arguments={}, tool_call_id={}", env.getExtensionName(), functionName,
             finalArguments, toolCallId); // LOG_DEBUG
 
         // 使用 env.sendAsyncCmd 并处理其 CompletableFuture 回调
@@ -504,8 +504,8 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
             .whenComplete((cmdResult, cmdThrowable) -> {
                 try {
                     if (cmdThrowable != null) {
-                        log.error("{} 工具调用命令执行失败: toolName={}, toolCallId={}, error={}",
-                            LOG_PREFIX, functionName, toolCallId,
+                        log.error("[{}] 工具调用命令执行失败: toolName={}, toolCallId={}, error={}",
+                            env.getExtensionName(), functionName, toolCallId,
                             cmdThrowable.getMessage(), cmdThrowable); // LOG_DEBUG
                         // 将失败结果添加到历史
                         com.alibaba.dashscope.common.Message toolErrorMsg =
@@ -518,8 +518,8 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
                     } else if (cmdResult != null && cmdResult.isSuccess()) {
                         String toolResultJson =
                             cmdResult.getProperty(ExtensionConstants.CMD_PROPERTY_RESULT, String.class);
-                        log.info("{} 工具调用命令执行成功: toolName={}, toolCallId={}, result={}",
-                            LOG_PREFIX, functionName, toolCallId, toolResultJson); // LOG_DEBUG
+                        log.info("[{}] 工具调用命令执行成功: toolName={}, toolCallId={}, result={}",
+                            env.getExtensionName(), functionName, toolCallId, toolResultJson); // LOG_DEBUG
                         // 将工具执行结果添加到历史
                         com.alibaba.dashscope.common.Message toolOutputMsg =
                             com.alibaba.dashscope.common.Message.builder()
@@ -530,8 +530,8 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
                         llmHistoryManager.onOtherMsg(toolOutputMsg);
                     } else {
                         String errorMsg = cmdResult != null ? cmdResult.getDetail() : "未知错误";
-                        log.error("{} 工具调用命令执行失败（非异常）: toolName={}, toolCallId={}, message={}",
-                            LOG_PREFIX, functionName, toolCallId, errorMsg); // LOG_DEBUG
+                        log.error("[{}] 工具调用命令执行失败（非异常）: toolName={}, toolCallId={}, message={}",
+                            env.getExtensionName(), functionName, toolCallId, errorMsg); // LOG_DEBUG
                         // 将失败结果添加到历史
                         com.alibaba.dashscope.common.Message toolErrorMsg =
                             com.alibaba.dashscope.common.Message.builder()
@@ -542,14 +542,14 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
                         llmHistoryManager.onOtherMsg(toolErrorMsg);
                     }
                     // 收到工具结果后，再次调用LLM
-                    log.info("{} LLM请求工具调用，已收到异步命令结果，开始调用LLM: toolName={}, toolCallId={}",
-                        LOG_PREFIX, functionName, toolCallId); // LOG_DEBUG
+                    log.info("[{}] LLM请求工具调用，已收到异步命令结果，开始调用LLM: toolName={}, toolCallId={}",
+                        env.getExtensionName(), functionName, toolCallId); // LOG_DEBUG
                     Flowable<GenerationResult> flowable
                         = onRequestLLM(env, llmHistoryManager.getMessagesForLLM(), registeredFunctions);
                     streamProcessor.onNext(new StreamPayload<>(flowable, originalMessage));
                 } catch (Exception e) {
-                    log.error("{} 处理工具调用CompletableFuture回调异常: toolName={}, toolCallId={}, error={}",
-                        LOG_PREFIX, functionName, toolCallId, e.getMessage(), e); // LOG_DEBUG
+                    log.error("[{}] 处理工具调用CompletableFuture回调异常: toolName={}, toolCallId={}, error={}",
+                        env.getExtensionName(), functionName, toolCallId, e.getMessage(), e); // LOG_DEBUG
                     sendErrorResult(env, originalMessage.getId(), originalMessage.getType(),
                         originalMessage.getName(), "处理工具回调失败: %s".formatted(e.getMessage()));
                 }
@@ -559,7 +559,7 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
     // 辅助类，用于累积流式工具调用的片段
     @Getter
     @AllArgsConstructor
-    private static class ToolCallAccumulator {
+    protected static class ToolCallAccumulator {
         private final ToolCallFunction initialToolCall;
         private final StringBuilder accumulatedArguments = new StringBuilder();
         // 新增 getter 方法

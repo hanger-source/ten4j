@@ -1,26 +1,19 @@
 package source.hanger.core.extension.bailian.llm;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 import com.alibaba.dashscope.aigc.generation.GenerationResult;
 import com.alibaba.dashscope.common.Message;
-import com.alibaba.dashscope.common.Role;
+import com.alibaba.dashscope.tools.ToolFunction;
 import com.alibaba.dashscope.utils.JsonUtils;
 
 import io.reactivex.Flowable;
 import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.system.llm.BaseLLMExtension;
-import source.hanger.core.message.CommandResult;
-import source.hanger.core.message.DataMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
-import com.alibaba.dashscope.tools.ToolFunction;
-import source.hanger.core.util.SentenceProcessor; // [{}] 新增导入 SentenceProcessor
+import source.hanger.core.util.SentenceProcessor;
 
 /**
  * 简单的LLM扩展示例，用于演示如何处理不同类型的消息。

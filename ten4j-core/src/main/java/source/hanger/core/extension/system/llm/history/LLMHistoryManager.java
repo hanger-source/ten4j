@@ -1,18 +1,15 @@
 package source.hanger.core.extension.system.llm.history;
 
-import com.alibaba.dashscope.common.Message; // [llm_history] 使用 Message
-import com.alibaba.dashscope.common.Role;
-import com.alibaba.dashscope.tools.ToolCallFunction; // [llm_history] 新增导入 ToolCallFunction
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
-
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Supplier;
+
+import com.alibaba.dashscope.common.Message;
+import com.alibaba.dashscope.common.Role;
+import com.alibaba.dashscope.tools.ToolCallFunction;
+
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 历史消息管理类
@@ -21,12 +18,10 @@ import java.util.function.Supplier;
 public class LLMHistoryManager {
 
     private final List<Message> history = new CopyOnWriteArrayList<>();
-    private int maxHistory = 20; // 默认历史长度
-    private final ObjectMapper objectMapper; // 用于处理工具调用消息的JSON转换
     private final Supplier<String> systemPromptSupplier; // 获取系统提示词的函数式接口
+    private int maxHistory = 20; // 默认历史长度
 
-    public LLMHistoryManager(ObjectMapper objectMapper, Supplier<String> systemPromptSupplier) {
-        this.objectMapper = objectMapper;
+    public LLMHistoryManager(Supplier<String> systemPromptSupplier) {
         this.systemPromptSupplier = systemPromptSupplier;
     }
 

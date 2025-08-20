@@ -17,7 +17,7 @@ public class GetCurrentDateTimeTool implements LLMTool {
     public ToolMetadata getToolMetadata() {
         return ToolMetadata.builder()
                 .name("get_current_datetime")
-                .description("获取当前最新的日期和时间，精确到秒。")
+            .description("当用户询问当前日期/时间时，获取最新的日期和时间，精确到秒。")
                 .parameters(Collections.emptyList())
                 .build();
     }
@@ -27,7 +27,7 @@ public class GetCurrentDateTimeTool implements LLMTool {
         LocalDateTime now = LocalDateTime.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         String formattedDateTime = now.format(formatter);
-        return LLMToolResult.llmResult(true, "当前日期和时间是: %s".formatted(formattedDateTime));
+        return LLMToolResult.llmResult(true, "此次询问结果的日期和时间是: %s".formatted(formattedDateTime));
     }
 
     @Override
