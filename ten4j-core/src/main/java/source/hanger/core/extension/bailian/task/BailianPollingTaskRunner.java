@@ -98,13 +98,13 @@ public class BailianPollingTaskRunner {
         Objects.requireNonNull(taskId, "taskId");
 
         if (!canAcceptTask()) {
-            log.warn("[BailianPollingTaskRunner] not running or shutting down, rejecting task: {}", taskId);
+            log.warn("[{}] not running or shutting down, rejecting task: {}", pollingAgent.roleName(), taskId);
             return;
         }
 
         boolean success = taskQueue.offer(new TaskWrapper<>(task, taskId, pollingInterval)); // 传递 pollingInterval
         if (!success) {
-            log.warn("[BailianPollingTaskRunner] queue full, task dropped: {}", taskId);
+            log.warn("[{}] queue full, task dropped: {}", pollingAgent.roleName(), taskId);
             return;
         }
 
@@ -116,9 +116,9 @@ public class BailianPollingTaskRunner {
                     long timerId = timerWheel.scheduleTimer(deadlineMs);
                     activeTimeouts.put(timerId, new DelayedTaskRequeue(taskId, task, new TaskWrapper<>(task, taskId, pollingInterval), TimeoutType.TOTAL_TIMEOUT)); // 存储任务到activeTimeouts，使用新的记录
                     taskIdToTimerId.put(taskId, timerId); // 存储 taskId 到 timerId 的映射
-                    log.debug("[BailianPollingTaskRunner] Scheduled timeout for taskId: {} with timerId: {}", taskId, timerId);
+                    log.debug("[{}] Scheduled timeout for taskId: {} with timerId: {}", pollingAgent.roleName(), taskId, timerId);
                 } else {
-                    log.warn("[BailianPollingTaskRunner] Runner not active, not scheduling timeout for taskId: {}", taskId);
+                    log.warn("[{}] Runner not active, not scheduling timeout for taskId: {}", pollingAgent.roleName(), taskId);
                 }
             });
             wakeup(); // 唤醒 polling 线程以处理新命令
@@ -128,7 +128,7 @@ public class BailianPollingTaskRunner {
 
     private void start() {
         if (!running.compareAndSet(false, true)) {
-            log.warn("[BailianPollingTaskRunner] already running.");
+            log.warn("[{}] already running.", pollingAgent.roleName());
             return;
         }
         shuttingDown.set(false);
@@ -141,13 +141,13 @@ public class BailianPollingTaskRunner {
 
         agentRunner = new AgentRunner(
             idleStrategy,
-            ex -> log.error("[BailianPollingTaskRunner] uncaught error", ex),
+            ex -> log.error("[{}] uncaught error", pollingAgent.roleName(), ex),
             null,
             pollingAgent
         );
 
         coreThread = createCoreThread(agentRunner);
-        log.info("[BailianPollingTaskRunner] started on thread: {}", coreThread.getName());
+        log.info("[{}] started on thread: {}", pollingAgent.roleName(), coreThread.getName());
     }
 
     private void wakeup() {
@@ -169,7 +169,7 @@ public class BailianPollingTaskRunner {
             try {
                 agentRunner.close();
             } catch (Exception e) {
-                log.error("[BailianPollingTaskRunner] Error closing AgentRunner", e);
+                log.error("[{}] Error closing AgentRunner", pollingAgent.roleName(), e);
             }
         }
     }
@@ -185,7 +185,7 @@ public class BailianPollingTaskRunner {
                 pollingResult = r.execute(); // 执行任务，期待不抛出检查型异常
             } catch (Throwable e) {
                 // 如果任务执行抛出异常，视为任务失败
-                log.error("[BailianPollingTaskRunner] Task {} execution failed during drainRemainingTasks: {}", taskId, e.getMessage(), e);
+                log.error("[{}] Task {} execution failed during drainRemainingTasks: {}", pollingAgent.roleName(), taskId, e.getMessage(), e);
                 callbackExecutor.submit(() -> r.onFailure(e)); // 在虚拟线程中调用 onFailure 回调
                 continue; // 处理下一个任务
             }
@@ -202,7 +202,7 @@ public class BailianPollingTaskRunner {
                     r.onFailure(pollingResult.error);
                 } else if (pollingResult.needsRepoll) {
                     // 关闭阶段不再重试
-                    log.warn("[BailianPollingTaskRunner] is shutting down, not re-polling task: {}", taskId);
+                    log.warn("[{}] is shutting down, not re-polling task: {}", pollingAgent.roleName(), taskId);
                 }
             });
         }
@@ -215,7 +215,7 @@ public class BailianPollingTaskRunner {
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.warn("[BailianPollingTaskRunner] shutdown interrupted.");
+            log.warn("[{}] shutdown interrupted.", pollingAgent.roleName());
         }
     }
 
@@ -236,7 +236,7 @@ public class BailianPollingTaskRunner {
      */
     public void shutdown() {
         if (!running.compareAndSet(true, false)) {
-            log.warn("[BailianPollingTaskRunner] not running.");
+            log.warn("[{}] not running.", pollingAgent.roleName());
             return;
         }
         shuttingDown.set(true);
@@ -258,16 +258,16 @@ public class BailianPollingTaskRunner {
         callbackExecutor.shutdown();
         try {
             if (!callbackExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
-                log.warn("[BailianPollingTaskRunner] callbackExecutor did not terminate in time.");
+                log.warn("[{}] callbackExecutor did not terminate in time.", pollingAgent.roleName());
                 callbackExecutor.shutdownNow();
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.warn("[BailianPollingTaskRunner] Interrupted while waiting for BailianPollingTaskRunner to terminate.");
+            log.warn("[{}] Interrupted while waiting for BailianPollingTaskRunner to terminate.", pollingAgent.roleName());
             callbackExecutor.shutdownNow();
         }
 
-        log.info("[BailianPollingTaskRunner] shutdown complete.");
+        log.info("[{}] shutdown complete.", pollingAgent.roleName());
     }
 
     private void cancelTimeout(String taskId) {
@@ -277,9 +277,9 @@ public class BailianPollingTaskRunner {
             if (timerId != null) {
                 timerWheel.cancelTimer(timerId); // 取消DeadlineTimerWheel中的计时器
                 activeTimeouts.remove(timerId); // 从activeTimeouts中移除
-                log.debug("[BailianPollingTaskRunner] Cancelled timeout for taskId: {} with timerId: {}", taskId, timerId);
+                log.debug("[{}] Cancelled timeout for taskId: {} with timerId: {}", pollingAgent.roleName(), taskId, timerId);
             } else {
-                log.debug("[BailianPollingTaskRunner] No active timeout found for taskId: {}", taskId);
+                log.debug("[{}] No active timeout found for taskId: {}", pollingAgent.roleName(), taskId);
             }
         });
         wakeup(); // 唤醒 polling 线程以处理取消命令
@@ -291,7 +291,7 @@ public class BailianPollingTaskRunner {
             try {
                 command.run();
             } catch (Exception e) {
-                log.error("[BailianPollingTaskRunner] Error draining command during shutdown", e);
+                log.error("[{}] Error draining command during shutdown", pollingAgent.roleName(), e);
             }
         }
     }
@@ -377,7 +377,7 @@ public class BailianPollingTaskRunner {
                     command.run();
                     workCount++;
                 } catch (Exception e) {
-                    log.error("[BailianPollingTaskRunner] Error processing command", e);
+                    log.error("[{}] Error processing command", roleName(), e);
                 }
             }
 
@@ -389,18 +389,18 @@ public class BailianPollingTaskRunner {
                     taskIdToTimerId.remove(delayedRequeue.taskId());
 
                     if (delayedRequeue.timeoutType() == TimeoutType.POLLING_INTERVAL) {
-                        log.debug("[BailianPollingTaskRunner] Re-queueing task {} after polling interval. Timer ID: {}", delayedRequeue.taskId(), timerId);
+                        log.debug("[{}] Re-queueing task {} after polling interval. Timer ID: {}", roleName(), delayedRequeue.taskId(), timerId);
                         // 将原始任务重新入队 taskQueue
                         taskQueue.offer(delayedRequeue.originalTaskWrapper());
                         wakeup(); // 唤醒以再次处理
                     } else if (delayedRequeue.timeoutType() == TimeoutType.TOTAL_TIMEOUT) {
-                        log.warn("[BailianPollingTaskRunner] Task {} total timeout, calling onTimeout. Timer ID: {}", delayedRequeue.taskId(), timerId);
+                        log.warn("[{}] Task {} total timeout, calling onTimeout. Timer ID: {}", roleName(), delayedRequeue.taskId(), timerId);
                         // 总任务超时，触发 onTimeout 回调
                         callbackExecutor.submit(() -> delayedRequeue.task().onTimeout());
                     }
                     return true; // 消费计时器
                 }
-                log.debug("[BailianPollingTaskRunner] Expired timer with ID {} found but no corresponding delayed re-queue task. Already handled or cancelled?", timerId);
+                log.debug("[{}] Expired timer with ID {} found but no corresponding delayed re-queue task. Already handled or cancelled?", roleName(), timerId);
                 return true; // 即使找不到任务，也消费计时器（可能任务已完成并被取消）
             }, Integer.MAX_VALUE); // 轮询所有到期计时器
             workCount += expiredTimers;
@@ -411,13 +411,13 @@ public class BailianPollingTaskRunner {
                 BailianPollingTask<?> task = taskWrapper.task();
                 String taskId = taskWrapper.taskId();
 
-                log.info("[BailianPollingTaskRunner] processing task: {}", taskId);
+                log.info("[{}] processing task: {}", roleName(), taskId);
                 PollingResult<?> pollingResult;
                 try {
                     pollingResult = task.execute(); // 执行任务，期待不抛出检查型异常
                 } catch (Throwable e) {
                     // 如果任务执行抛出异常，视为任务失败
-                    log.error("[BailianPollingTaskRunner] Task {} execution failed with exception: {}", taskId, e.getMessage(), e);
+                    log.error("[{}] Task {} execution failed with exception: {}", roleName(), taskId, e.getMessage(), e);
                     cancelTimeout(taskId); // 任务失败，取消超时
                     callbackExecutor.submit(() -> task.onFailure(e)); // 在虚拟线程中调用 onFailure 回调
                     workCount++;
@@ -426,19 +426,19 @@ public class BailianPollingTaskRunner {
 
                 if (pollingResult.completed || pollingResult.error != null) {
                     // 任务完成或失败，立即取消计时器并清理相关映射
-                    log.info("[BailianPollingTaskRunner] Task {} completed or failed, cancelling timeout and cleaning up.", taskId);
+                    log.info("[{}] Task {} completed or failed, cancelling timeout and cleaning up.", roleName(), taskId);
                     cancelTimeout(taskId); // 确保取消操作立即发生
                 }
 
                 // 无论是否重新轮询，都将回调提交到回调执行器
                 callbackExecutor.submit(() -> {
                     if (pollingResult.completed) {
-                        log.info("[BailianPollingTaskRunner] Calling onComplete for task {}.", taskId);
+                        log.info("[{}] Calling onComplete for task {}.", roleName(), taskId);
                         @SuppressWarnings("unchecked")
                         BailianPollingTask<Object> cast = (BailianPollingTask<Object>) task;
                         cast.onComplete(pollingResult.result);
                     } else if (pollingResult.error != null) {
-                        log.info("[BailianPollingTaskRunner] Calling onFailure for task {}.", taskId);
+                        log.info("[{}] Calling onFailure for task {}.", roleName(), taskId);
                         task.onFailure(pollingResult.error);
                     }
                     // 如果需要重新轮询，这里的逻辑已经在外面处理了，不需要在这里再次入队
@@ -457,27 +457,27 @@ public class BailianPollingTaskRunner {
                                 if (existingTimerId != null) {
                                     timerWheel.cancelTimer(existingTimerId);
                                     activeTimeouts.remove(existingTimerId);
-                                    log.debug("[BailianPollingTaskRunner] Existing timer {} cancelled for taskId: {} before re-scheduling.", existingTimerId, taskId);
+                                    log.debug("[{}] Existing timer {} cancelled for taskId: {} before re-scheduling.", roleName(), existingTimerId, taskId);
                                 }
                                 long timerId = timerWheel.scheduleTimer(reEnqueueDeadlineMs);
                                 // 存储原始的 TaskWrapper，以便在计时器到期时重新入队
                                 activeTimeouts.put(timerId, new DelayedTaskRequeue(taskId, task, taskWrapper, TimeoutType.POLLING_INTERVAL));
                                 // 更新 taskIdToTimerId 映射为新的延迟重新入队计时器 ID
                                 taskIdToTimerId.put(taskId, timerId);
-                                log.debug("[BailianPollingTaskRunner] Scheduled delayed re-queue for taskId: {} with timerId: {} (interval {}ms)", taskId, timerId, currentPollingInterval.toMillis());
+                                log.debug("[{}] Scheduled delayed re-queue for taskId: {} with timerId: {} (interval {}ms)", roleName(), taskId, timerId, currentPollingInterval.toMillis());
                             } else {
-                                log.warn("[BailianPollingTaskRunner] Runner not active, not scheduling delayed re-queue for taskId: {}.", taskId);
+                                log.warn("[{}] Runner not active, not scheduling delayed re-queue for taskId: {}.", roleName(), taskId);
                             }
                         });
                         wakeup(); // 唤醒 polling 线程以处理新的调度命令
                     } else {
                         // 没有指定轮询间隔或间隔无效，立即重新入队
                         if (!shuttingDown.get() && running.get()) {
-                            log.info("[BailianPollingTaskRunner] No polling interval, immediately re-queuing task {}.", taskId);
+                            log.info("[{}] No polling interval, immediately re-queuing task {}.", roleName(), taskId);
                             taskQueue.offer(taskWrapper); // 重新入队包装器
                             wakeup(); // 唤醒以再次处理
                         } else {
-                            log.warn("[BailianPollingTaskRunner] is shutting down, not re-polling task: {}.", taskId);
+                            log.warn("[{}] is shutting down, not re-polling task: {}.", roleName(), taskId);
                         }
                     }
                 }
@@ -488,12 +488,12 @@ public class BailianPollingTaskRunner {
 
         @Override
         public void onStart() {
-            log.info("[BailianPollingTaskRunner] started", roleName());
+            log.info("[{}] started", roleName());
         }
 
         @Override
         public void onClose() {
-            log.info("[BailianPollingTaskRunner] closed", roleName());
+            log.info("[{}] closed", roleName());
         }
     }
 }
