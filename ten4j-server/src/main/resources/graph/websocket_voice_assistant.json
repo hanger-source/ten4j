@@ -61,7 +61,7 @@
       },{
         "type": "extension",
         "name": "get_current_datetime",
-        "addon": "source.hanger.core.extension.internal.datetime.GetCurrentDateTimeExtension",
+        "addon": "source.hanger.core.extension.internal.tool.datetime.GetCurrentDateTimeExtension",
         "extension_group": "default",
         "property": {
         }
