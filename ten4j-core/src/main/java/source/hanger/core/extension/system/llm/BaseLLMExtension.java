@@ -225,7 +225,7 @@ public abstract class BaseLLMExtension extends BaseFlushExtension<GenerationResu
                 String functionName = accumulator.getInitialToolCall().getFunction().getName();
                 String finalArguments = accumulator.getAccumulatedArguments().toString();
 
-                log.debug("[{}] 准备处理已完成的工具调用: toolCallId={}, functionName={}, finalArguments={}",
+                log.info("[{}] 准备处理已完成的工具调用: toolCallId={}, functionName={}, finalArguments={}",
                     env.getExtensionName(), toolCallId, functionName, finalArguments); // LOG_DEBUG
 
                 // 工具调用完成，处理并移除累加器
