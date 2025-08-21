@@ -1,4 +1,4 @@
-package source.hanger.core.extension.component.impl;
+package source.hanger.core.extension.component.stream;
 
 import io.reactivex.Flowable;
 import io.reactivex.disposables.Disposable;
@@ -8,8 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.common.PipelinePacket;
 import source.hanger.core.extension.component.flush.InterruptionStateProvider;
-import source.hanger.core.extension.component.stream.StreamOutputBlockConsumer;
-import source.hanger.core.extension.component.stream.StreamPipelineChannel;
 import source.hanger.core.tenenv.TenEnv;
 
 /**

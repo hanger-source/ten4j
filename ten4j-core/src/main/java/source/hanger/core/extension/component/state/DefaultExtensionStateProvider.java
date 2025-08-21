@@ -1,9 +1,8 @@
-package source.hanger.core.extension.component.impl;
+package source.hanger.core.extension.component.state;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.extension.component.state.ExtensionStateProvider;
 
 /**
  * Extension 状态提供者的默认实现类。

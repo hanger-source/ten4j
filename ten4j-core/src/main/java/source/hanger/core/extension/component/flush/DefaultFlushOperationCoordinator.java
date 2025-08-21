@@ -1,10 +1,8 @@
-package source.hanger.core.extension.component.impl;
+package source.hanger.core.extension.component.flush;
 
 import java.util.function.Consumer;
 
 import source.hanger.core.extension.component.common.OutputBlock;
-import source.hanger.core.extension.component.flush.FlushOperationCoordinator;
-import source.hanger.core.extension.component.flush.InterruptionStateProvider;
 import source.hanger.core.extension.component.stream.StreamPipelineChannel;
 import source.hanger.core.tenenv.TenEnv;
 

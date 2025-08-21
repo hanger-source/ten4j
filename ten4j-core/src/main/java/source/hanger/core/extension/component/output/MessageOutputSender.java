@@ -5,8 +5,10 @@ import org.slf4j.LoggerFactory;
 import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.component.asr.ASRTranscriptionOutputBlock;
 import source.hanger.core.extension.component.stream.StreamOutputBlockConsumer;
+import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.DataMessage;
 import source.hanger.core.message.Message;
+import source.hanger.core.message.MessageType;
 import source.hanger.core.tenenv.TenEnv;
 
 import java.util.Collections;
@@ -65,6 +67,28 @@ public abstract class MessageOutputSender {
             log.info("[{}] Sent ASR transcription: {}", env.getExtensionName(), block.getText());
         } catch (Exception e) {
             log.error("[{}] 发送ASR文本输出异常: {}", env.getExtensionName(), e.getMessage(), e);
+        }
+    }
+
+    public static void sendAudioOutput(TenEnv env, Message originalMessage, byte[] audioData,
+        int sampleRate, int bytesPerSample,
+        int numberOfChannels) {
+        try {
+            AudioFrameMessage audioFrame = AudioFrameMessage.create("pcm_frame");
+            audioFrame.setId(originalMessage.getId()); // 使用原始消息的ID
+            audioFrame.setSampleRate(sampleRate);
+            audioFrame.setBytesPerSample(bytesPerSample);
+            audioFrame.setNumberOfChannel(numberOfChannels);
+            audioFrame.setSamplesPerChannel(audioData.length / (bytesPerSample * numberOfChannels));
+            audioFrame.setBuf(audioData);
+            audioFrame.setType(MessageType.AUDIO_FRAME);
+            // 取llm留下来的group_timestamp 也就是llm一组回复
+            audioFrame.setProperty("audio_text", originalMessage.getProperty("text"));
+            audioFrame.setProperty("group_timestamp", originalMessage.getProperty("group_timestamp"));
+            env.sendMessage(audioFrame);
+            log.debug("[{}] 发送音频帧成功: size={}", env.getExtensionName(), audioData.length);
+        } catch (Exception e) {
+            log.error("[{}] 发送音频帧异常: ", env.getExtensionName(), e);
         }
     }
 }

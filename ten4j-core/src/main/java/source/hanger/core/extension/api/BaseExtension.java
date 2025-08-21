@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.Extension;
-import source.hanger.core.extension.component.impl.DefaultExtensionStateProvider;
+import source.hanger.core.extension.component.state.DefaultExtensionStateProvider;
 import source.hanger.core.extension.component.state.ExtensionStateProvider;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
@@ -128,56 +128,6 @@ public abstract class BaseExtension implements Extension {
                 env.getExtensionName(),
                 videoFrame.getId(), videoFrame.getType(), inboundMessageCounter.get());
         errorCounter.incrementAndGet(); // Increment error count for unhandled video frames
-    }
-
-    protected void setPropertyInternal(Map<String, Object> currentMap, String path, Object value) {
-        String[] parts = path.split("\\.", 2);
-        String currentKey = parts[0];
-        if (parts.length == 1) {
-            currentMap.put(currentKey, value);
-        } else {
-            currentMap.computeIfAbsent(currentKey, k -> new ConcurrentHashMap<>());
-            if (currentMap.get(currentKey) instanceof Map) {
-                setPropertyInternal((Map<String, Object>) currentMap.get(currentKey), parts[1], value);
-            } else {
-                // 如果中间节点不是Map，则抛出异常或覆盖
-                throw new IllegalArgumentException(
-                        "Cannot set property: intermediate path '%s' is not a map.".formatted(currentKey));
-            }
-        }
-    }
-
-    protected void deletePropertyInternal(Map<String, Object> currentMap, String path) {
-        String[] parts = path.split("\\.", 2);
-        String currentKey = parts[0];
-        if (!currentMap.containsKey(currentKey)) {
-            return;
-        }
-
-        if (parts.length == 1) {
-            currentMap.remove(currentKey);
-        } else {
-            Object value = currentMap.get(currentKey);
-            if (value instanceof Map) {
-                deletePropertyInternal((Map<String, Object>) value, parts[1]);
-            }
-        }
-    }
-
-    /**
-     * 递增内部错误计数。
-     */
-    protected void incrementErrorCount() {
-        errorCounter.incrementAndGet();
-    }
-
-    /**
-     * 获取当前错误计数。
-     *
-     * @return 错误计数。
-     */
-    protected long getErrorCount() {
-        return errorCounter.get();
     }
 
     @Override

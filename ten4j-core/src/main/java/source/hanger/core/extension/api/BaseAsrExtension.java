@@ -8,7 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.component.asr.ASRStreamAdapter;
 import source.hanger.core.extension.component.asr.ASRTranscriptionOutputBlock;
 import source.hanger.core.extension.component.common.OutputBlock;
-import source.hanger.core.extension.component.impl.DefaultStreamPipelineChannel;
+import source.hanger.core.extension.component.stream.DefaultStreamPipelineChannel;
 import source.hanger.core.extension.component.stream.StreamOutputBlockConsumer;
 import source.hanger.core.extension.component.stream.StreamPipelineChannel;
 import source.hanger.core.message.AudioFrameMessage;

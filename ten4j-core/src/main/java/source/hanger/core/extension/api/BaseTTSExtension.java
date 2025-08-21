@@ -2,6 +2,7 @@ package source.hanger.core.extension.api;
 
 import io.reactivex.Flowable;
 import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.extension.component.output.MessageOutputSender;
 import source.hanger.core.extension.system.BaseFlushExtension;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
@@ -81,7 +82,7 @@ public abstract class BaseTTSExtension extends BaseFlushExtension<byte[]> {
     @Override
     protected void handleStreamItem(byte[] audioData, Message originalMessage, TenEnv env) {
         // 默认示例实现，具体发送音频帧
-        sendAudioOutput(env, originalMessage, audioData, 24000, 2, 1);
+        MessageOutputSender.sendAudioOutput(env, originalMessage, audioData, 24000, 2, 1);
     }
 
     /**
@@ -103,29 +104,6 @@ public abstract class BaseTTSExtension extends BaseFlushExtension<byte[]> {
     @Override
     public void onCmd(TenEnv env, Command command) {
         super.onCmd(env, command);
-    }
-
-    // 发送音频帧
-    protected void sendAudioOutput(TenEnv env, Message originalMessage, byte[] audioData,
-        int sampleRate, int bytesPerSample,
-        int numberOfChannels) {
-        try {
-            AudioFrameMessage audioFrame = AudioFrameMessage.create("pcm_frame");
-            audioFrame.setId(originalMessage.getId()); // 使用原始消息的ID
-            audioFrame.setSampleRate(sampleRate);
-            audioFrame.setBytesPerSample(bytesPerSample);
-            audioFrame.setNumberOfChannel(numberOfChannels);
-            audioFrame.setSamplesPerChannel(audioData.length / (bytesPerSample * numberOfChannels));
-            audioFrame.setBuf(audioData);
-            audioFrame.setType(MessageType.AUDIO_FRAME);
-            // 取llm留下来的group_timestamp 也就是llm一组回复
-            audioFrame.setProperty("audio_text", originalMessage.getProperty("text"));
-            audioFrame.setProperty("group_timestamp", originalMessage.getProperty("group_timestamp"));
-            env.sendMessage(audioFrame);
-            log.debug("[{}] 发送音频帧成功: size={}", env.getExtensionName(), audioData.length);
-        } catch (Exception e) {
-            log.error("[{}] 发送音频帧异常: ", env.getExtensionName(), e);
-        }
     }
 
     // 发送错误结果
