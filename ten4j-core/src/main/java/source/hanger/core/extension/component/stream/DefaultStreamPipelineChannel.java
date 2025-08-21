@@ -52,8 +52,10 @@ public class DefaultStreamPipelineChannel implements StreamPipelineChannel<Outpu
         // 建立主订阅，实际处理逻辑在这里
         disposable = streamProcessor
             .onBackpressureBuffer() // 防止上游发射过快
+            .subscribeOn(Schedulers.io())
+            .takeWhile(_ -> !interruptionStateProvider.isInterrupted())
             .concatMap(flowablePayload -> flowablePayload // 使用 concatMap 保证内部流的顺序执行
-                .filter(packet -> !interruptionStateProvider.isInterrupted()) // 在内部流层面进行中断检查
+                .takeWhile(_ -> !interruptionStateProvider.isInterrupted())
             )
             .subscribe(
                 packet -> env.postTask(() -> {
