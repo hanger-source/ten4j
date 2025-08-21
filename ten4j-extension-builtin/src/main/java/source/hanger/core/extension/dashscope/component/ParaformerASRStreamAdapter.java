@@ -1,4 +1,4 @@
-package source.hanger.core.extension.dashscope.client.asr;
+package source.hanger.core.extension.dashscope.component;
 
 import java.nio.ByteBuffer;
 
@@ -15,6 +15,7 @@ import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.common.PipelinePacket;
 import source.hanger.core.extension.component.state.ExtensionStateProvider;
 import source.hanger.core.extension.component.stream.StreamPipelineChannel;
+import source.hanger.core.extension.dashscope.test.AudioFileWriter;
 import source.hanger.core.tenenv.TenEnv;
 
 @Slf4j

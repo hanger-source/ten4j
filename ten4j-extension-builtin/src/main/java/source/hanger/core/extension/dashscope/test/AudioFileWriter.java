@@ -1,4 +1,4 @@
-package source.hanger.core.extension.dashscope.client.asr;
+package source.hanger.core.extension.dashscope.test;
 
 import java.io.BufferedOutputStream;
 import java.io.File;

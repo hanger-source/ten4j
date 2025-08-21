@@ -44,7 +44,7 @@
       {
         "type": "extension",
         "name": "asr",
-        "addon": "source.hanger.core.extension.dashscope.client.asr.ParaformerASRExtension",
+        "addon": "source.hanger.core.extension.dashscope.extension.ParaformerASRExtension",
         "extension_group": "asr_group",
         "property": {
           "api_key": "{{env:bailian.dashscope.api.key}}",
