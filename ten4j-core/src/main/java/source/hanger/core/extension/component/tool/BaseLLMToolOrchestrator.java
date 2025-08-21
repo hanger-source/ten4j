@@ -7,8 +7,8 @@ import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.extension.api.tool.LLMTool;
-import source.hanger.core.extension.api.tool.LLMToolResult;
+import source.hanger.core.extension.base.tool.LLMTool;
+import source.hanger.core.extension.base.tool.LLMToolResult;
 import source.hanger.core.extension.component.context.LLMContextManager;
 import source.hanger.core.extension.component.llm.LLMStreamAdapter;
 import source.hanger.core.extension.component.llm.ToolCallOutputBlock;

@@ -5,9 +5,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.Map;
 
-import source.hanger.core.extension.api.tool.LLMTool;
-import source.hanger.core.extension.api.tool.LLMToolResult;
-import source.hanger.core.extension.api.tool.ToolMetadata;
+import source.hanger.core.extension.base.tool.LLMTool;
+import source.hanger.core.extension.base.tool.LLMToolResult;
+import source.hanger.core.extension.base.tool.ToolMetadata;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
 

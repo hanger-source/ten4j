@@ -8,8 +8,8 @@ import com.alibaba.dashscope.common.Message;
 import com.alibaba.dashscope.tools.ToolFunction;
 
 import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.extension.api.BaseLLMExtension;
-import source.hanger.core.extension.api.tool.LLMTool;
+import source.hanger.core.extension.base.BaseLLMExtension;
+import source.hanger.core.extension.base.tool.LLMTool;
 import source.hanger.core.extension.component.context.LLMContextManager;
 import source.hanger.core.extension.component.llm.LLMStreamAdapter;
 import source.hanger.core.extension.component.tool.LLMToolOrchestrator;

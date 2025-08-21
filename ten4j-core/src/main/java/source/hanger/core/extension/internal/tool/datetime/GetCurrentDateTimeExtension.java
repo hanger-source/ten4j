@@ -1,6 +1,6 @@
 package source.hanger.core.extension.internal.tool.datetime;
 
-import source.hanger.core.extension.api.BaseExtension;
+import source.hanger.core.extension.base.BaseExtension;
 
 public class GetCurrentDateTimeExtension extends BaseExtension {
 

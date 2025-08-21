@@ -3,7 +3,7 @@ package source.hanger.core.extension.dashscope.extension;
 import java.util.Map;
 
 import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.extension.api.BaseTTSExtension;
+import source.hanger.core.extension.base.BaseTTSExtension;
 import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.stream.StreamPipelineChannel;
 import source.hanger.core.extension.component.tts.TTSStreamAdapter;

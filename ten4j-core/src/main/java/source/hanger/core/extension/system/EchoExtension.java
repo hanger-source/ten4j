@@ -4,7 +4,7 @@ import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.extension.api.BaseExtension;
+import source.hanger.core.extension.base.BaseExtension;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;

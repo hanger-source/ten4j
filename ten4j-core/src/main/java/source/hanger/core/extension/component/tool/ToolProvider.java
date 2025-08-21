@@ -2,7 +2,7 @@ package source.hanger.core.extension.component.tool;
 
 import java.util.List;
 
-import source.hanger.core.extension.api.tool.LLMTool;
+import source.hanger.core.extension.base.tool.LLMTool;
 import source.hanger.core.tenenv.TenEnv;
 
 /**

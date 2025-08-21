@@ -1,7 +1,7 @@
 package source.hanger.core.extension.dashscope.client.image;
 
 import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.extension.api.BaseExtension;
+import source.hanger.core.extension.base.BaseExtension;
 
 /// **
 // * ImageSynthesisExtension 是一个 LLM 工具扩展，用于注册图片合成工具。

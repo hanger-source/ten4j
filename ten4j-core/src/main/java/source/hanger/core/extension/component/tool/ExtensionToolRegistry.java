@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.extension.api.tool.LLMTool;
+import source.hanger.core.extension.base.tool.LLMTool;
 
 /**
  * 扩展工具注册中心。

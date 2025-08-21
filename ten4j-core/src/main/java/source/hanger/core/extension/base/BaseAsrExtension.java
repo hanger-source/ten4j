@@ -1,7 +1,6 @@
-package source.hanger.core.extension.api;
+package source.hanger.core.extension.base;
 
 import java.nio.ByteBuffer;
-import java.util.HashMap;
 import java.util.Map;
 
 import io.reactivex.disposables.CompositeDisposable;

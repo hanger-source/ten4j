@@ -10,9 +10,9 @@ import com.alibaba.dashscope.exception.ApiException;
 import com.alibaba.dashscope.exception.NoApiKeyException;
 
 import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.extension.api.tool.LLMTool;
-import source.hanger.core.extension.api.tool.LLMToolResult;
-import source.hanger.core.extension.api.tool.ToolMetadata;
+import source.hanger.core.extension.base.tool.LLMTool;
+import source.hanger.core.extension.base.tool.LLMToolResult;
+import source.hanger.core.extension.base.tool.ToolMetadata;
 import source.hanger.core.extension.dashscope.client.task.BailianPollingTask;
 import source.hanger.core.extension.dashscope.client.task.BailianPollingTaskRunner;
 import source.hanger.core.message.DataMessage;

@@ -1,4 +1,4 @@
-package source.hanger.core.extension.api;
+package source.hanger.core.extension.base;
 
 import java.util.List;
 import java.util.Map;
@@ -6,7 +6,7 @@ import java.util.function.Supplier;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.extension.api.tool.LLMTool;
+import source.hanger.core.extension.base.tool.LLMTool;
 import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.context.LLMContextManager;
 import source.hanger.core.extension.component.flush.FlushOperationCoordinator;

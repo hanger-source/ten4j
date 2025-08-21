@@ -9,7 +9,7 @@ import io.reactivex.processors.PublishProcessor;
 import io.reactivex.schedulers.Schedulers;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.common.ExtensionConstants;
-import source.hanger.core.extension.api.BaseExtension;
+import source.hanger.core.extension.base.BaseExtension;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.Message;
 import source.hanger.core.message.MessageType;
