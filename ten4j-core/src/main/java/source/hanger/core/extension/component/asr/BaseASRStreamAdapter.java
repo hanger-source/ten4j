@@ -64,6 +64,9 @@ public abstract class BaseASRStreamAdapter<RECOGNITION_RESULT> implements ASRStr
             .takeWhile(_ -> !extensionStateProvider.isInterrupted())
             // 引入 retryWhen 实现指数退避和重试限制
             .retryWhen(throwableFlowable -> throwableFlowable.flatMap(e -> {
+                if (e.getMessage().contains("timeout")) {
+                    return Flowable.error(e);
+                }
                 int count = retryCount.incrementAndGet();
                 if (count > MAX_RETRY_ATTEMPTS) {
                     // 超过最大重试次数，终止重连
@@ -80,7 +83,14 @@ public abstract class BaseASRStreamAdapter<RECOGNITION_RESULT> implements ASRStr
                 return Flowable.timer(delay, MILLISECONDS, Schedulers.io());
             }))
             .doOnError(e -> {
-                log.error("[{}] ASR Stream final error after all retries: {}", env.getExtensionName(), e.getMessage(), e);
+                if (e.getMessage().contains("timeout")) {
+                    env.postTask(() -> {
+                        log.info("[{}] ASR Stream timeout, reconnecting...", env.getExtensionName());
+                        onReconnect(env);
+                    });;
+                } else {
+                    log.error("[{}] ASR Stream final error after all retries: {}", env.getExtensionName(), e.getMessage(), e);
+                }
                 // 最终失败后，可以根据业务需求做一些收尾工作，比如通知上层服务
             })
             .doOnSubscribe(subscription -> {
