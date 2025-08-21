@@ -4,6 +4,7 @@ import io.reactivex.Flowable;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.processors.FlowableProcessor;
 import io.reactivex.processors.PublishProcessor;
+import io.reactivex.schedulers.Schedulers;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.common.PipelinePacket;
@@ -19,7 +20,7 @@ public class DefaultStreamPipelineChannel implements StreamPipelineChannel<Outpu
 
     private final InterruptionStateProvider interruptionStateProvider;
     private final StreamOutputBlockConsumer<OutputBlock> streamOutputBlockConsumer; // 类型改为新的 StreamItemHandler 接口
-    private FlowableProcessor<PipelinePacket<OutputBlock>> streamProcessor;
+    private FlowableProcessor<Flowable<PipelinePacket<OutputBlock>>> streamProcessor;
     private Disposable disposable;
 
     /**
@@ -47,15 +48,18 @@ public class DefaultStreamPipelineChannel implements StreamPipelineChannel<Outpu
     @Override
     public void recreatePipeline(TenEnv env) {
         disposeCurrent(); // 先清理旧的订阅
-        // streamProcessor 处理的是 PipelinePacket<LLMOutputBlock>
-        streamProcessor = PublishProcessor.<PipelinePacket<OutputBlock>>create().toSerialized();
+        streamProcessor = PublishProcessor.<Flowable<PipelinePacket<OutputBlock>>>create().toSerialized();
         // 建立主订阅，实际处理逻辑在这里
         disposable = streamProcessor
-            .filter(packet -> !interruptionStateProvider.isInterrupted())
+            .onBackpressureBuffer() // 防止上游发射过快
+            .concatMap(flowablePayload -> flowablePayload // 使用 concatMap 保证内部流的顺序执行
+                .filter(packet -> !interruptionStateProvider.isInterrupted()) // 在内部流层面进行中断检查
+            )
             .subscribe(
-                packet -> streamOutputBlockConsumer.consumeOutputBlock(packet.item(), packet.originalMessage(), env),
-                // 动态传递 TenEnv
-                error -> log.error("[{}] StreamPipelineManager: 主管道处理错误", env.getExtensionName()),
+                packet -> env.postTask(() -> {
+                    streamOutputBlockConsumer.consumeOutputBlock(packet.item(), packet.originalMessage(), env);
+                }),
+                error -> log.error("[{}] StreamPipelineManager: 主管道处理错误", env.getExtensionName(), error),
                 () -> log.info("[{}] StreamPipelineManager: 主管道处理完成", env.getExtensionName())
             );
     }
@@ -75,8 +79,8 @@ public class DefaultStreamPipelineChannel implements StreamPipelineChannel<Outpu
         // 检查 streamProcessor 是否已初始化，Disposable 未 disposed 且未中断
         if (streamProcessor != null && disposable != null && !disposable.isDisposed()
             && !interruptionStateProvider.isInterrupted()) {
-            // flowable 已包含 PipelinePacket，直接订阅
-            flowable.subscribe(streamProcessor);
+            // 直接将整个 flowable payload 推送到 streamProcessor，由 concatMap 保证顺序
+            streamProcessor.onNext(flowable);
         } else {
             log.error(
                 "[{}] 管道未准备好或已中断，无法提交流。如果此错误在生产环境中频繁出现，请检查组件生命周期和 flush 逻辑。",

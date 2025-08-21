@@ -1,118 +1,142 @@
 package source.hanger.core.extension.api;
 
-import io.reactivex.Flowable;
+import java.util.Map;
+import java.util.function.Consumer;
+
+import io.reactivex.disposables.CompositeDisposable;
 import lombok.extern.slf4j.Slf4j;
+import net.fellbaum.jemoji.EmojiManager;
+import source.hanger.core.extension.component.common.OutputBlock;
+import source.hanger.core.extension.component.flush.DefaultFlushOperationCoordinator;
+import source.hanger.core.extension.component.flush.FlushOperationCoordinator;
 import source.hanger.core.extension.component.output.MessageOutputSender;
-import source.hanger.core.extension.system.BaseFlushExtension;
-import source.hanger.core.message.AudioFrameMessage;
-import source.hanger.core.message.CommandResult;
+import source.hanger.core.extension.component.state.ExtensionStateProvider;
+import source.hanger.core.extension.component.stream.DefaultStreamPipelineChannel;
+import source.hanger.core.extension.component.stream.StreamOutputBlockConsumer;
+import source.hanger.core.extension.component.stream.StreamPipelineChannel;
+import source.hanger.core.extension.component.tts.TTSAudioOutputBlock;
+import source.hanger.core.extension.component.tts.TTSStreamAdapter;
 import source.hanger.core.message.DataMessage;
-import source.hanger.core.message.Message;
 import source.hanger.core.message.MessageType;
+import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.command.Command;
+import source.hanger.core.message.command.GenericCommand;
 import source.hanger.core.tenenv.TenEnv;
 import source.hanger.core.util.MessageUtils;
 
-/**
- * TTS基础抽象类
- * 基于ten-framework AI_BASE的tts.py设计
- *
- * 核心特性：
- * 1. 异步处理队列机制 (通过 UnicastProcessor 串联所有音频流)
- * 2. 音频数据流式输出
- * 3. 输入数据处理与取消支持
- */
-@Slf4j
-public abstract class BaseTTSExtension extends BaseFlushExtension<byte[]> {
+import static source.hanger.core.common.ExtensionConstants.CMD_IN_FLUSH;
+import static source.hanger.core.common.ExtensionConstants.CMD_OUT_FLUSH;
+import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_TEXT;
 
-    public BaseTTSExtension() {
-        super();
+@Slf4j
+public abstract class BaseTTSExtension extends BaseExtension {
+
+    private final CompositeDisposable disposables = new CompositeDisposable();
+    protected FlushOperationCoordinator flushOperationCoordinator;
+    protected StreamPipelineChannel<OutputBlock> streamPipelineChannel;
+    protected TTSStreamAdapter ttsStreamAdapter;
+
+    @Override
+    protected void onExtensionConfigure(TenEnv env, Map<String, Object> properties) {
+        this.streamPipelineChannel = createStreamPipelineChannel(createOutputBlockConsumer());
+        log.info("[{}] 配置中，初始化 StreamPipelineChannel。", env.getExtensionName());
+        this.ttsStreamAdapter = createTTSStreamAdapter(streamPipelineChannel);
+        log.info("[{}] 配置中，初始化 TTSStreamAdapter。", env.getExtensionName());
+        // 6. 初始化 FlushOperationCoordinator (由子类提供具体实现，或使用通用实现)
+        this.flushOperationCoordinator = createFlushOperationCoordinator(extensionStateProvider,
+            streamPipelineChannel, (currentEnv) -> {
+                // LLMStreamAdapter 的 onCancelLLM 方法被调用
+                ttsStreamAdapter.onCancelTTS(currentEnv);
+            });
     }
 
-    /**
-     * 启动时调用
-     */
+    private FlushOperationCoordinator createFlushOperationCoordinator(ExtensionStateProvider extensionStateProvider,
+        StreamPipelineChannel<OutputBlock> streamPipelineChannel, Consumer<TenEnv> onCancelFlushCallback) {
+        return new DefaultFlushOperationCoordinator(extensionStateProvider, streamPipelineChannel, onCancelFlushCallback);
+    }
+
     @Override
     public void onStart(TenEnv env) {
         super.onStart(env);
+        log.info("[{}] BaseTTSExtension 启动，初始化管道。", env.getExtensionName());
+        streamPipelineChannel.initPipeline(env);
     }
 
-    /**
-     * 停止时调用，取消所有流
-     */
-    @Override
-    public void onStop(TenEnv env) {
-        super.onStop(env);
-    }
-
-    /**
-     * 清理时调用
-     */
     @Override
     public void onDeinit(TenEnv env) {
-        super.onDeinit(env);
+        log.info("[{}] TTS扩展清理，停止连接.", env.getExtensionName());
+        streamPipelineChannel.disposeCurrent();
+        disposables.clear();
     }
-
-    /**
-     * 新数据消息到来，调用抽象的 onRequestTTS 生成音频流，推送到 processor
-     */
-    @Override
-    public void onDataMessage(TenEnv env, DataMessage data) {
-        if (!isRunning()) {
-            log.warn("[{}] TTS扩展未运行，忽略数据: dataId={}", env.getExtensionName(), data.getId());
-            return;
-        }
-
-        if (interrupted.get()) {
-            log.warn("[{}] 当前扩展未运行或已中断，丢弃消息", env.getExtensionName());
-            return;
-        }
-
-        Flowable<byte[]> audioFlow = onRequestTTS(env, data);
-        if (audioFlow != null) {
-            log.debug("[{}] 推送新音频流到streamProcessor, dataId={}", env.getExtensionName(),
-                data.getId());
-            streamProcessor.onNext(new StreamPayload<>(audioFlow, data));
-        }
-    }
-
-    /**
-     * 发送音频数据块，子类可重写实现具体发送逻辑
-     */
-    @Override
-    protected void handleStreamItem(byte[] audioData, Message originalMessage, TenEnv env) {
-        // 默认示例实现，具体发送音频帧
-        MessageOutputSender.sendAudioOutput(env, originalMessage, audioData, 24000, 2, 1);
-    }
-
-    /**
-     * 抽象方法：处理TTS请求，返回音频数据流
-     * 子类必须实现
-     */
-    protected abstract Flowable<byte[]> onRequestTTS(TenEnv env, DataMessage data);
-
-    /**
-     * 取消TTS，子类覆盖实现清理逻辑
-     */
-    @Override
-    protected void onCancelFlush(TenEnv env) {
-        onCancelTTS(env);
-    }
-
-    protected abstract void onCancelTTS(TenEnv env);
 
     @Override
     public void onCmd(TenEnv env, Command command) {
-        super.onCmd(env, command);
+        if (!isRunning()) {
+            log.warn("[{}] Extension未运行，忽略 Command。", env.getExtensionName());
+            return;
+        }
+        // 处理 CMD_FLUSH 命令
+        if (CMD_IN_FLUSH.equals(command.getName())) {
+            log.info("[{}] 收到 CMD_FLUSH 命令，执行刷新操作并重置历史。", env.getExtensionName());
+            flushOperationCoordinator.triggerFlush(env);
+            env.sendCmd(GenericCommand.create(CMD_OUT_FLUSH, command.getId(), command.getType()));
+            return;
+        }
     }
 
-    // 发送错误结果
     @Override
-    protected void sendErrorResult(TenEnv env, String messageId, MessageType messageType, String messageName,
+    public void onDataMessage(TenEnv env, DataMessage dataMessage) {
+        if (!isRunning()) {
+            log.warn("[{}] TTS Extension未运行，忽略语音转录", env.getExtensionName());
+            return;
+        }
+        String inputText = dataMessage.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse("");
+        // 使用 EmojiManager 过滤掉 inputText 中的 emoji
+        String filteredInputText = EmojiManager.removeAllEmojis(inputText)
+            // 移除换行符和空格
+            .replace("\n", "").strip();
+
+        if (filteredInputText.isEmpty()) {
+            log.warn("[qwen_tts] Received empty text for TTS, ignoring.");
+            return;
+        }
+
+        log.info("[qwen_tts] Received TTS request for text: \"{}\"", filteredInputText);
+        // 使用 QwenTtsClient 进行流式 TTS 调用
+        ttsStreamAdapter.onRequestSpeechTranscription(env, filteredInputText, dataMessage);
+    }
+
+    protected void sendTtsError(TenEnv env, String messageId, MessageType messageType, String messageName,
         String errorMessage) {
         String finalMessageId = (messageId != null && !messageId.isEmpty()) ? messageId
             : MessageUtils.generateUniqueId();
         CommandResult errorResult = CommandResult.fail(finalMessageId, messageType, messageName, errorMessage);
         env.sendResult(errorResult);
+        log.error("[{}] TTS Error [{}]: {}", env.getExtensionName(), messageName, errorMessage);
+    }
+
+    protected StreamPipelineChannel<OutputBlock> createStreamPipelineChannel(
+        StreamOutputBlockConsumer<OutputBlock> streamOutputBlockConsumer) {
+        return new DefaultStreamPipelineChannel(extensionStateProvider, streamOutputBlockConsumer);
+    }
+
+    protected abstract TTSStreamAdapter createTTSStreamAdapter(
+        StreamPipelineChannel<OutputBlock> streamPipelineChannel);
+
+    protected StreamOutputBlockConsumer<OutputBlock> createOutputBlockConsumer() {
+        return (item, originalMessage, env) -> {
+            if (item instanceof TTSAudioOutputBlock ttsAudioBlock) {
+                // TTS 音频块
+                log.info("[{}] TTSStream输出 (Audio): dataSize={}, sampleRate={}, channels={}, sampleBytes={}",
+                    env.getExtensionName(), ttsAudioBlock.getData().length,
+                    ttsAudioBlock.getSampleRate(), ttsAudioBlock.getChannels(), ttsAudioBlock.getSampleBytes());
+
+                MessageOutputSender.sendAudioOutput(env, originalMessage, ttsAudioBlock.getData(),
+                    ttsAudioBlock.getSampleRate(), ttsAudioBlock.getChannels(), ttsAudioBlock.getSampleBytes());
+            } else {
+                // 处理其他类型的 OutputBlock，如果需要
+                log.warn("[{}] 收到未知类型的 OutputBlock: {}", env.getExtensionName(), item.getClass().getName());
+            }
+        };
     }
 }

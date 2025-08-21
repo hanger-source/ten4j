@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import io.reactivex.Flowable;
+import io.reactivex.schedulers.Schedulers;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.common.PipelinePacket;
@@ -44,7 +45,7 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RESULT, MESSAGE, TOOL_FUNC
     }
 
     @Override
-    public void requestLLMAndProcessStream(TenEnv env, List<MESSAGE> messages, List<TOOL_FUNCTION> tools,
+    public void onRequestLLMAndProcessStream(TenEnv env, List<MESSAGE> messages, List<TOOL_FUNCTION> tools,
         Message originalMessage) {
         log.info("[{}] 开始请求LLM并处理流. 原始消息ID: {}", env.getExtensionName(),
             originalMessage.getId());

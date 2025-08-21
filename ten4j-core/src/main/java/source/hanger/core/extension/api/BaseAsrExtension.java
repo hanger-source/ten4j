@@ -1,5 +1,6 @@
 package source.hanger.core.extension.api;
 
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -60,7 +61,7 @@ public abstract class BaseAsrExtension extends BaseExtension {
                 env.getExtensionName(), audioFrame.getId());
             return;
         }
-        asrStreamAdapter.onAudioFrame(env, audioFrame); // 将音频帧转发给 ASRStreamAdapter
+        asrStreamAdapter.onRequestAudioInput(env, ByteBuffer.wrap(audioFrame.getBuf()));
     }
 
     protected void sendAsrError(TenEnv env, String messageId, MessageType messageType, String messageName,
@@ -91,7 +92,6 @@ public abstract class BaseAsrExtension extends BaseExtension {
             if (item instanceof ASRTranscriptionOutputBlock asrTextBlock) {
                 // ASR 文本块
                 log.info("[{}] ASRStream输出 (Text): {}", env.getExtensionName(), asrTextBlock.getText());
-                Map<String, Object> properties = new HashMap<>();
                 sendAsrTranscriptionOutput(env, asrTextBlock);
             }
         };

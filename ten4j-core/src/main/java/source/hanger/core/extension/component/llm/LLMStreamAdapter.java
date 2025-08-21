@@ -23,7 +23,7 @@ public interface LLMStreamAdapter<MESSAGE_TYPE, TOOL_FUNCTION_TYPE> {
      * @param tools           提供给 LLM 的工具列表（如果支持工具调用）。
      * @param originalMessage 触发此 LLM 请求的原始消息。
      */
-    void requestLLMAndProcessStream(TenEnv env, List<MESSAGE_TYPE> messages, List<TOOL_FUNCTION_TYPE> tools,
+    void onRequestLLMAndProcessStream(TenEnv env, List<MESSAGE_TYPE> messages, List<TOOL_FUNCTION_TYPE> tools,
         Message originalMessage);
 
     /**

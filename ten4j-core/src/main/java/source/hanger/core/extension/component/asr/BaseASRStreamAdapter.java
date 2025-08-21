@@ -1,11 +1,8 @@
 package source.hanger.core.extension.component.asr;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import com.alibaba.dashscope.audio.asr.recognition.RecognitionResult;
 
 import io.reactivex.Flowable;
 import io.reactivex.disposables.CompositeDisposable;
@@ -99,13 +96,14 @@ public abstract class BaseASRStreamAdapter<RECOGNITION_RESULT> implements ASRStr
         // 由于 retryWhen 已经包含了重连逻辑，我们不再需要在 doOnError/doOnComplete 中手动调用 onReconnect
         streamPipelineChannel.submitStreamPayload(flowable, env);
     }
+
     @Override
-    public void onAudioFrame(TenEnv env, AudioFrameMessage audioFrame) {
-        log.debug("[{}] Received audio frame with buffer size: {}", env.getExtensionName(), audioFrame.getBuf().length);
+    public void onRequestAudioInput(TenEnv env, ByteBuffer rawAudioInput) {
+        log.debug("[{}] Received audio frame with buffer size: {}", env.getExtensionName(), rawAudioInput.remaining());
         if (audioInputStreamProcessor != null
             && !audioInputStreamProcessor.hasComplete()
             && !audioInputStreamProcessor.hasThrowable()) {
-            audioInputStreamProcessor.onNext(ByteBuffer.wrap(audioFrame.getBuf()));
+            audioInputStreamProcessor.onNext(rawAudioInput);
         } else {
             log.warn("[{}] Audio input processor is not active, cannot send audio frame. ASR Stream not started or already stopped?", env.getExtensionName());
         }

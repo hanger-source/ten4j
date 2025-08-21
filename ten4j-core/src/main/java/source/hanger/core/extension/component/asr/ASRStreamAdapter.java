@@ -1,6 +1,7 @@
 package source.hanger.core.extension.component.asr;
 
-import source.hanger.core.message.AudioFrameMessage;
+import java.nio.ByteBuffer;
+
 import source.hanger.core.tenenv.TenEnv;
 
 /**
@@ -20,9 +21,9 @@ public interface ASRStreamAdapter {
      * 处理接收到的音频帧。
      *
      * @param env        当前的 TenEnv 环境。
-     * @param audioFrame 接收到的音频帧消息。
+     * @param audioInput audioInput
      */
-    void onAudioFrame(TenEnv env, AudioFrameMessage audioFrame);
+    void onRequestAudioInput(TenEnv env, ByteBuffer audioInput);
     /**
      * 处理 ASR 重连逻辑。
      *

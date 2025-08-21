@@ -151,7 +151,7 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
             List<MESSAGE> messagesForLlm = llmContextManager.getMessagesForLLM();
             List<TOOL_FUNCTION> registeredTools = LLMToolOrchestrator.getRegisteredToolFunctions();
             // 请求 LLM 并处理流
-            llmStreamAdapter.requestLLMAndProcessStream(env, messagesForLlm, registeredTools, dataMessage);
+            llmStreamAdapter.onRequestLLMAndProcessStream(env, messagesForLlm, registeredTools, dataMessage);
         }
     }
 

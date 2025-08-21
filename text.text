@@ -1,0 +1,490 @@
+package source.hanger.core.extension.dashscope.client.tts;
+
+import java.util.Base64;
+import java.util.Objects;
+
+import com.alibaba.dashscope.aigc.multimodalconversation.AudioParameters;
+import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversation;
+import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationParam;
+import com.alibaba.dashscope.exception.NoApiKeyException;
+import com.alibaba.dashscope.exception.UploadFileException;
+
+import io.reactivex.Flowable;
+import io.reactivex.schedulers.Schedulers;
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * Qwen TTS 客户端，负责与 DashScope TTS 服务进行交互。
+ */
+@Slf4j
+public class QwenTtsClient {
+
+    private static final String MODEL = "qwen-tts";
+    private final String apiKey;
+    private final MultiModalConversation multiModalConversation;
+
+    public QwenTtsClient(String apiKey) {
+        this.apiKey = apiKey;
+        this.multiModalConversation = new MultiModalConversation();
+    }
+
+    /**
+     * 执行流式 TTS 文本转语音。
+     *
+     * @param text      要转换的文本
+     * @param voiceName 语音名称 (例如: AudioParameters.Voice.CHERRY)
+     */
+    public Flowable<byte[]> streamTextToSpeech(String text, String voiceName) {
+        AudioParameters.Voice voice = AudioParameters.Voice.valueOf(voiceName.toUpperCase());
+
+        MultiModalConversationParam param = MultiModalConversationParam.builder()
+            .model(MODEL)
+            .apiKey(apiKey)
+            .text(text)
+            .voice(voice)
+            .build();
+
+        try {
+            return multiModalConversation.streamCall(param)
+                .subscribeOn(Schedulers.io())  // 指定上游执行线程
+                .observeOn(Schedulers.io())    // 指定下游执行线程
+                .map(r -> {
+                    if (r.getOutput() != null && r.getOutput().getAudio() != null) {
+                        return Base64.getDecoder().decode(r.getOutput().getAudio().getData());
+                    } else {
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .takeUntil(r -> {
+                    // 结束条件，检测finishReason不为null表示结束
+                    // 由于map后流的是byte[]，这里无法检测finishReason，可以改为doOnNext里检测状态，或者用flatMap做拆分
+                    // 简化示例，暂时不实现结束控制，需要上游控制
+                    return false;
+                });
+        } catch (NoApiKeyException | UploadFileException e) {
+            return Flowable.error(e);
+        }
+    }
+
+}
+
+
+
+
+package source.hanger.core.extension.dashscope.client.tts;
+
+import java.util.Map;
+
+import io.reactivex.Flowable;
+import lombok.extern.slf4j.Slf4j;
+import net.fellbaum.jemoji.EmojiManager;
+import source.hanger.core.common.ExtensionConstants;
+import source.hanger.core.extension.api.BaseTTSExtension;
+import source.hanger.core.message.CommandResult;
+import source.hanger.core.message.DataMessage;
+import source.hanger.core.message.command.Command;
+import source.hanger.core.tenenv.TenEnv;
+
+/**
+ * Qwen TTS 扩展实现。
+ * 继承 BaseTTSExtension 并实现具体的 TTS 逻辑。
+ */
+@Slf4j
+public class QwenTtsExtension extends BaseTTSExtension {
+
+    private QwenTtsClient qwenTtsClient;
+    private String voiceName; // 语音名称，例如 "CHERRY"
+
+    @Override
+    protected void onExtensionConfigure(TenEnv env, Map<String, Object> properties) {
+        log.info("[qwen_tts] Extension configuring: {}", env.getExtensionName());
+
+        String apiKey = (String)properties.get("api_key");
+        voiceName = (String)properties.get("voice_name"); // 从配置中获取语音名称
+
+        if (apiKey == null || voiceName == null || apiKey.isEmpty() || voiceName.isEmpty()) {
+            log.error("[qwen_tts] API Key or Voice Name is not set. Please configure in manifest.json/property.json.");
+        }
+
+        qwenTtsClient = new QwenTtsClient(apiKey);
+    }
+
+    @Override
+    protected Flowable<byte[]> onRequestTTS(TenEnv env, DataMessage data) {
+        String inputText = (String)data.getProperty(ExtensionConstants.DATA_OUT_PROPERTY_TEXT); // 假设文本属性名为 "text"
+        Boolean isQuiet = (Boolean)data.getProperty(ExtensionConstants.DATA_IN_PROPERTY_QUIET); // 假设 quiet 属性名为 "quiet"
+        if (isQuiet == null) {
+            isQuiet = false; // 默认不静音
+        }
+
+        // 使用 EmojiManager 过滤掉 inputText 中的 emoji
+        String filteredInputText = EmojiManager.removeAllEmojis(inputText)
+            // 移除换行符和空格
+            .replace("\n", "").strip();
+
+        if (filteredInputText.isEmpty()) {
+            log.warn("[qwen_tts] Received empty text for TTS, ignoring.");
+            return Flowable.empty();
+        }
+
+        log.info("[qwen_tts] Received TTS request for text: \"{}\"", filteredInputText);
+
+        // 使用 QwenTtsClient 进行流式 TTS 调用
+        Boolean finalIsQuiet = isQuiet;
+        // 返回一个 Flowable，用于流式处理音频数据（冷流）
+        return qwenTtsClient.streamTextToSpeech(filteredInputText, voiceName);
+    }
+
+    @Override
+    public void flushInputItems(TenEnv env, Command command) {
+        super.flushInputItems(env, command);
+        CommandResult cmdResult = CommandResult.success(command, "TTS input flushed.");
+        env.sendResult(cmdResult);
+    }
+
+    @Override
+    protected void onCancelTTS(TenEnv env) {
+        log.info("[qwen_tts] TTS request cancelled.");
+        // 在这里实现取消当前 TTS 生成的逻辑，如果 QwenTtsClient 支持取消
+        // DashScope SDK 目前没有直接的取消方法，这里主要用于标记状态和清理
+        interrupted.set(true);
+    }
+
+    @Override
+    public void onCmd(TenEnv env, Command command) {
+        String cmdName = command.getName();
+        switch (cmdName) {
+            case ExtensionConstants.CMD_IN_ON_USER_JOINED:
+                // 处理用户加入事件（如果需要）
+                CommandResult joinResult = CommandResult.success(command, "User joined.");
+                env.sendResult(joinResult);
+                break;
+            case ExtensionConstants.CMD_IN_ON_USER_LEFT:
+                // 处理用户离开事件（如果需要）
+                CommandResult leftResult = CommandResult.success(command, "User left.");
+                env.sendResult(leftResult);
+                break;
+            default:
+                // 将其他未处理的命令传递给父类
+                super.onCmd(env, command);
+                break;
+        }
+    }
+
+    @Override
+    public void onStart(TenEnv env) {
+        super.onStart(env);
+        interrupted.set(false); // 在启动时重置中断标志
+    }
+}
+
+package source.hanger.core.extension.api;
+
+import io.reactivex.Flowable;
+import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.extension.component.output.MessageOutputSender;
+import source.hanger.core.extension.system.BaseFlushExtension;
+import source.hanger.core.message.AudioFrameMessage;
+import source.hanger.core.message.CommandResult;
+import source.hanger.core.message.DataMessage;
+import source.hanger.core.message.Message;
+import source.hanger.core.message.MessageType;
+import source.hanger.core.message.command.Command;
+import source.hanger.core.tenenv.TenEnv;
+import source.hanger.core.util.MessageUtils;
+
+/**
+ * TTS基础抽象类
+ * 基于ten-framework AI_BASE的tts.py设计
+ *
+ * 核心特性：
+ * 1. 异步处理队列机制 (通过 UnicastProcessor 串联所有音频流)
+ * 2. 音频数据流式输出
+ * 3. 输入数据处理与取消支持
+ */
+@Slf4j
+public abstract class BaseTTSExtension extends BaseFlushExtension<byte[]> {
+
+    public BaseTTSExtension() {
+        super();
+    }
+
+    /**
+     * 启动时调用
+     */
+    @Override
+    public void onStart(TenEnv env) {
+        super.onStart(env);
+    }
+
+    /**
+     * 停止时调用，取消所有流
+     */
+    @Override
+    public void onStop(TenEnv env) {
+        super.onStop(env);
+    }
+
+    /**
+     * 清理时调用
+     */
+    @Override
+    public void onDeinit(TenEnv env) {
+        super.onDeinit(env);
+    }
+
+    /**
+     * 新数据消息到来，调用抽象的 onRequestTTS 生成音频流，推送到 processor
+     */
+    @Override
+    public void onDataMessage(TenEnv env, DataMessage data) {
+        if (!isRunning()) {
+            log.warn("[{}] TTS扩展未运行，忽略数据: dataId={}", env.getExtensionName(), data.getId());
+            return;
+        }
+
+        if (interrupted.get()) {
+            log.warn("[{}] 当前扩展未运行或已中断，丢弃消息", env.getExtensionName());
+            return;
+        }
+
+        Flowable<byte[]> audioFlow = onRequestTTS(env, data);
+        if (audioFlow != null) {
+            log.debug("[{}] 推送新音频流到streamProcessor, dataId={}", env.getExtensionName(),
+                data.getId());
+            streamProcessor.onNext(new StreamPayload<>(audioFlow, data));
+        }
+    }
+
+    /**
+     * 发送音频数据块，子类可重写实现具体发送逻辑
+     */
+    @Override
+    protected void handleStreamItem(byte[] audioData, Message originalMessage, TenEnv env) {
+        // 默认示例实现，具体发送音频帧
+        MessageOutputSender.sendAudioOutput(env, originalMessage, audioData, 24000, 2, 1);
+    }
+
+    /**
+     * 抽象方法：处理TTS请求，返回音频数据流
+     * 子类必须实现
+     */
+    protected abstract Flowable<byte[]> onRequestTTS(TenEnv env, DataMessage data);
+
+    /**
+     * 取消TTS，子类覆盖实现清理逻辑
+     */
+    @Override
+    protected void onCancelFlush(TenEnv env) {
+        onCancelTTS(env);
+    }
+
+    protected abstract void onCancelTTS(TenEnv env);
+
+    @Override
+    public void onCmd(TenEnv env, Command command) {
+        super.onCmd(env, command);
+    }
+
+    // 发送错误结果
+    @Override
+    protected void sendErrorResult(TenEnv env, String messageId, MessageType messageType, String messageName,
+        String errorMessage) {
+        String finalMessageId = (messageId != null && !messageId.isEmpty()) ? messageId
+            : MessageUtils.generateUniqueId();
+        CommandResult errorResult = CommandResult.fail(finalMessageId, messageType, messageName, errorMessage);
+        env.sendResult(errorResult);
+    }
+}
+
+
+
+package source.hanger.core.extension.system;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import io.reactivex.Flowable;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.processors.FlowableProcessor;
+import io.reactivex.processors.PublishProcessor;
+import io.reactivex.schedulers.Schedulers;
+import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.common.ExtensionConstants;
+import source.hanger.core.extension.BaseExtension;
+import source.hanger.core.message.CommandResult;
+import source.hanger.core.message.Message;
+import source.hanger.core.message.MessageType;
+import source.hanger.core.message.command.Command;
+import source.hanger.core.message.command.GenericCommand;
+import source.hanger.core.tenenv.TenEnv;
+import source.hanger.core.util.MessageUtils;
+
+/**
+ * 带有输入刷新（中断）功能的抽象基类
+ * 提供了流式处理和中断机制的通用实现。
+ *
+ * @param <T> 流中元素的类型
+ */
+@Slf4j
+public abstract class BaseFlushExtension<T> extends BaseExtension {
+
+    protected final AtomicBoolean interrupted = new AtomicBoolean(false);
+
+    // 统一的流发布器，所有流通过它排队并依次执行，保证顺序，toSerialized保证线程安全
+    protected FlowableProcessor<StreamPayload<T>> streamProcessor = PublishProcessor.<StreamPayload<T>>create()
+        .toSerialized();
+    // 维护所有活跃流的 Disposable，支持取消
+    protected Disposable disposable;
+
+    public BaseFlushExtension() {
+        super();
+    }
+
+    /**
+     * 启动时调用
+     */
+    @Override
+    public void onStart(TenEnv env) {
+        super.onStart(env);
+        log.info("[{}] 扩展启动", env.getExtensionName());
+        // isRunning = true; // Handled by BaseExtension
+        interrupted.set(false);
+        disposable = generateDisposable(env);
+    }
+
+    protected Disposable generateDisposable(TenEnv env) {
+        return streamProcessor
+            .onBackpressureBuffer()
+            .concatMap(payload -> payload.flowable()
+                .map(item -> new ItemAndMessage<>(item, payload.originalMessage())) // Map to carry original
+                // message
+                .subscribeOn(Schedulers.io())
+                .observeOn(Schedulers.io())
+                // 中断检测，flush后中断当前流处理
+                .takeWhile(itemAndMessage -> !interrupted.get()))
+            .subscribe(
+                itemAndMessage -> handleStreamItem(itemAndMessage.item(),
+                    itemAndMessage.originalMessage(), env),
+                error -> log.error("{} 流异常", env.getExtensionName(), error),
+                () -> log.info("[{}] 流处理完成", env.getExtensionName()));
+    }
+
+    /**
+     * 停止时调用，取消所有流
+     */
+    @Override
+    public void onStop(TenEnv env) {
+        super.onStop(env);
+        log.info("[{}] 扩展停止", env.getExtensionName());
+        // isRunning = false; // Handled by BaseExtension
+        interrupted.set(true);
+        disposeCurrent(env);
+    }
+
+    /**
+     * 清理时调用
+     */
+    @Override
+    public void onDeinit(TenEnv env) {
+        super.onDeinit(env);
+        log.info("[{}] 扩展清理", env.getExtensionName());
+        disposeCurrent(env);
+    }
+
+    protected synchronized void disposeCurrent(TenEnv env) {
+        if (disposable != null && !disposable.isDisposed()) {
+            try {
+                disposable.dispose();
+                log.debug("[{}] 已取消当前流订阅", env.getExtensionName());
+            } catch (Exception e) {
+                log.warn("[{}] 取消流订阅异常", env.getExtensionName(), e);
+            }
+        }
+    }
+
+    /**
+     * 刷新输入，取消所有待处理和活跃流
+     * 重新创建流发布器和订阅，保证新流可以正常消费
+     */
+    public synchronized void flushInputItems(TenEnv env, Command command) {
+        log.info("[{}] 刷新输入并取消活跃流: extensionName={}", env.getExtensionName(), env.getExtensionName());
+        onCancelFlush(env); // 调用子类特定的取消逻辑
+        interrupted.set(true); // 先设置中断，切断当前流的处理
+        disposeCurrent(env); // 取消订阅，释放资源
+        // 重新创建流发布器（线程安全的）
+        streamProcessor = PublishProcessor.<StreamPayload<T>>create().toSerialized();
+        interrupted.set(false); // 解除中断，准备处理新流
+        disposable = generateDisposable(env); // 重新订阅新流
+    }
+
+    @Override
+    public void onCmd(TenEnv env, Command command) {
+        if (!isRunning()) { // Use isRunning() from BaseExtension
+            log.warn("[{}] 扩展未运行，忽略命令: extensionName={}, commandName={}", env.getExtensionName(),
+                env.getExtensionName(),
+                command.getName());
+            return;
+        }
+        log.info("[{}] Received command: {}", env.getExtensionName(), command.getName());
+        try {
+            String commandName = command.getName();
+            if (ExtensionConstants.CMD_IN_FLUSH.equals(commandName)) {
+                flushInputItems(env, command);
+                Command outFlushCmd = GenericCommand.create(ExtensionConstants.CMD_OUT_FLUSH, command.getId(),
+                    command.getType());
+                log.info("[{}] 传递 flush: {}", env.getExtensionName(), commandName);
+                env.sendCmd(outFlushCmd);
+                log.info("[{}] 命令处理完成: {}", env.getExtensionName(), commandName);
+            } else {
+                CommandResult result = CommandResult.success(command,
+                    "未知%s命令，忽略".formatted(env.getExtensionName()));
+                env.sendResult(result);
+            }
+        } catch (Exception e) {
+            log.error("[{}] 扩展命令处理异常: extensionName={}, commandName={}", env.getExtensionName(),
+                env.getExtensionName(),
+                command.getName(), e);
+            sendErrorResult(env, command.getId(), command.getType(), "",
+                "%s命令处理异常: %s".formatted(env.getExtensionName(), e.getMessage()));
+        }
+    }
+
+    // 发送错误结果
+    protected void sendErrorResult(TenEnv env, String messageId, MessageType messageType, String messageName,
+        String errorMessage) {
+        String finalMessageId = (messageId != null && !messageId.isEmpty()) ? messageId
+            : MessageUtils.generateUniqueId();
+        CommandResult errorResult = CommandResult.fail(finalMessageId, messageType, messageName, errorMessage);
+        env.sendResult(errorResult);
+    }
+
+    /**
+     * 子类必须实现此方法来处理从流中接收到的每个数据项。
+     *
+     * @param item            从流中接收到的数据项
+     * @param originalMessage 触发此流的原始消息
+     * @param env             当前的TenEnv环境
+     */
+    protected abstract void handleStreamItem(T item, Message originalMessage, TenEnv env);
+
+    /**
+     * 子类必须实现此方法以执行特定的取消逻辑，例如停止底层服务。
+     * 在发生输入刷新（中断）时调用。
+     *
+     * @param env 当前的TenEnv环境
+     */
+    protected abstract void onCancelFlush(TenEnv env);
+
+    /**
+     * 内部类，用于封装流和原始消息
+     */
+    public record StreamPayload<T>(Flowable<T> flowable, Message originalMessage) {
+    }
+
+    /**
+     * 内部类，用于封装流中的数据项和原始消息
+     */
+    public record ItemAndMessage<T>(T item, Message originalMessage) {
+    }
+}

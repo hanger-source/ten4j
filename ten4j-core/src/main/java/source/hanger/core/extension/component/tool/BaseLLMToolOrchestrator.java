@@ -209,7 +209,7 @@ public abstract class BaseLLMToolOrchestrator<GENERATION_RESULT, MESSAGE, LLM_TO
 
             List<MESSAGE> messagesForNextTurn = llmContextManager.getMessagesForLLM();
             List<LLM_TOOL_FUNCTION> registeredToolFunctions = getRegisteredToolFunctions();
-            llmStreamAdapter.requestLLMAndProcessStream(
+            llmStreamAdapter.onRequestLLMAndProcessStream(
                 env,
                 messagesForNextTurn,
                 registeredToolFunctions,
