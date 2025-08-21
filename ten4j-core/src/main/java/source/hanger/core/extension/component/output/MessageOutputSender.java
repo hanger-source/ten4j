@@ -1,0 +1,40 @@
+package source.hanger.core.extension.component.output;
+
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.LoggerFactory;
+import source.hanger.core.common.ExtensionConstants;
+import source.hanger.core.extension.component.stream.StreamOutputBlockConsumer;
+import source.hanger.core.message.DataMessage;
+import source.hanger.core.message.Message;
+import source.hanger.core.tenenv.TenEnv;
+
+import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_END_OF_SEGMENT;
+import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_ROLE;
+import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_TEXT;
+
+/**
+ * @author fuhangbo.hanger.uhfun
+ **/
+@Slf4j
+public abstract class MessageOutputSender {
+    public static void sendTextOutput(TenEnv env, Message originalMessage, String text,
+        boolean endOfSegment) { // 使用 core 包的 Message
+        try {
+            DataMessage outputData = DataMessage.create(ExtensionConstants.TEXT_DATA_OUT_NAME);
+            outputData.setId(originalMessage.getId()); // 使用原始消息的ID
+            outputData.setProperty(DATA_OUT_PROPERTY_TEXT, text);
+            outputData.setProperty(DATA_OUT_PROPERTY_ROLE, "assistant");
+            outputData.setProperty(DATA_OUT_PROPERTY_END_OF_SEGMENT, endOfSegment);
+            outputData.setProperty("extension_name", env.getExtensionName());
+            outputData.setProperty("group_timestamp", originalMessage.getTimestamp());
+
+            env.sendMessage(outputData);
+            LoggerFactory.getLogger(StreamOutputBlockConsumer.class)
+                .debug("[{}] LLM文本输出发送成功: text={}, endOfSegment={}", env.getExtensionName(),
+                    text, endOfSegment);
+        } catch (Exception e) {
+            LoggerFactory.getLogger(StreamOutputBlockConsumer.class)
+                .error("[{}] LLM文本输出发送异常: {}", env.getExtensionName(), e.getMessage(), e);
+        }
+    }
+}

@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Map;
 
 import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.extension.BaseExtension;
+import source.hanger.core.extension.api.BaseExtension;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
 import source.hanger.core.message.command.Command;

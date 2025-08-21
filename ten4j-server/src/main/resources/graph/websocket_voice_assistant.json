@@ -22,7 +22,7 @@
       {
         "type": "extension",
         "name": "llm",
-        "addon": "source.hanger.core.extension.bailian.llm.QwenLLMExtension",
+        "addon": "source.hanger.core.extension.dashscope.extension.QwenChatLlmExtension",
         "extension_group": "llm_group",
         "property": {
           "api_key": "{{env:bailian.dashscope.api.key}}",
@@ -34,7 +34,7 @@
       {
         "type": "extension",
         "name": "tts",
-        "addon": "source.hanger.core.extension.bailian.tts.QwenTtsExtension",
+        "addon": "source.hanger.core.extension.dashscope.client.tts.QwenTtsExtension",
         "extension_group": "tts_group",
         "property": {
           "api_key": "{{env:bailian.dashscope.api.key}}",
@@ -44,7 +44,7 @@
       {
         "type": "extension",
         "name": "asr",
-        "addon": "source.hanger.core.extension.bailian.asr.ParaformerASRExtension",
+        "addon": "source.hanger.core.extension.dashscope.client.asr.ParaformerASRExtension",
         "extension_group": "asr_group",
         "property": {
           "api_key": "{{env:bailian.dashscope.api.key}}",
@@ -69,7 +69,7 @@
       {
         "type": "extension",
         "name": "image_generate",
-        "addon": "source.hanger.core.extension.bailian.image.ImageSynthesisExtension",
+        "addon": "source.hanger.core.extension.dashscope.client.image.ImageSynthesisExtension",
         "extension_group": "default",
         "property": {
           "api_key": "{{env:bailian.dashscope.api.key}}"

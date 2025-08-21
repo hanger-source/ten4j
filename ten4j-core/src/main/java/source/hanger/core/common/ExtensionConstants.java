@@ -9,6 +9,7 @@ public final class ExtensionConstants {
     public static final String DATA_OUT_PROPERTY_TEXT = "text";
     public static final String DATA_OUT_PROPERTY_ROLE = "role";
     public static final String DATA_OUT_PROPERTY_END_OF_SEGMENT = "end_of_segment";
+    public static final String DATA_OUT_PROPERTY_IS_FINAL = "is_final";
 
     // TTS 相关的常量
     public static final String DATA_IN_PROPERTY_QUIET = "quiet";
@@ -25,6 +26,7 @@ public final class ExtensionConstants {
     public static final String CMD_TOOL_CALL = "tool_call";
     public static final String CMD_TOOL_CALL_PROPERTY_NAME = "name";
     public static final String CMD_TOOL_CALL_PROPERTY_ARGUMENTS = "arguments";
+    public static final String CMD_TOOL_CALL_PROPERTY_TOOL_CALL_ID = "tool_call_id";
     public static final String CMD_PROPERTY_RESULT = "result";
 
     public static final String CONTENT_DATA_OUT_NAME = "content_data";
