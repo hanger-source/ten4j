@@ -12,10 +12,10 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import source.hanger.core.extension.api.tool.LLMTool;
 import source.hanger.core.extension.api.tool.ToolMetadata;
-import source.hanger.core.extension.component.base.BaseLLMToolOrchestrator;
-import source.hanger.core.extension.component.common.ToolCallOutputBlock;
 import source.hanger.core.extension.component.context.LLMContextManager;
 import source.hanger.core.extension.component.llm.LLMStreamAdapter;
+import source.hanger.core.extension.component.llm.ToolCallOutputBlock;
+import source.hanger.core.extension.component.tool.BaseLLMToolOrchestrator;
 import source.hanger.core.message.MessageType;
 import source.hanger.core.tenenv.TenEnv;
 

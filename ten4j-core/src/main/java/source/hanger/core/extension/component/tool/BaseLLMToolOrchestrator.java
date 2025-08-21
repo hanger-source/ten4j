@@ -1,4 +1,4 @@
-package source.hanger.core.extension.component.base;
+package source.hanger.core.extension.component.tool;
 
 import java.util.List;
 import java.util.Map;
@@ -9,10 +9,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.api.tool.LLMTool;
 import source.hanger.core.extension.api.tool.LLMToolResult;
-import source.hanger.core.extension.component.common.ToolCallOutputBlock;
 import source.hanger.core.extension.component.context.LLMContextManager;
 import source.hanger.core.extension.component.llm.LLMStreamAdapter;
-import source.hanger.core.extension.component.tool.LLMToolOrchestrator;
+import source.hanger.core.extension.component.llm.ToolCallOutputBlock;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.Message;
 import source.hanger.core.message.MessageType;

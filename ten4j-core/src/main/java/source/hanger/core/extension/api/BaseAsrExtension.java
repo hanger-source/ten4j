@@ -1,150 +1,90 @@
 package source.hanger.core.extension.api;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.alibaba.dashscope.audio.asr.recognition.RecognitionResult;
 
 import io.reactivex.Flowable;
 import io.reactivex.disposables.CompositeDisposable;
-import io.reactivex.disposables.Disposable;
 import io.reactivex.schedulers.Schedulers;
 import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.extension.component.asr.ASROutputBlock;
+import source.hanger.core.extension.component.asr.ASRStreamAdapter;
+import source.hanger.core.extension.component.common.OutputBlock;
+import source.hanger.core.extension.component.flush.FlushOperationCoordinator;
+import source.hanger.core.extension.component.flush.InterruptionStateProvider;
+import source.hanger.core.extension.component.impl.DefaultFlushOperationCoordinator;
+import source.hanger.core.extension.component.impl.DefaultInterruptionStateProvider;
+import source.hanger.core.extension.component.impl.DefaultStreamPipelineChannel;
+import source.hanger.core.extension.component.stream.StreamOutputBlockConsumer;
+import source.hanger.core.extension.component.stream.StreamPipelineChannel;
+import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
-import source.hanger.core.message.DataMessage;
 import source.hanger.core.message.MessageType;
 import source.hanger.core.tenenv.TenEnv;
 import source.hanger.core.util.MessageUtils;
 
-import static java.util.Collections.emptyList;
-import static java.util.Collections.singletonMap;
-import static source.hanger.core.common.ExtensionConstants.ASR_DATA_OUT_NAME;
-import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_END_OF_SEGMENT;
-import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_ROLE;
-
 @Slf4j
 public abstract class BaseAsrExtension extends BaseExtension {
 
-    protected final AtomicBoolean stopped = new AtomicBoolean(false);
-    protected final AtomicBoolean reconnecting = new AtomicBoolean(false);
-    private final CompositeDisposable disposables = new CompositeDisposable(); // 新增：管理所有 Disposable
-    protected String sessionId;
-    protected TenEnv tenEnv;
-    private Disposable asrStreamDisposable;
+    private final CompositeDisposable disposables = new CompositeDisposable(); // 管理所有 Disposable
+    // 成员变量
+    protected StreamPipelineChannel<ASROutputBlock> streamPipelineChannel;
+    protected ASRStreamAdapter asrStreamAdapter;
+
+    // 构造函数
+    public BaseAsrExtension() {
+    }
+
+    @Override
+    public void onConfigure(TenEnv env, Map<String, Object> properties) {
+        log.info("[{}] 配置中，初始化核心组件。", env.getExtensionName());
+
+        // 2. 初始化 StreamPipelineChannel (通用实现)
+        this.streamPipelineChannel = createStreamPipelineChannel(createASROutputBlockConsumer());
+        log.info("[{}] 配置中，初始化 StreamPipelineChannel。", env.getExtensionName());
+
+        // 3. 初始化 ASRStreamAdapter (由子类提供具体实现)
+        this.asrStreamAdapter = createASRStreamAdapter();
+        log.info("[{}] 配置中，初始化 ASRStreamAdapter。", env.getExtensionName());
+    }
 
     @Override
     public void onStart(TenEnv env) {
-        log.info("[{}] ASR扩展启动", env.getExtensionName());
-        stopped.set(false);
-        reconnecting.set(false);
-        this.tenEnv = env;
-        startAsrStream(env);
         super.onStart(env);
-    }
-
-    protected void startAsrStream(TenEnv env) {
-        if (asrStreamDisposable != null && !asrStreamDisposable.isDisposed()) {
-            asrStreamDisposable.dispose();
-        }
-
-        asrStreamDisposable = onRequestAsr(env)
-            .observeOn(Schedulers.computation())
-            .subscribe(
-                item -> {
-                    if (item.getSentence() != null) {
-                        processRecognitionResultAndSendMessage(item, env);
-                    }
-                },
-                e -> {
-                    log.error("[{}] ASR Stream error: {}", env.getExtensionName(), e.getMessage(), e);
-                    if (!stopped.get()) {
-                        handleReconnect(env);
-                    } else {
-                        log.info("[{}] Extension stopped, not retrying on stream error.",
-                            env.getExtensionName());
-                    }
-                },
-                () -> {
-                    log.info("[{}] ASR Stream completed.", env.getExtensionName());
-                    if (!stopped.get()) {
-                        handleReconnect(env);
-                    } else {
-                        log.info("[{}] Extension stopped, not reconnecting on stream completion.",
-                            env.getExtensionName());
-                    }
-                });
-    }
-
-    private void processRecognitionResultAndSendMessage(RecognitionResult item, TenEnv env) {
-        Map<String, Object> properties = new HashMap<>();
-        properties.put("text", item.getSentence().getText());
-        properties.put("is_final", item.isSentenceEnd());
-        properties.put(DATA_OUT_PROPERTY_END_OF_SEGMENT, item.isSentenceEnd());
-        properties.put("start_ms", item.getSentence().getBeginTime());
-        properties.put("duration_ms",
-            item.getSentence().getEndTime() != null && item.getSentence().getBeginTime() != null
-                ? item.getSentence().getEndTime() - item.getSentence().getBeginTime()
-                : 0L);
-        properties.put("language", "zh-CN");
-        properties.put("metadata", singletonMap("session_id", this.sessionId));
-        properties.put("words", emptyList());
-
-        DataMessage message = DataMessage.create(ASR_DATA_OUT_NAME);
-        properties.put(DATA_OUT_PROPERTY_ROLE, "user");
-        message.setProperties(properties);
-        message.setProperty("asr_request_id", item.getRequestId());
-        env.sendData(message);
-        log.info("[{}] Sent ASR transcription: {}", env.getExtensionName(), item.getSentence().getText());
+        log.info("[{}] BaseAsrExtension 启动，初始化管道。", env.getExtensionName());
+        streamPipelineChannel.initPipeline(env);
+        asrStreamAdapter.startASRStream(env); // 调用 ASRStreamAdapter 的启动方法
     }
 
     @Override
     public void onDeinit(TenEnv env) {
-        disposeAsrStreamsInternal();
         log.info("[{}] ASR扩展清理，停止连接.", env.getExtensionName());
+        streamPipelineChannel.disposeCurrent();
+        disposables.clear(); // 清理所有定时器 Disposable
+        asrStreamAdapter.onDeinit(env); // 调用 ASRStreamAdapter 的清理方法
     }
 
-    protected void disposeAsrStreamsInternal() {
-        if (asrStreamDisposable != null && !asrStreamDisposable.isDisposed()) {
-            asrStreamDisposable.dispose();
-        }
-        disposables.clear(); // 新增：清理所有定时器 Disposable
-        onClientStop();
-    }
-
-    protected abstract void onClientStop();
-
-    protected abstract Flowable<RecognitionResult> onRequestAsr(TenEnv env);
-
-    protected synchronized void handleReconnect(TenEnv env) {
-        if (reconnecting.get()) {
-            log.debug("[{}] Reconnection already in progress, skipping.", env.getExtensionName());
+    @Override
+    public void onAudioFrame(TenEnv env, AudioFrameMessage audioFrame) {
+        if (!isRunning()) {
+            log.warn("[{}] ASR Extension未运行，忽略音频帧: frameId={}",
+                env.getExtensionName(), audioFrame.getId());
             return;
         }
+        asrStreamAdapter.onAudioFrame(env, audioFrame); // 将音频帧转发给 ASRStreamAdapter
+    }
 
-        reconnecting.set(true);
+    protected synchronized void handleReconnect(TenEnv env) {
         log.info("[{}] Starting reconnection process.", env.getExtensionName());
-
         disposables.add(Flowable.timer(200, TimeUnit.MILLISECONDS, Schedulers.io()).doOnComplete(() -> {
                     try {
-                        disposeAsrStreamsInternal();
-                        Thread.sleep(200);
-                        onClientInit(); // Add this line
-                        startAsrStream(env);
+                        asrStreamAdapter.onReconnect(env); // 调用 ASRStreamAdapter 的重连方法
                         log.info("[{}] Reconnection completed successfully.", env.getExtensionName());
                     } catch (Exception e) {
                         log.error("[{}] Reconnection failed: {}", env.getExtensionName(), e.getMessage(), e);
-                        if (!stopped.get()) {
-                            disposables.add( // 新增：将 Disposable 添加到 CompositeDisposable
-                                Flowable.timer(1000, TimeUnit.MILLISECONDS, Schedulers.io())
-                                    .subscribe(v -> handleReconnect(env)));
-                        } else {
-                            log.info("[{}] Extension stopped, not retrying reconnection.",
-                                env.getExtensionName());
-                        }
-                    } finally {
-                        reconnecting.set(false);
+                        disposables.add( // 新增：将 Disposable 添加到 CompositeDisposable
+                            Flowable.timer(1000, TimeUnit.MILLISECONDS, Schedulers.io())
+                                .subscribe(v -> handleReconnect(env)));
                     }
                 })
                 .subscribe() // 修正：直接调用 subscribe() 来获取 Disposable
@@ -160,14 +100,46 @@ public abstract class BaseAsrExtension extends BaseExtension {
         log.error("[{}] ASR Error [{}]: {}", env.getExtensionName(), messageName, errorMessage);
     }
 
-    public boolean isAlive() {
-        return !stopped.get();
+    /**
+     * 抽象方法：创建 InterruptionStateProvider 实例。
+     * 子类可以返回 DefaultInterruptionStateProvider 的实例。
+     */
+    protected InterruptionStateProvider createInterruptionStateProvider() {
+        return new DefaultInterruptionStateProvider();
     }
 
-    public int getInputAudioSampleRate() {
-        return 16000;
+    /**
+     * 抽象方法：创建 StreamPipelineChannel 实例。
+     */
+    protected StreamPipelineChannel<ASROutputBlock> createStreamPipelineChannel(
+        StreamOutputBlockConsumer streamOutputBlockConsumer) {
+        return new DefaultStreamPipelineChannel(interruptionStateProvider, streamOutputBlockConsumer);
     }
 
-    // Add this abstract method
-    protected abstract void onClientInit();
+    /**
+     * 抽象方法：创建 ASRStreamAdapter 实例。
+     * 子类应返回 ASRStreamAdapter 的具体实现，例如 ParaformerASRStreamAdapter。
+     */
+    protected abstract ASRStreamAdapter createASRStreamAdapter();
+
+    /**
+     * 抽象方法：创建 ASRStreamOutputBlockConsumer 实例。
+     */
+    protected abstract StreamOutputBlockConsumer createASROutputBlockConsumer();
+
+    /**
+     * 抽象方法：创建 FlushOperationCoordinator 实例。
+     * 子类应返回 FlushOperationCoordinator 的具体实现，例如 DefaultFlushOperationCoordinator。
+     *
+     * @param interruptionStateProvider 中断状态提供者。
+     * @param streamPipelineChannel     流管道管理器。
+     * @param onCancelFlushCallback     用于通知 ASRStreamAdapter 执行取消操作的回调函数。
+     */
+    protected FlushOperationCoordinator createFlushOperationCoordinator(
+        InterruptionStateProvider interruptionStateProvider,
+        StreamPipelineChannel<OutputBlock> streamPipelineChannel,
+        java.util.function.Consumer<TenEnv> onCancelFlushCallback) {
+        return new DefaultFlushOperationCoordinator(interruptionStateProvider,
+            streamPipelineChannel, onCancelFlushCallback);
+    }
 }

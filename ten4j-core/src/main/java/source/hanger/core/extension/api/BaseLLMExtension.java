@@ -8,8 +8,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.api.tool.LLMTool;
 import source.hanger.core.extension.component.common.OutputBlock;
-import source.hanger.core.extension.component.common.TextOutputBlock;
-import source.hanger.core.extension.component.common.ToolCallOutputBlock;
 import source.hanger.core.extension.component.context.LLMContextManager;
 import source.hanger.core.extension.component.flush.FlushOperationCoordinator;
 import source.hanger.core.extension.component.flush.InterruptionStateProvider;
@@ -17,6 +15,8 @@ import source.hanger.core.extension.component.impl.DefaultFlushOperationCoordina
 import source.hanger.core.extension.component.impl.DefaultInterruptionStateProvider;
 import source.hanger.core.extension.component.impl.DefaultStreamPipelineChannel;
 import source.hanger.core.extension.component.llm.LLMStreamAdapter;
+import source.hanger.core.extension.component.llm.TextOutputBlock;
+import source.hanger.core.extension.component.llm.ToolCallOutputBlock;
 import source.hanger.core.extension.component.stream.StreamOutputBlockConsumer;
 import source.hanger.core.extension.component.stream.StreamPipelineChannel;
 import source.hanger.core.extension.component.tool.LLMToolOrchestrator;
@@ -74,7 +74,7 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
         log.info("[{}] 配置中，初始化 StreamPipelineManager。", env.getExtensionName());
 
         // 4. 初始化 LLMStreamAdapter (由子类提供具体实现)
-        this.llmStreamAdapter = createLLMStreamTransformer();
+        this.llmStreamAdapter = createLLMStreamAdapter();
         log.info("[{}] 配置中，初始化 LLMStreamAdapter。", env.getExtensionName());
 
         // 5. 初始化 ToolRegistryAndCaller (由子类提供具体实现)
@@ -262,7 +262,7 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
      * 抽象方法：创建 LLMStreamAdapter 实例。
      * 子类应返回 LLMStreamAdapter 的具体实现，例如 DashScopeLLMStreamAdapter。
      */
-    protected abstract LLMStreamAdapter<MESSAGE, TOOL_FUNCTION> createLLMStreamTransformer();
+    protected abstract LLMStreamAdapter<MESSAGE, TOOL_FUNCTION> createLLMStreamAdapter();
 
     /**
      * 抽象方法：创建 ToolRegistryAndCaller 实例。

@@ -15,10 +15,10 @@ import com.alibaba.dashscope.tools.ToolFunction;
 
 import io.reactivex.Flowable;
 import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.extension.component.base.BaseLLMStreamTransformer;
 import source.hanger.core.extension.component.common.OutputBlock;
-import source.hanger.core.extension.component.common.ToolCallOutputFragment;
 import source.hanger.core.extension.component.flush.InterruptionStateProvider;
+import source.hanger.core.extension.component.llm.BaseLLMStreamAdapter;
+import source.hanger.core.extension.component.llm.ToolCallOutputFragment;
 import source.hanger.core.extension.component.stream.StreamPipelineChannel;
 import source.hanger.core.tenenv.TenEnv;
 
@@ -27,11 +27,11 @@ import source.hanger.core.tenenv.TenEnv;
  * 负责与 DashScope LLM 进行交互，并实现 AbstractLLMStreamService 中定义的抽象方法。
  */
 @Slf4j
-public class QwenChatLLMStreamTransformer extends BaseLLMStreamTransformer<GenerationResult, Message, ToolFunction> {
+public class QwenChatLLMStreamAdapter extends BaseLLMStreamAdapter<GenerationResult, Message, ToolFunction> {
 
     private final Generation generation;
 
-    public QwenChatLLMStreamTransformer(
+    public QwenChatLLMStreamAdapter(
         InterruptionStateProvider interruptionStateProvider,
         StreamPipelineChannel<OutputBlock> streamPipelineChannel) {
         super(interruptionStateProvider, streamPipelineChannel);

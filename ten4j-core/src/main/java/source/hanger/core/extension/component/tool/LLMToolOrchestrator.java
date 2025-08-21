@@ -3,7 +3,7 @@ package source.hanger.core.extension.component.tool;
 import java.util.List;
 
 import source.hanger.core.extension.api.tool.LLMTool;
-import source.hanger.core.extension.component.common.ToolCallOutputBlock;
+import source.hanger.core.extension.component.llm.ToolCallOutputBlock;
 import source.hanger.core.message.Message;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;

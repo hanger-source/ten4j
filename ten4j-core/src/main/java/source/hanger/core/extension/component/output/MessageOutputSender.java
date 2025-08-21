@@ -8,9 +8,15 @@ import source.hanger.core.message.DataMessage;
 import source.hanger.core.message.Message;
 import source.hanger.core.tenenv.TenEnv;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_END_OF_SEGMENT;
 import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_ROLE;
 import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_TEXT;
+import static source.hanger.core.common.ExtensionConstants.ASR_DATA_OUT_NAME; // 新增
+import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_IS_FINAL; // 新增
 
 /**
  * @author fuhangbo.hanger.uhfun
@@ -35,6 +41,28 @@ public abstract class MessageOutputSender {
         } catch (Exception e) {
             LoggerFactory.getLogger(StreamOutputBlockConsumer.class)
                 .error("[{}] LLM文本输出发送异常: {}", env.getExtensionName(), e.getMessage(), e);
+        }
+    }
+
+    public static void sendAsrTextOutput(TenEnv env, String text, boolean isFinal, long startTime, long duration) {
+        try {
+            Map<String, Object> properties = new HashMap<>();
+            properties.put(DATA_OUT_PROPERTY_TEXT, text);
+            properties.put(DATA_OUT_PROPERTY_IS_FINAL, isFinal);
+            properties.put(DATA_OUT_PROPERTY_END_OF_SEGMENT, isFinal);
+            properties.put("start_ms", startTime);
+            properties.put("duration_ms", duration);
+            properties.put("language", "zh-CN");
+            properties.put("metadata", Collections.singletonMap("session_id", "")); // session_id 暂时为空
+            properties.put("words", Collections.emptyList());
+
+            DataMessage message = DataMessage.create(ASR_DATA_OUT_NAME);
+            properties.put(DATA_OUT_PROPERTY_ROLE, "user");
+            message.setProperties(properties);
+            env.sendData(message);
+            log.info("[{}] Sent ASR transcription: {}", env.getExtensionName(), text);
+        } catch (Exception e) {
+            log.error("[{}] 发送ASR文本输出异常: {}", env.getExtensionName(), e.getMessage(), e);
         }
     }
 }

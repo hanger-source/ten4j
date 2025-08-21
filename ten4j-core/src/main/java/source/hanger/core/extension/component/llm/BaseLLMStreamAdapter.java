@@ -1,4 +1,4 @@
-package source.hanger.core.extension.component.base;
+package source.hanger.core.extension.component.llm;
 
 import java.util.List;
 import java.util.Map;
@@ -8,11 +8,7 @@ import io.reactivex.Flowable;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.common.PipelinePacket;
-import source.hanger.core.extension.component.common.TextOutputBlock;
-import source.hanger.core.extension.component.common.ToolCallOutputBlock;
-import source.hanger.core.extension.component.common.ToolCallOutputFragment;
 import source.hanger.core.extension.component.flush.InterruptionStateProvider;
-import source.hanger.core.extension.component.llm.LLMStreamAdapter;
 import source.hanger.core.extension.component.stream.StreamPipelineChannel;
 import source.hanger.core.message.Message;
 import source.hanger.core.tenenv.TenEnv;
@@ -27,7 +23,7 @@ import source.hanger.core.util.SentenceProcessor;
  * @param <TOOL_FUNCTION>     LLM 工具函数定义的类型（例如 DashScope 的 ToolCallFunction）。
  */
 @Slf4j
-public abstract class BaseLLMStreamTransformer<GENERATION_RESULT, MESSAGE, TOOL_FUNCTION>
+public abstract class BaseLLMStreamAdapter<GENERATION_RESULT, MESSAGE, TOOL_FUNCTION>
     implements LLMStreamAdapter<MESSAGE, TOOL_FUNCTION> {
 
     protected final InterruptionStateProvider interruptionStateProvider;
@@ -40,7 +36,7 @@ public abstract class BaseLLMStreamTransformer<GENERATION_RESULT, MESSAGE, TOOL_
      * @param interruptionStateProvider 中断状态提供者。
      * @param streamPipelineChannel     流管道管理器。
      */
-    public BaseLLMStreamTransformer(
+    public BaseLLMStreamAdapter(
         InterruptionStateProvider interruptionStateProvider,
         StreamPipelineChannel<OutputBlock> streamPipelineChannel) {
         this.interruptionStateProvider = interruptionStateProvider;

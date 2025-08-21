@@ -7,10 +7,14 @@ import com.alibaba.dashscope.audio.asr.recognition.RecognitionResult;
 import io.reactivex.Flowable;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.api.BaseAsrExtension;
+import source.hanger.core.extension.component.asr.ASRStreamAdapter;
+import source.hanger.core.extension.component.asr.ASRTextOutputBlock;
+import source.hanger.core.extension.component.stream.StreamOutputBlockConsumer;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.tenenv.TenEnv;
 
 import static java.nio.ByteBuffer.wrap;
+import static source.hanger.core.extension.component.output.MessageOutputSender.sendAsrTextOutput;
 
 @Slf4j
 public class ParaformerASRExtension extends BaseAsrExtension {
@@ -104,5 +108,22 @@ public class ParaformerASRExtension extends BaseAsrExtension {
                 handleReconnect(env);
             }
         }
+    }
+
+    @Override
+    protected ASRStreamAdapter createASRStreamAdapter() {
+        return new ParaformerASRStreamAdapter(interruptionStateProvider, streamPipelineChannel);
+    }
+
+    @Override
+    protected StreamOutputBlockConsumer createASROutputBlockConsumer() {
+        return (item, originalMessage, env) -> {
+            if (item instanceof ASRTextOutputBlock asrTextBlock) {
+                // ASR 文本块
+                log.info("[{}] ASRStream输出 (Text): {}", env.getExtensionName(), asrTextBlock.getText());
+                sendAsrTextOutput(env, asrTextBlock.getText(), asrTextBlock.isFinal(),
+                    asrTextBlock.getStartTime(), asrTextBlock.getDuration());
+            }
+        };
     }
 }

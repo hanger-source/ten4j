@@ -1,7 +1,8 @@
-package source.hanger.core.extension.component.common;
+package source.hanger.core.extension.component.llm;
 
 import lombok.Getter;
 import lombok.Setter;
+import source.hanger.core.extension.component.common.OutputBlock;
 
 /**
  * LLM 服务处理后的文本输出块。

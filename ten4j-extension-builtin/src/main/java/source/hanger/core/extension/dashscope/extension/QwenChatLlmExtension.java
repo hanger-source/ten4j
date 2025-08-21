@@ -14,7 +14,7 @@ import source.hanger.core.extension.component.context.LLMContextManager;
 import source.hanger.core.extension.component.llm.LLMStreamAdapter;
 import source.hanger.core.extension.component.tool.LLMToolOrchestrator;
 import source.hanger.core.extension.dashscope.component.DashScopeLLMContextManager;
-import source.hanger.core.extension.dashscope.component.QwenChatLLMStreamTransformer;
+import source.hanger.core.extension.dashscope.component.QwenChatLLMStreamAdapter;
 import source.hanger.core.extension.dashscope.component.QwenChatLLMToolOrchestrator;
 import source.hanger.core.tenenv.TenEnv;
 
@@ -37,8 +37,8 @@ public class QwenChatLlmExtension
     }
 
     @Override
-    protected LLMStreamAdapter<Message, ToolFunction> createLLMStreamTransformer() {
-        return new QwenChatLLMStreamTransformer(
+    protected LLMStreamAdapter<Message, ToolFunction> createLLMStreamAdapter() {
+        return new QwenChatLLMStreamAdapter(
             interruptionStateProvider,
             streamPipelineChannel
         );

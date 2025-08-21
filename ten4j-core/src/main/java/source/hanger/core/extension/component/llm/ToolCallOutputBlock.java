@@ -1,9 +1,10 @@
-package source.hanger.core.extension.component.common;
+package source.hanger.core.extension.component.llm;
 
 import java.util.Map;
 
 import lombok.Getter;
 import lombok.Setter;
+import source.hanger.core.extension.component.common.OutputBlock;
 
 /**
  * LLM 工具执行的最终结果块。

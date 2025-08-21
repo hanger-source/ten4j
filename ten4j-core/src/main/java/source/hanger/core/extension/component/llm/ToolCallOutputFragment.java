@@ -1,4 +1,4 @@
-package source.hanger.core.extension.component.common;
+package source.hanger.core.extension.component.llm;
 
 import lombok.Getter;
 import lombok.Setter;
