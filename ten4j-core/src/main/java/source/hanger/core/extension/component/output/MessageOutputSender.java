@@ -3,6 +3,7 @@ package source.hanger.core.extension.component.output;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.LoggerFactory;
 import source.hanger.core.common.ExtensionConstants;
+import source.hanger.core.extension.component.asr.ASRTranscriptionOutputBlock;
 import source.hanger.core.extension.component.stream.StreamOutputBlockConsumer;
 import source.hanger.core.message.DataMessage;
 import source.hanger.core.message.Message;
@@ -44,23 +45,24 @@ public abstract class MessageOutputSender {
         }
     }
 
-    public static void sendAsrTextOutput(TenEnv env, String text, boolean isFinal, long startTime, long duration) {
+    public static void sendAsrTranscriptionOutput(TenEnv env, ASRTranscriptionOutputBlock block) {
         try {
             Map<String, Object> properties = new HashMap<>();
-            properties.put(DATA_OUT_PROPERTY_TEXT, text);
-            properties.put(DATA_OUT_PROPERTY_IS_FINAL, isFinal);
-            properties.put(DATA_OUT_PROPERTY_END_OF_SEGMENT, isFinal);
-            properties.put("start_ms", startTime);
-            properties.put("duration_ms", duration);
+            properties.put(DATA_OUT_PROPERTY_TEXT, block.getText());
+            properties.put(DATA_OUT_PROPERTY_IS_FINAL, block.isFinal());
+            properties.put(DATA_OUT_PROPERTY_END_OF_SEGMENT, block.isFinal());
+            properties.put("start_ms", block.getStartTime());
+            properties.put("duration_ms", block.getDuration());
             properties.put("language", "zh-CN");
             properties.put("metadata", Collections.singletonMap("session_id", "")); // session_id 暂时为空
             properties.put("words", Collections.emptyList());
 
             DataMessage message = DataMessage.create(ASR_DATA_OUT_NAME);
             properties.put(DATA_OUT_PROPERTY_ROLE, "user");
+            properties.put("asr_request_id", block.getRequestId());
             message.setProperties(properties);
             env.sendData(message);
-            log.info("[{}] Sent ASR transcription: {}", env.getExtensionName(), text);
+            log.info("[{}] Sent ASR transcription: {}", env.getExtensionName(), block.getText());
         } catch (Exception e) {
             log.error("[{}] 发送ASR文本输出异常: {}", env.getExtensionName(), e.getMessage(), e);
         }

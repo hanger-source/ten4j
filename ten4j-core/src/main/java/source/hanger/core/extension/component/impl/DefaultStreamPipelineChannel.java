@@ -20,7 +20,7 @@ import source.hanger.core.tenenv.TenEnv;
 public class DefaultStreamPipelineChannel implements StreamPipelineChannel<OutputBlock> { // 实现泛型接口
 
     private final InterruptionStateProvider interruptionStateProvider;
-    private final StreamOutputBlockConsumer streamOutputBlockConsumer; // 类型改为新的 StreamItemHandler 接口
+    private final StreamOutputBlockConsumer<OutputBlock> streamOutputBlockConsumer; // 类型改为新的 StreamItemHandler 接口
     private FlowableProcessor<PipelinePacket<OutputBlock>> streamProcessor;
     private Disposable disposable;
 
@@ -33,7 +33,7 @@ public class DefaultStreamPipelineChannel implements StreamPipelineChannel<Outpu
      */
     public DefaultStreamPipelineChannel(
         InterruptionStateProvider interruptionStateProvider,
-        StreamOutputBlockConsumer streamOutputBlockConsumer) { // 构造函数参数类型改为 StreamItemHandler
+        StreamOutputBlockConsumer<OutputBlock> streamOutputBlockConsumer) { // 构造函数参数类型改为 StreamItemHandler
         this.interruptionStateProvider = interruptionStateProvider;
         this.streamOutputBlockConsumer = streamOutputBlockConsumer;
     }

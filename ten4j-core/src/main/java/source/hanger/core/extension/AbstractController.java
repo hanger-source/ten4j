@@ -55,8 +55,7 @@ public abstract class AbstractController extends BaseExtension {
     }
 
     @Override
-    public void onConfigure(TenEnv env, Map<String, Object> properties) {
-        super.onConfigure(env, properties); // 调用父类方法
+    protected void onExtensionConfigure(TenEnv env, Map<String, Object> properties) {
         // 配置属性将在子类中通过getProperty方法获取
         log.info("控制器配置阶段: extensionName={}", env.getExtensionName()); // 使用 env.getExtensionName()
         onControllerConfigure(env);

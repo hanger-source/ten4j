@@ -23,8 +23,7 @@ public class QwenTtsExtension extends BaseTTSExtension {
     private String voiceName; // 语音名称，例如 "CHERRY"
 
     @Override
-    public void onConfigure(TenEnv env, Map<String, Object> properties) {
-        super.onConfigure(env, properties);
+    protected void onExtensionConfigure(TenEnv env, Map<String, Object> properties) {
         log.info("[qwen_tts] Extension configuring: {}", env.getExtensionName());
 
         String apiKey = (String)properties.get("api_key");

@@ -74,8 +74,7 @@ public class EchoExtension extends BaseExtension { // Extend BaseExtension
     // }
 
     @Override
-    public void onConfigure(TenEnv env, Map<String, Object> properties) {
-        super.onConfigure(env, properties); // Call super method
+    protected void onExtensionConfigure(TenEnv env, Map<String, Object> properties) {
         // this.env = env; // No longer needed here as it's set in init()
         log.info("EchoExtension配置阶段: extensionName={}", env.getExtensionName());
 

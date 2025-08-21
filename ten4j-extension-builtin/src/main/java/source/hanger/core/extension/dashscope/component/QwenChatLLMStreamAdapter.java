@@ -99,11 +99,9 @@ public class QwenChatLLMStreamAdapter extends BaseLLMStreamAdapter<GenerationRes
             .map(List::getFirst) // 假设目前只处理第一个工具调用
             .map(toolCallBase -> {
                 if (toolCallBase instanceof ToolCallFunction toolCallFunction) {
-                    return ToolCallOutputFragment.builder()
-                        .name(toolCallFunction.getFunction().getName())
-                        .argumentsJson(toolCallFunction.getFunction().getArguments())
-                        .id(result.getRequestId())
-                        .build();
+                    return new ToolCallOutputFragment(toolCallFunction.getFunction().getName(),
+                        toolCallFunction.getFunction().getArguments(),
+                        result.getRequestId());
                 }
                 log.warn("[{}] 发现非 ToolCallFunction 类型的 ToolCallBase: {}",
                     env.getExtensionName(), toolCallBase.getClass().getName());

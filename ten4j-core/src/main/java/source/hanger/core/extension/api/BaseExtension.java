@@ -6,6 +6,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.Extension;
+import source.hanger.core.extension.component.impl.DefaultExtensionStateProvider;
+import source.hanger.core.extension.component.state.ExtensionStateProvider;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
@@ -30,22 +32,23 @@ import source.hanger.core.tenenv.TenEnv;
 public abstract class BaseExtension implements Extension {
 
     private final AtomicLong inboundMessageCounter = new AtomicLong(0);
-    private final AtomicLong outboundMessageCounter = new AtomicLong(0);
     private final AtomicLong totalCommandReceived = new AtomicLong(0);
     private final AtomicLong errorCounter = new AtomicLong(0);
-    protected volatile boolean isRunning = false; // Moved from BaseFlushExtension
+    protected ExtensionStateProvider extensionStateProvider; // 统一的状态管理组件
     protected TenEnv env;
     protected Map<String, Object> configuration;
 
     @Override
-    public void onConfigure(TenEnv env, Map<String, Object> properties) {
+    public final void onConfigure(TenEnv env, Map<String, Object> properties) {
         this.env = env; // 确保 env 已设置
         this.configuration = new ConcurrentHashMap<>(properties);
+        // 初始化状态提供者
+        this.extensionStateProvider = createExtensionStateProvider(env.getExtensionName());
         log.info("[{}] Extension配置完成", env.getExtensionName());
-        onExtensionConfigure(env);
+        onExtensionConfigure(env, properties);
     }
 
-    protected void onExtensionConfigure(TenEnv env) {
+    protected void onExtensionConfigure(TenEnv env,  Map<String, Object> properties) {
         // Subclasses can override this
     }
 
@@ -57,18 +60,25 @@ public abstract class BaseExtension implements Extension {
     @Override
     public void onStart(TenEnv env) {
         log.info("[{}] Extension启动阶段", env.getExtensionName());
-        this.isRunning = true;
+        if (extensionStateProvider != null) {
+            extensionStateProvider.start();
+        }
     }
 
     @Override
     public void onStop(TenEnv env) {
         log.info("[{}] Extension停止阶段", env.getExtensionName());
-        this.isRunning = false;
+        if (extensionStateProvider != null) {
+            extensionStateProvider.stop();
+        }
     }
 
     @Override
     public void onDeinit(TenEnv env) {
         log.info("[{}] Extension去初始化阶段", env.getExtensionName());
+        if (extensionStateProvider != null) {
+            extensionStateProvider.reset();
+        }
     }
 
     @Override
@@ -180,6 +190,17 @@ public abstract class BaseExtension implements Extension {
 
     // Getter for isRunning
     public boolean isRunning() {
-        return isRunning;
+        return extensionStateProvider != null && extensionStateProvider.isRunning();
+    }
+
+    /**
+     * 创建 Extension 状态提供者实例。
+     * 子类可以重写此方法以提供自定义的状态管理实现。
+     *
+     * @param extensionName Extension 名称。
+     * @return Extension 状态提供者实例。
+     */
+    protected ExtensionStateProvider createExtensionStateProvider(String extensionName) {
+        return new DefaultExtensionStateProvider(extensionName);
     }
 }

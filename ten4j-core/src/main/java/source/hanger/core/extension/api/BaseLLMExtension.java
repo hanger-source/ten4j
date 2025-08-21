@@ -12,7 +12,6 @@ import source.hanger.core.extension.component.context.LLMContextManager;
 import source.hanger.core.extension.component.flush.FlushOperationCoordinator;
 import source.hanger.core.extension.component.flush.InterruptionStateProvider;
 import source.hanger.core.extension.component.impl.DefaultFlushOperationCoordinator;
-import source.hanger.core.extension.component.impl.DefaultInterruptionStateProvider;
 import source.hanger.core.extension.component.impl.DefaultStreamPipelineChannel;
 import source.hanger.core.extension.component.llm.LLMStreamAdapter;
 import source.hanger.core.extension.component.llm.TextOutputBlock;
@@ -50,7 +49,6 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
 
     // 从 BaseLLMToolExtension 迁移的成员变量
     protected final ObjectMapper objectMapper = new ObjectMapper();
-    protected InterruptionStateProvider interruptionStateProvider;
     protected FlushOperationCoordinator flushOperationCoordinator;
     protected StreamPipelineChannel<OutputBlock> streamPipelineChannel;
     protected LLMContextManager<MESSAGE> llmContextManager;
@@ -58,12 +56,8 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
     protected LLMToolOrchestrator<TOOL_FUNCTION> LLMToolOrchestrator;
 
     @Override
-    public void onConfigure(TenEnv env, Map<String, Object> properties) {
+    protected void onExtensionConfigure(TenEnv env, Map<String, Object> properties) {
         log.info("[{}] 配置中，初始化核心组件。", env.getExtensionName());
-
-        // 1. 初始化 InterruptionStateProvider (通用实现)
-        this.interruptionStateProvider = createInterruptionStateProvider();
-        log.info("[{}] 配置中，初始化 InterruptionStateProvider。", env.getExtensionName());
 
         // 2. 初始化 LLMContextManager (由子类提供具体实现)
         this.llmContextManager = createLLMContextManager(() -> (String)properties.get("prompt"));
@@ -82,7 +76,7 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
         log.info("[{}] 配置中，初始化 ToolRegistryAndCaller。", env.getExtensionName());
 
         // 6. 初始化 FlushOperationCoordinator (由子类提供具体实现，或使用通用实现)
-        this.flushOperationCoordinator = createFlushOperationCoordinator(interruptionStateProvider,
+        this.flushOperationCoordinator = createFlushOperationCoordinator(extensionStateProvider,
             streamPipelineChannel, (currentEnv) -> {
                 // LLMStreamAdapter 的 onCancelLLM 方法被调用
                 llmStreamAdapter.onCancelLLM(currentEnv);
@@ -193,14 +187,6 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
     }
 
     /**
-     * 抽象方法：创建 InterruptionStateProvider 实例。
-     * 子类可以返回 DefaultInterruptionStateProvider 的实例。
-     */
-    protected InterruptionStateProvider createInterruptionStateProvider() {
-        return new DefaultInterruptionStateProvider();
-    }
-
-    /**
      * 抽象方法：创建 LLMContextManager 实例。
      * 子类应返回 LLMContextManager 的具体实现，例如 DashScopeLLMContextManager。
      */
@@ -223,7 +209,7 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
         }
     }
 
-    protected StreamOutputBlockConsumer createStreamLLMOutputBlockConsumer() {
+    protected StreamOutputBlockConsumer<OutputBlock> createStreamLLMOutputBlockConsumer() {
         return (item, originalMessage, env) -> {
             if (item instanceof TextOutputBlock textBlock) {
                 // 文本块
@@ -254,8 +240,8 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
      * @param streamOutputBlockConsumer 流项目处理器。
      */
     protected StreamPipelineChannel<OutputBlock> createStreamPipelineChannel(
-        StreamOutputBlockConsumer streamOutputBlockConsumer) {
-        return new DefaultStreamPipelineChannel(interruptionStateProvider, streamOutputBlockConsumer);
+        StreamOutputBlockConsumer<OutputBlock> streamOutputBlockConsumer) {
+        return new DefaultStreamPipelineChannel(extensionStateProvider, streamOutputBlockConsumer);
     }
 
     /**

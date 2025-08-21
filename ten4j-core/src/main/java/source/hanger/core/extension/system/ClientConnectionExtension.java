@@ -27,9 +27,8 @@ public class ClientConnectionExtension extends BaseExtension {
     private String clientAppUri;
 
     @Override
-    public void onConfigure(TenEnv env, Map<String, Object> properties) {
-        this.env = env; // 初始化 env 字段
-        // 默认空实现
+    protected void onExtensionConfigure(TenEnv env, Map<String, Object> properties) {
+        super.onExtensionConfigure(env, properties);
     }
 
     @Override

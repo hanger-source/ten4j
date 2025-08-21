@@ -191,8 +191,6 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RESULT, MESSAGE, TOOL_FUNC
 
     @Override
     public void onCancelLLM(TenEnv env) {
-        // 取消 LLM 请求，由 StreamPipelineManager 内部处理其 Disposable
-        // AbstractLLMStreamService 不再直接持有 llmStreamDisposable
         log.info("[{}] 收到取消LLM请求", env.getExtensionName());
     }
 
@@ -260,25 +258,24 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RESULT, MESSAGE, TOOL_FUNC
             return null; // 没有传入片段，直接返回 null
         }
 
-        String toolCallId = incomingFragment.getId();
+        String toolCallId = incomingFragment.id();
         if (toolCallId == null) {
             log.warn("[{}] 收到没有toolCallId的工具调用片段，将忽略. 名称: {}", env.getExtensionName(),
-                incomingFragment.getName());
+                incomingFragment.name());
             return null; // 没有 ID 无法累积
         }
 
         accumulatingToolCallFragments.compute(toolCallId, (key, existingFragment) -> {
-            String newArguments = incomingFragment.getArgumentsJson() != null ? incomingFragment.getArgumentsJson()
+            String newArguments = incomingFragment.argumentsJson() != null ? incomingFragment.argumentsJson()
                 : "";
             if (existingFragment != null) {
-                newArguments = (existingFragment.getArgumentsJson() != null ? existingFragment.getArgumentsJson() : "")
+                newArguments = (existingFragment.argumentsJson() != null ? existingFragment.argumentsJson() : "")
                     + newArguments;
             }
             return new ToolCallOutputFragment(
-                existingFragment != null ? existingFragment.getName() : incomingFragment.getName(),
+                existingFragment != null ? existingFragment.name() : incomingFragment.name(),
                 newArguments,
-                toolCallId,
-                existingFragment != null ? existingFragment.getIndex() : incomingFragment.getIndex()
+                toolCallId
             );
         });
 
@@ -286,14 +283,14 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RESULT, MESSAGE, TOOL_FUNC
         if ("tool_calls".equalsIgnoreCase(finishReason)) {
             ToolCallOutputFragment completeToolCall = accumulatingToolCallFragments.remove(toolCallId);
             if (completeToolCall != null) {
-                log.info("[{}] 工具调用 {} 聚合完成并移除. ID: {}", env.getExtensionName(), completeToolCall.getName(),
-                    completeToolCall.getId());
+                log.info("[{}] 工具调用 {} 聚合完成并移除. ID: {}", env.getExtensionName(), completeToolCall.name(),
+                    completeToolCall.id());
                 return new ToolCallOutputBlock(
                     originalMessage.getId(),
-                    completeToolCall.getName(),
-                    completeToolCall.getArgumentsJson(),
+                    completeToolCall.name(),
+                    completeToolCall.argumentsJson(),
                     null,
-                    completeToolCall.getId()
+                    completeToolCall.id()
                 );
             }
             return null; // 即使 finishReason 是 tool_calls，如果没有完整工具调用，也返回 null

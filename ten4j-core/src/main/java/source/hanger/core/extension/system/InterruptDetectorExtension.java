@@ -23,8 +23,7 @@ public class InterruptDetectorExtension extends BaseExtension {
     private static final String TEXT_DATA_FINAL_FIELD = "is_final"; // Corresponds to Python's TEXT_DATA_FINAL_FIELD
 
     @Override
-    public void onConfigure(TenEnv env, Map<String, Object> properties) {
-        super.onConfigure(env, properties);
+    protected void onExtensionConfigure(TenEnv env, Map<String, Object> properties) {
         log.info("[InterruptDetector] Extension configuring: {}", env.getExtensionName());
     }
 

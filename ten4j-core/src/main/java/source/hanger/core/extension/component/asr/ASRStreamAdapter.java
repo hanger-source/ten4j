@@ -23,21 +23,6 @@ public interface ASRStreamAdapter {
      * @param audioFrame 接收到的音频帧消息。
      */
     void onAudioFrame(TenEnv env, AudioFrameMessage audioFrame);
-
-    /**
-     * 取消 ASR 请求。
-     *
-     * @param env 当前的 TenEnv 环境。
-     */
-    void onCancelASR(TenEnv env);
-
-    /**
-     * 清理 ASR 适配器资源。
-     *
-     * @param env 当前的 TenEnv 环境。
-     */
-    void onDeinit(TenEnv env);
-
     /**
      * 处理 ASR 重连逻辑。
      *

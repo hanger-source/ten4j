@@ -39,7 +39,7 @@ public class QwenChatLlmExtension
     @Override
     protected LLMStreamAdapter<Message, ToolFunction> createLLMStreamAdapter() {
         return new QwenChatLLMStreamAdapter(
-            interruptionStateProvider,
+            extensionStateProvider,
             streamPipelineChannel
         );
     }

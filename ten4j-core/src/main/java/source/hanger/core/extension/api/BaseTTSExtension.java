@@ -57,7 +57,7 @@ public abstract class BaseTTSExtension extends BaseFlushExtension<byte[]> {
      */
     @Override
     public void onDataMessage(TenEnv env, DataMessage data) {
-        if (!isRunning) {
+        if (!isRunning()) {
             log.warn("[{}] TTS扩展未运行，忽略数据: dataId={}", env.getExtensionName(), data.getId());
             return;
         }
