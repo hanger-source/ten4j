@@ -1,32 +1,45 @@
 package source.hanger.core.util;
 
-import lombok.extern.slf4j.Slf4j;
-
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Base64;
+
 import javax.imageio.ImageIO;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class ImageUtils {
 
-    public static String convertVideoFrameToJpegBase64(byte[] rgbData, int width, int height) {
+    public static String convertVideoFrameToJpegBase64(byte[] imageData, int width, int height, int pixelFormat) {
         try {
-            BufferedImage image;
-            int actualLen = rgbData.length;
+            BufferedImage image = null;
+            int actualLen = imageData.length;
             int expectedRgb = width * height * 3;
             int expectedRgba = width * height * 4;
 
-            log.info("[ImageUtils] Detecting image format: actualLen={}, width={}, height={}, expectedRGB={}, expectedRGBA={}",
-                    actualLen, width, height, expectedRgb, expectedRgba);
+            log.info(
+                "[ImageUtils] Detecting image format: actualLen={}, width={}, height={}, expectedRGB={}, "
+                    + "expectedRGBA={}, pixelFormat={}",
+                actualLen, width, height, expectedRgb, expectedRgba, pixelFormat);
 
-            if (actualLen == expectedRgb) { // RGB
+            // 前端发送的JPEG数据，pixelFormat=1 表示JPEG
+            // 临时处理：如果 pixelFormat 为 0 且数据长度远小于预期原始数据长度，也尝试按 JPEG 解码
+            if (pixelFormat == 1) {
+                try (ByteArrayInputStream bais = new ByteArrayInputStream(imageData)) {
+                    image = ImageIO.read(bais);
+                } catch (IOException e) {
+                    log.error("[ImageUtils] Error decoding JPEG data: {}", e.getMessage());
+                    return null;
+                }
+            } else if (actualLen == expectedRgb) { // RGB
                 image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-                image.getRaster().setDataElements(0, 0, width, height, rgbData);
+                image.getRaster().setDataElements(0, 0, width, height, imageData);
             } else if (actualLen == expectedRgba) { // RGBA
                 BufferedImage rgbaImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-                rgbaImage.getRaster().setDataElements(0, 0, width, height, rgbData);
+                rgbaImage.getRaster().setDataElements(0, 0, width, height, imageData);
                 image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB); // Convert to RGB
                 image.getGraphics().drawImage(rgbaImage, 0, 0, null);
             } else if (actualLen == (int)(width * height * 1.5)) { // YUV420 - requires OpenCV in Java, for simplicity, we will skip it and log an error if encountered.
@@ -34,7 +47,13 @@ public class ImageUtils {
                 return null; // For now, we don't support YUV420 without external library
             }
             else {
-                log.error("[ImageUtils] Unknown image data format: len={}, width={}, height={}", actualLen, width, height);
+                log.error("[ImageUtils] Unknown image data format: len={}, width={}, height={}, pixelFormat={}",
+                    actualLen, width, height, pixelFormat);
+                return null;
+            }
+
+            if (image == null) {
+                log.error("[ImageUtils] Image could not be decoded or created.");
                 return null;
             }
 

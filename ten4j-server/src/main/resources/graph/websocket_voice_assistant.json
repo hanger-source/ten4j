@@ -82,7 +82,8 @@
         "extension_group": "vision_group",
         "property": {
           "api_key": "{{env:bailian.dashscope.api.key}}",
-          "model": "qwen-vl-max"
+          "model": "qwen-vl-max",
+          "prompt": "{{prompt}}"
         }
       }
     ],
@@ -265,6 +266,19 @@
             "dest": [
               {
                 "extension": "llm"
+              }
+            ]
+          }
+        ],
+        "data": [
+          {
+            "name": "text_data",
+            "dest": [
+              {
+                "extension": "client_connection"
+              },
+              {
+                "extension": "tts"
               }
             ]
           }

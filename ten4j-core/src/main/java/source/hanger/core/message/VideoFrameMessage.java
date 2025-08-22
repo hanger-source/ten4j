@@ -46,7 +46,7 @@ public class VideoFrameMessage extends Message {
      * 对应C端 `ten_video_frame_t` 结构体中的 `pixel_fmt` 字段。
      */
     @JsonProperty("pixel_fmt")
-    private int pixelFormat;
+    private Integer pixelFormat;
 
     /**
      * 视频帧时间戳 (内部时间戳)。

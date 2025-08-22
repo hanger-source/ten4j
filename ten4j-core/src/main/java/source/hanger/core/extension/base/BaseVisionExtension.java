@@ -38,7 +38,7 @@ import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_TEX
 @Slf4j
 public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLLMExtension<MESSAGE, TOOL_FUNCTION> {
 
-    private static final int VIDEO_FRAME_COUNT = 0;
+    private static final int VIDEO_FRAME_COUNT = 3;
     // 使用RingBuffer作为帧缓冲
     private RingBuffer imageRingBuffer;
     // 生产者线程池，使用虚拟线程处理帧转换
@@ -73,7 +73,7 @@ public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLL
                     public LLMToolResult runTool(TenEnv env, Command command, Map<String, Object> args) {
                         String prompt = (String)args.get("prompt");
                         onTextWithVideo(command, prompt);
-                        return LLMToolResult.noop(true);
+                        return LLMToolResult.noop();
                     }
 
                     @Override
@@ -142,7 +142,7 @@ public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLL
             try {
                 // 将视频帧转换为 Base64 JPEG 字符串
                 String base64Image = ImageUtils.convertVideoFrameToJpegBase64(videoFrame.getData(),
-                    videoFrame.getWidth(), videoFrame.getHeight());
+                    videoFrame.getWidth(), videoFrame.getHeight(), videoFrame.getPixelFormat());
 
                 if (base64Image != null) {
                     // 将字符串转为字节，以便写入RingBuffer

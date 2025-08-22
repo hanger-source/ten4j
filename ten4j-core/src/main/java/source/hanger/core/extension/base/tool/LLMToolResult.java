@@ -21,8 +21,8 @@ public interface LLMToolResult {
         return LLMResult.builder().success(success).content(content).build();
     }
 
-    static LLMToolResult noop(boolean success) {
-        return LLMResult.builder().success(success).build();
+    static LLMToolResult noop() {
+        return Noop.builder().build();
     }
 
     // 静态工厂方法，用于创建 Requery 实例

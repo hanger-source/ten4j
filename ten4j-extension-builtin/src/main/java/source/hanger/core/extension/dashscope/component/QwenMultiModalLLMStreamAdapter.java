@@ -50,7 +50,8 @@ public class QwenMultiModalLLMStreamAdapter
             = MultiModalConversationParam.builder()
             .apiKey(env.getPropertyString("api_key").orElseThrow(() -> new RuntimeException("api_key 为空")))
             .model(env.getPropertyString("model").orElseThrow(() -> new RuntimeException("model 为空")))
-            .message(messages);
+            .incrementalOutput(true)
+            .messages(messages);
 
         if (tools != null && !tools.isEmpty()) {
             paramBuilder.tools(tools);
@@ -77,7 +78,8 @@ public class QwenMultiModalLLMStreamAdapter
             .map(MultiModalMessage::getContent)
             .map(contentList -> contentList.stream()
                 .filter(c -> c.containsKey("text"))
-                .findAny().map(String::valueOf).orElse(""))
+                .findAny().map(c -> c.get("text"))
+                .map(String::valueOf).orElse(""))
             .orElse(null);
     }
 

@@ -108,8 +108,8 @@ public class TenServer {
                                         // Handler
                                         // WebSocket 协议处理器，路径为 "/websocket"
                                         // 在握手完成后，HTTP 请求会被替换为 WebSocket 帧
-                                        new WebSocketServerProtocolHandler("/websocket", null, true, 65536), // 明确设置
-                                        new WebSocketFrameAggregator(8192), // 聚合 WebSocket 帧
+                                        new WebSocketServerProtocolHandler("/websocket", null, true, 1048576), // 增加到1MB
+                                        new WebSocketFrameAggregator(1048576), // 聚合 WebSocket 帧，增加到1MB
                                         // MsgPack 编解码器
                                         new WebSocketFrameToByteBufDecoder(),
                                         new MessagePackDecoder(), // MsgPack 解码器
