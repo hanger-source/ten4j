@@ -38,8 +38,8 @@
         "extension_group": "tts_group",
         "property": {
           "api_key": "{{env:bailian.dashscope.api.key}}",
-          "voice_name": "Ethan",
-          "model": "qwen-tts-latest"
+          "voice_name": "Cherry",
+          "model": "qwen-tts"
         }
       },
       {
