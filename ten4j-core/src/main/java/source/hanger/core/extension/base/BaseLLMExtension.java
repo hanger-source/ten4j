@@ -94,6 +94,7 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
     @Override
     public void onStop(TenEnv env) {
         log.info("[{}] BaseLLMExtension 停止，销毁管道。", env.getExtensionName());
+        super.onStop(env);
         streamPipelineChannel.disposeCurrent();
     }
 

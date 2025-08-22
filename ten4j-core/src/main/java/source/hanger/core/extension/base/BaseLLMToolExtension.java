@@ -39,8 +39,8 @@ public abstract class BaseLLMToolExtension extends BaseExtension {
     @Override
     public void onStart(TenEnv env) {
         super.onStart(env);
-        // 注册工具
-        registerTools(env);
+        // 发送注册工具
+        sendRegisterToolCommands(env);
     }
 
     @Override
@@ -53,7 +53,7 @@ public abstract class BaseLLMToolExtension extends BaseExtension {
         }
     }
 
-    private void registerTools(TenEnv env) {
+    private void sendRegisterToolCommands(TenEnv env) {
         // 从 BaseLLMToolExtension 迁移的逻辑：注册和发送工具元数据
         log.info("[{}] 工具扩展启动阶段", env.getExtensionName());
         if (tools != null && !tools.isEmpty()) {

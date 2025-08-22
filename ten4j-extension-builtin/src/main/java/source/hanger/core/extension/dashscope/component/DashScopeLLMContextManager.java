@@ -133,11 +133,6 @@ public class DashScopeLLMContextManager implements
     }
 
     @Override
-    public String getSystemPrompt() {
-        return systemPromptSupplier.get();
-    }
-
-    @Override
     public void onAssistantMsg(String content) {
         Message assistantMessage = Message.builder().role(Role.ASSISTANT.getValue()).content(content).build();
         history.add(assistantMessage);

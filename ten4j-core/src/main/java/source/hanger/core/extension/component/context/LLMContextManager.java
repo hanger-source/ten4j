@@ -18,13 +18,6 @@ public interface LLMContextManager<MESSAGE> {
     List<MESSAGE> getMessagesForLLM();
 
     /**
-     * 获取当前的系统提示。
-     *
-     * @return 系统提示字符串。
-     */
-    String getSystemPrompt();
-
-    /**
      * 添加一个新的用户或助手消息到对话历史。
      *
      * @param content 消息内容。
