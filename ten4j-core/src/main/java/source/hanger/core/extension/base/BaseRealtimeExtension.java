@@ -20,10 +20,6 @@ import source.hanger.core.util.MessageUtils;
 @Slf4j
 public abstract class BaseRealtimeExtension<REALTIME_EVENT> extends BaseFlushExtension<REALTIME_EVENT> {
 
-    public BaseRealtimeExtension() {
-        super();
-    }
-
     @Override
     public void onStart(TenEnv env) {
         super.onStart(env);
