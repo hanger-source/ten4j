@@ -24,31 +24,31 @@ public class InterruptDetectorExtension extends BaseExtension {
 
     @Override
     protected void onExtensionConfigure(TenEnv env, Map<String, Object> properties) {
-        log.info("[InterruptDetector] Extension configuring: {}", env.getExtensionName());
+        log.info("[{}] Extension configuring", env.getExtensionName());
     }
 
     @Override
     public void onInit(TenEnv env) {
         super.onInit(env);
-        log.info("[InterruptDetector] Extension initialized: {}", env.getExtensionName());
+        log.info("[{}] Extension initialized", env.getExtensionName());
     }
 
     @Override
     public void onStart(TenEnv env) {
         super.onStart(env);
-        log.info("[InterruptDetector] Extension starting: {}", env.getExtensionName());
+        log.info("[{}] Extension starting", env.getExtensionName());
     }
 
     @Override
     public void onStop(TenEnv env) {
         super.onStop(env);
-        log.info("[InterruptDetector] Extension stopping: {}", env.getExtensionName());
+        log.info("[{}] Extension stopping", env.getExtensionName());
     }
 
     @Override
     public void onDeinit(TenEnv env) {
         super.onDeinit(env);
-        log.info("[InterruptDetector] Extension de-initialized: {}", env.getExtensionName());
+        log.info("[{}] Extension de-initialized", env.getExtensionName());
     }
 
     /**
@@ -58,7 +58,7 @@ public class InterruptDetectorExtension extends BaseExtension {
         // Use GenericCommand.create for flush command
         GenericCommand flushCmd = GenericCommand.create(CMD_NAME_FLUSH, originalCommandId);
         env.sendMessage(flushCmd);
-        log.info("[InterruptDetector] Sent flush command to downstream. cmdId {} OriginalCmdId: {}", flushCmd.getId(),
+        log.info("[{}] Sent flush command to downstream. cmdId {} OriginalCmdId: {}", env.getExtensionName(), flushCmd.getId(),
             originalCommandId);
     }
 
@@ -66,7 +66,7 @@ public class InterruptDetectorExtension extends BaseExtension {
     public void onCmd(TenEnv env, Command command) {
         super.onCmd(env, command);
         String cmdName = command.getName();
-        log.info("[InterruptDetector] Received command: {}", cmdName);
+        log.info("[{}] Received command: {}",env.getExtensionName(), cmdName);
 
         // Flush whatever cmd incoming at the moment
         sendFlushCmd(env, command.getId(), command.getParentCommandId());
@@ -87,9 +87,9 @@ public class InterruptDetectorExtension extends BaseExtension {
             }
 
             env.sendCmd(newCmd);
-            log.info("[InterruptDetector] Forwarded command: {}", newCmd.getName());
+            log.info("[{}] Forwarded command: {}",env.getExtensionName(), newCmd.getName());
         } catch (Exception e) {
-            log.error("[InterruptDetector] Error forwarding command {}: {}", cmdName, e.getMessage(), e);
+            log.error("[{}] Error forwarding command {}: {}",env.getExtensionName(), cmdName, e.getMessage(), e);
         }
 
         // Return success result for the incoming command
