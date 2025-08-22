@@ -147,17 +147,19 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RESULT, MESSAGE, TOOL_FUNC
                     originalMessage
                 ));
             }
+        }
 
-            // 如果是流结束或当前文本段的结束，并且缓冲区中还有文本，则发出剩余文本作为最终片段
-            if ((isStreamEnding || endOfSegment)) {
+        // 如果是流结束或当前文本段的结束，并且缓冲区中还有文本，则发出剩余文本作为最终片段
+        if ((isStreamEnding || endOfSegment)) {
+            if (!fullTextBuffer.isEmpty()) {
                 packetsToEmit.add(new PipelinePacket<>(
                     new TextOutputBlock(originalMessage.getId(), textBuffer.toString(), true,
                         fullTextBuffer.toString()),
                     originalMessage
                 ));
-                textBuffer.setLength(0);
-                fullTextBuffer.setLength(0);
             }
+            textBuffer.setLength(0);
+            fullTextBuffer.setLength(0);
         }
     }
 
