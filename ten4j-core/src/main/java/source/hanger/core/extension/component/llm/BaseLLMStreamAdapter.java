@@ -1,5 +1,6 @@
 package source.hanger.core.extension.component.llm;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -18,17 +19,20 @@ import source.hanger.core.util.SentenceProcessor;
  * LLM 流服务抽象基类。
  * 负责 LLM 原始输出的复杂解析、文本聚合、通用工具调用片段的生成，并将其转换为更高级的“逻辑块”推送到主管道。
  *
- * @param <GENERATION_RESULT> LLM 原始响应的类型（例如 DashScope 的 GenerationResult）。
+ * @param <GENERATION_RAW_RESULT> LLM 原始响应的类型（例如 DashScope 的 GenerationResult）。
  * @param <MESSAGE>           LLM 对话消息的类型（例如 DashScope 的 Message）。
  * @param <TOOL_FUNCTION>     LLM 工具函数定义的类型（例如 DashScope 的 ToolCallFunction）。
  */
 @Slf4j
-public abstract class BaseLLMStreamAdapter<GENERATION_RESULT, MESSAGE, TOOL_FUNCTION>
+public abstract class BaseLLMStreamAdapter<GENERATION_RAW_RESULT, MESSAGE, TOOL_FUNCTION>
     implements LLMStreamAdapter<MESSAGE, TOOL_FUNCTION> {
 
     protected final InterruptionStateProvider interruptionStateProvider;
     protected final StreamPipelineChannel<OutputBlock> streamPipelineChannel;
     protected final Map<String, ToolCallOutputFragment> accumulatingToolCallFragments = new ConcurrentHashMap<>();
+
+    protected final String TEXT_BUFFER_STATE = "textBuffer";
+    protected final String FULL_TEXT_BUFFER_STATE = "fullTextBuffer";
 
     /**
      * 构造函数。
@@ -49,15 +53,15 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RESULT, MESSAGE, TOOL_FUNC
         log.info("[{}] 开始请求LLM并处理流. 原始消息ID: {}", env.getExtensionName(),
             originalMessage.getId());
 
-        StringBuilder textBuffer = new StringBuilder();
-        StringBuilder fullTextBuffer = new StringBuilder();
+        Map<String, Object> streamContexts = initStreamContexts(env, messages, tools);
+
         // 获取 LLM 原始响应流
-        Flowable<GENERATION_RESULT> rawLlmFlowable = getRawLlmFlowable(env, messages, tools);
+        Flowable<GENERATION_RAW_RESULT> rawLlmFlowable = getRawLlmFlowable(env, messages, tools);
 
         // 转换原始 LLM 流为 LLMOutputBlock 流，实现真正的流式处理
         Flowable<PipelinePacket<OutputBlock>> transformedOutputFlowable = rawLlmFlowable
             .flatMap(
-                result -> transformSingleGenerationResult(result, originalMessage, textBuffer, fullTextBuffer, env))
+                result -> transformSingleGenerationResult(result, originalMessage, streamContexts, env))
             // 中断检测，flush后中断当前流处理
             .takeWhile(_ -> !interruptionStateProvider.isInterrupted())
             .doOnError(error -> {
@@ -74,22 +78,30 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RESULT, MESSAGE, TOOL_FUNC
         streamPipelineChannel.submitStreamPayload(transformedOutputFlowable, env); // 直接提交 transformedOutputFlowable
     }
 
+    protected Map<String, Object> initStreamContexts(TenEnv env, List<MESSAGE> messages, List<TOOL_FUNCTION> tools) {
+        Map<String, Object> streamContexts = new HashMap<>();
+        streamContexts.put(TEXT_BUFFER_STATE, new StringBuilder());
+        streamContexts.put(FULL_TEXT_BUFFER_STATE, new StringBuilder());
+        return streamContexts;
+    }
+
     /**
      * 辅助方法：处理单个 LLM 原始响应结果。
      * 从结果中提取文本片段和工具调用片段，并将其转换为 Flowable<PipelinePacket<LLMOutputBlock>>。
      *
      * @param result          LLM 原始响应结果。
      * @param originalMessage 原始消息。
-     * @param textBuffer      textBuffer
-     * @param fullTextBuffer  fullTextBuffer
      * @param env             当前的 TenEnv 环境。
      * @return 包含 PipelinePacket 的 Flowable 流。
      */
     protected Flowable<PipelinePacket<OutputBlock>> transformSingleGenerationResult(
-        GENERATION_RESULT result,
+        GENERATION_RAW_RESULT result,
         Message originalMessage,
-        StringBuilder textBuffer, StringBuilder fullTextBuffer, TenEnv env
+        Map<String, Object> streamContexts, TenEnv env
     ) {
+        StringBuilder textBuffer = (StringBuilder)streamContexts.get(TEXT_BUFFER_STATE);
+        StringBuilder fullTextBuffer = (StringBuilder)streamContexts.get(FULL_TEXT_BUFFER_STATE);
+
         List<PipelinePacket<OutputBlock>> packetsToEmit = new java.util.ArrayList<>();
 
         // 提前获取 finishReason
@@ -106,7 +118,15 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RESULT, MESSAGE, TOOL_FUNC
         // 2. 处理工具调用片段并聚合
         processToolCallStreamResult(result, originalMessage, env, finishReason, packetsToEmit);
 
+        // 3. 处理其他片段
+        processOtherStreamResult(result, originalMessage, env, finishReason, packetsToEmit, streamContexts);
+
         return Flowable.fromIterable(packetsToEmit);
+    }
+
+    protected void processOtherStreamResult(GENERATION_RAW_RESULT result, Message originalMessage, TenEnv env,
+        String finishReason, List<PipelinePacket<OutputBlock>> packetsToEmit, Map<String, Object> requestStates) {
+
     }
 
     /**
@@ -123,7 +143,7 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RESULT, MESSAGE, TOOL_FUNC
      * @param packetsToEmit   收集 PipelinePacket 的列表。
      */
     protected void processTextStreamResult(
-        GENERATION_RESULT result,
+        GENERATION_RAW_RESULT result,
         Message originalMessage,
         StringBuilder textBuffer, StringBuilder fullTextBuffer, TenEnv env,
         boolean isStreamEnding,
@@ -174,7 +194,7 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RESULT, MESSAGE, TOOL_FUNC
      * @param packetsToEmit   收集 PipelinePacket 的列表。
      */
     protected void processToolCallStreamResult(
-        GENERATION_RESULT result,
+        GENERATION_RAW_RESULT result,
         Message originalMessage,
         TenEnv env,
         String finishReason,
@@ -206,7 +226,7 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RESULT, MESSAGE, TOOL_FUNC
      * @param tools    提供给 LLM 的工具列表。
      * @return 包含原始 LLM 响应的 Flowable 流。
      */
-    protected abstract Flowable<GENERATION_RESULT> getRawLlmFlowable(TenEnv env, List<MESSAGE> messages,
+    protected abstract Flowable<GENERATION_RAW_RESULT> getRawLlmFlowable(TenEnv env, List<MESSAGE> messages,
         List<TOOL_FUNCTION> tools);
 
     /**
@@ -216,7 +236,7 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RESULT, MESSAGE, TOOL_FUNC
      * @param result 原始 LLM 响应。
      * @return 提取的文本片段，如果无文本则返回 null 或空字符串。
      */
-    protected abstract String extractTextFragment(GENERATION_RESULT result);
+    protected abstract String extractTextFragment(GENERATION_RAW_RESULT result);
 
     /**
      * 抽象方法：判断当前原始 LLM 响应是否表示一个文本段的结束。
@@ -225,7 +245,7 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RESULT, MESSAGE, TOOL_FUNC
      * @param result 原始 LLM 响应。
      * @return 如果是文本段的最终片段则返回 true。
      */
-    protected abstract boolean isEndOfTextSegment(GENERATION_RESULT result);
+    protected abstract boolean isEndOfTextSegment(GENERATION_RAW_RESULT result);
 
     /**
      * 抽象方法：从原始 LLM 响应中提取并转换为通用工具调用片段。
@@ -236,7 +256,8 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RESULT, MESSAGE, TOOL_FUNC
      * @param result 原始 LLM 响应。
      * @return 转换后的 CommonToolCallFragment，如果无工具调用则返回 null。
      */
-    protected abstract ToolCallOutputFragment extractAndConvertToolCallFragment(TenEnv env, GENERATION_RESULT result);
+    protected abstract ToolCallOutputFragment extractAndConvertToolCallFragment(TenEnv env,
+        GENERATION_RAW_RESULT result);
 
     /**
      * 抽象方法：从原始 LLM 响应中获取 LLM 的结束原因（例如 stop, tool_calls）。
@@ -245,7 +266,7 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RESULT, MESSAGE, TOOL_FUNC
      * @param result 原始 LLM 响应。
      * @return LLM 结束原因的字符串表示。
      */
-    protected abstract String getFinishReason(GENERATION_RESULT result);
+    protected abstract String getFinishReason(GENERATION_RAW_RESULT result);
 
     /**
      * 辅助方法：处理工具调用片段的聚合逻辑。

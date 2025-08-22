@@ -11,6 +11,7 @@ import lombok.experimental.SuperBuilder;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({
     @JsonSubTypes.Type(value = LLMToolResult.Requery.class, name = "requery"),
+    @JsonSubTypes.Type(value = LLMToolResult.Noop.class, name = "noop"),
     @JsonSubTypes.Type(value = LLMToolResult.LLMResult.class, name = "llmresult")
 })
 public interface LLMToolResult {
@@ -20,8 +21,8 @@ public interface LLMToolResult {
         return LLMResult.builder().success(success).content(content).build();
     }
 
-    static LLMToolResult llmResult(boolean success, String content, String groupId) {
-        return LLMResult.builder().success(success).content(content).groupId(groupId).build();
+    static LLMToolResult noop(boolean success) {
+        return LLMResult.builder().success(success).build();
     }
 
     // 静态工厂方法，用于创建 Requery 实例
@@ -34,10 +35,16 @@ public interface LLMToolResult {
         private String content;
     }
 
+    @Data
+    @SuperBuilder
+    @NoArgsConstructor
+    @JsonTypeName("noop")
+    class Noop implements LLMToolResult {
+    }
+
     @Data @SuperBuilder @NoArgsConstructor @AllArgsConstructor @JsonTypeName("llmresult")
-    public static class LLMResult implements LLMToolResult {
-        private boolean success; // 新增：表示操作是否成功
+    class LLMResult implements LLMToolResult {
+        private boolean success;
         private String content;
-        private String groupId;
     }
 }

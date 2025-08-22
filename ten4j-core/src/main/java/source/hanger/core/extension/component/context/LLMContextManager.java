@@ -27,6 +27,8 @@ public interface LLMContextManager<MESSAGE> {
     void onAssistantMsg(MESSAGE message);
 
     void onUserMsg(String content);
+
+    void onUserVideoMsg(String content, List<String> base64Images);
     /**
      * 添加一个 LLM 特定消息对象到对话历史。
      * 例如，用于添加工具调用消息或工具结果消息。

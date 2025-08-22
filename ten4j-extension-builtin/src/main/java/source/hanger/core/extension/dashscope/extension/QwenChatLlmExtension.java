@@ -10,7 +10,7 @@ import source.hanger.core.extension.base.BaseLLMExtension;
 import source.hanger.core.extension.component.context.LLMContextManager;
 import source.hanger.core.extension.component.llm.LLMStreamAdapter;
 import source.hanger.core.extension.component.tool.LLMToolOrchestrator;
-import source.hanger.core.extension.dashscope.component.DashScopeLLMContextManager;
+import source.hanger.core.extension.dashscope.component.QwenChatLLMContextManager;
 import source.hanger.core.extension.dashscope.component.QwenChatLLMStreamAdapter;
 import source.hanger.core.extension.dashscope.component.QwenChatLLMToolOrchestrator;
 
@@ -24,7 +24,7 @@ public class QwenChatLlmExtension
     @Override
     protected LLMContextManager<Message> createLLMContextManager(
         Supplier<String> systemPromptSupplier) {
-        return new DashScopeLLMContextManager(systemPromptSupplier);
+        return new QwenChatLLMContextManager(systemPromptSupplier);
     }
 
     @Override

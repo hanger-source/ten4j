@@ -91,9 +91,7 @@ public class ClientConnectionExtension extends BaseExtension {
     @Override
     public void onVideoFrame(TenEnv env, VideoFrameMessage videoFrame) {
         // 默认空实现
-        if (videoFrame.getDestLocs() == null) {
-            videoFrame.setDestLocs(singletonList(new Location(clientAppUri, env.getGraphId(), env.getExtensionName())));
-        }
+        routeLocation(env, videoFrame);
         env.sendVideoFrame(videoFrame);
     }
 

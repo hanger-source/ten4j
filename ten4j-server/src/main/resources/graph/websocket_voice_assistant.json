@@ -74,6 +74,16 @@
         "property": {
           "api_key": "{{env:bailian.dashscope.api.key}}"
         }
+      },
+      {
+        "type": "extension",
+        "name": "vision",
+        "addon": "source.hanger.core.extension.dashscope.extension.QwenVisionExtension",
+        "extension_group": "vision_group",
+        "property": {
+          "api_key": "{{env:bailian.dashscope.api.key}}",
+          "model": "qwen-vl-max"
+        }
       }
     ],
     "connections": [
@@ -105,6 +115,16 @@
             "dest": [
               {
                 "extension": "asr"
+              }
+            ]
+          }
+        ],
+        "video_frame": [
+          {
+            "name": "video_frame",
+            "dest": [
+              {
+                "extension": "vision"
               }
             ]
           }
@@ -168,6 +188,9 @@
               },
               {
                 "extension": "image_generate"
+              },
+              {
+                "extension": "vision"
               }
             ]
           }
@@ -229,6 +252,19 @@
             "dest": [
               {
                 "extension": "client_connection"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "extension": "vision",
+        "cmd": [
+          {
+            "name": "tool_register",
+            "dest": [
+              {
+                "extension": "llm"
               }
             ]
           }

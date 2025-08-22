@@ -20,7 +20,7 @@ import source.hanger.core.extension.component.context.LLMContextManager;
  * 负责管理 LLM 对话历史和系统提示。
  */
 @Slf4j // 添加Slf4j注解
-public class DashScopeLLMContextManager implements
+public class QwenChatLLMContextManager implements
     LLMContextManager<Message> {
 
     private final List<Message> history = new CopyOnWriteArrayList<>(); // 从 LLMHistoryManager 迁移
@@ -32,7 +32,7 @@ public class DashScopeLLMContextManager implements
      *
      * @param systemPromptSupplier 用于提供系统提示词的 Supplier。
      */
-    public DashScopeLLMContextManager(Supplier<String> systemPromptSupplier) {
+    public QwenChatLLMContextManager(Supplier<String> systemPromptSupplier) {
         this.systemPromptSupplier = systemPromptSupplier; // 赋值 Supplier
     }
 
@@ -153,6 +153,11 @@ public class DashScopeLLMContextManager implements
         history.add(userMessage);
         smartTruncateHistory();
         log.debug("[llm_history] Added user string message to history. Current size: {}", history.size());
+    }
+
+    @Override
+    public void onUserVideoMsg(String content, List<String> base64Images) {
+        onUserMsg(content);
     }
 
     @Override

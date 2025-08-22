@@ -5,8 +5,11 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.base.tool.LLMToolMetadata;
+import source.hanger.core.extension.base.tool.LLMToolResult;
+import source.hanger.core.extension.base.tool.LLMToolResult.Noop;
 import source.hanger.core.extension.component.context.LLMContextManager;
 import source.hanger.core.extension.component.llm.LLMStreamAdapter;
 import source.hanger.core.extension.component.llm.ToolCallOutputBlock;
@@ -33,6 +36,7 @@ public abstract class BaseLLMToolOrchestrator<MESSAGE, LLM_TOOL_FUNCTION> implem
     LLMToolOrchestrator<LLM_TOOL_FUNCTION> {
 
     protected final LLMContextManager<MESSAGE> llmContextManager;
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final Map<String, LLMToolMetadata> toolMap = new ConcurrentHashMap<>();
     private final LLMStreamAdapter<MESSAGE, LLM_TOOL_FUNCTION> llmStreamAdapter;
 
@@ -131,8 +135,8 @@ public abstract class BaseLLMToolOrchestrator<MESSAGE, LLM_TOOL_FUNCTION> implem
         TenEnv env,
         List<CommandResult> cmdResults, Throwable cmdThrowable) {
         try {
+            LLMToolResult llmToolResult = null;
             if (cmdThrowable != null) {
-
                 log.error("[{}] 工具调用命令执行失败: toolName={}, error={}",
                     env.getExtensionName(), callOutputBlock.getToolName(), cmdThrowable.getMessage(), cmdThrowable);
                 // 将失败结果添加到历史
@@ -150,13 +154,13 @@ public abstract class BaseLLMToolOrchestrator<MESSAGE, LLM_TOOL_FUNCTION> implem
                         finalCmdResult.getProperty(CMD_PROPERTY_RESULT, String.class);
                     log.info("[{}] 工具调用命令执行成功: toolName={}, result={}",
                         env.getExtensionName(), callOutputBlock.getToolName(), toolResultJson);
+
+                    llmToolResult = objectMapper.readValue(toolResultJson, LLMToolResult.class);
                     // 将工具执行结果添加到历史
                     MESSAGE toolOutputMsg =
                         createToolCallMessage(callOutputBlock, toolResultJson);
                     llmContextManager.onToolCallMsg(toolOutputMsg);
-
                 } else {
-
                     String errorMsg = finalCmdResult.getDetail() != null ? finalCmdResult.getDetail()
                         : "未知错误";
                     log.error("[{}] 工具调用命令执行失败（非异常）: toolName={}, message={}",
@@ -178,14 +182,16 @@ public abstract class BaseLLMToolOrchestrator<MESSAGE, LLM_TOOL_FUNCTION> implem
             log.info("[{}] LLM请求工具调用，已收到异步命令结果，开始调用LLM: toolName={}, callOutputBlock={}",
                 env.getExtensionName(), callOutputBlock.getToolName(), callOutputBlock);
 
-            List<MESSAGE> messagesForNextTurn = llmContextManager.getMessagesForLLM();
-            List<LLM_TOOL_FUNCTION> registeredToolFunctions = getRegisteredToolFunctions();
-            llmStreamAdapter.onRequestLLMAndProcessStream(
-                env,
-                messagesForNextTurn,
-                registeredToolFunctions,
-                originalMessage
-            );
+            if (!(llmToolResult instanceof Noop)) {
+                List<MESSAGE> messagesForNextTurn = llmContextManager.getMessagesForLLM();
+                List<LLM_TOOL_FUNCTION> registeredToolFunctions = getRegisteredToolFunctions();
+                llmStreamAdapter.onRequestLLMAndProcessStream(
+                    env,
+                    messagesForNextTurn,
+                    registeredToolFunctions,
+                    originalMessage
+                );
+            }
         } catch (Exception e) {
             log.error("[{}] 处理工具调用CompletableFuture回调异常: toolName={}, callOutputBlock={}, error={}",
                 env.getExtensionName(), callOutputBlock.getToolName(), callOutputBlock, e.getMessage(), e);
