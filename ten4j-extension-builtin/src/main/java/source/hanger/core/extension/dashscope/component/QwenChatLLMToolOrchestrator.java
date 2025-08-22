@@ -12,7 +12,7 @@ import com.alibaba.dashscope.tools.ToolFunction;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import source.hanger.core.extension.base.tool.ToolMetadata;
+import source.hanger.core.extension.base.tool.LLMToolMetadata;
 import source.hanger.core.extension.component.context.LLMContextManager;
 import source.hanger.core.extension.component.llm.LLMStreamAdapter;
 import source.hanger.core.extension.component.llm.ToolCallOutputBlock;
@@ -21,7 +21,7 @@ import source.hanger.core.message.MessageType;
 import source.hanger.core.tenenv.TenEnv;
 
 import static java.util.Collections.singletonList;
-import static source.hanger.core.extension.base.tool.ToolMetadata.ToolParameter;
+import static source.hanger.core.extension.base.tool.LLMToolMetadata.ToolParameter;
 
 /**
  * @author fuhangbo.hanger.uhfun
@@ -34,11 +34,11 @@ public class QwenChatLLMToolOrchestrator extends BaseLLMToolOrchestrator<Message
     }
 
     @Override
-    protected ToolFunction toToolFunction(ToolMetadata toolMetadata) {
+    protected ToolFunction toToolFunction(LLMToolMetadata LLMToolMetadata) {
         FunctionDefinition functionDefinition = FunctionDefinition.builder()
-            .name(toolMetadata.getName())
-            .description(toolMetadata.getDescription())
-            .parameters(convertParametersToJsonObject(toolMetadata.getParameters()))
+            .name(LLMToolMetadata.getName())
+            .description(LLMToolMetadata.getDescription())
+            .parameters(convertParametersToJsonObject(LLMToolMetadata.getParameters()))
             .build();
         return ToolFunction.builder().function(functionDefinition).build();
     }

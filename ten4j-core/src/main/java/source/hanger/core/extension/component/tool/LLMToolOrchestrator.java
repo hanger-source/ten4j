@@ -2,7 +2,7 @@ package source.hanger.core.extension.component.tool;
 
 import java.util.List;
 
-import source.hanger.core.extension.base.tool.ToolMetadata;
+import source.hanger.core.extension.base.tool.LLMToolMetadata;
 import source.hanger.core.extension.component.llm.ToolCallOutputBlock;
 import source.hanger.core.message.Message;
 import source.hanger.core.tenenv.TenEnv;
@@ -19,9 +19,9 @@ public interface LLMToolOrchestrator<TOOL_FUNCTION> {
     /**
      * 注册一个 LLM 工具。
      *
-     * @param toolMetadata toolMetadata
+     * @param LLMToolMetadata toolMetadata
      */
-    void registerTool(ToolMetadata toolMetadata);
+    void registerTool(LLMToolMetadata LLMToolMetadata);
 
     /**
      * 获取所有已注册的工具函数列表，用于传递给 LLM。

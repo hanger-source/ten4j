@@ -1,35 +1,37 @@
 package source.hanger.core.extension.base.tool;
 
 import java.util.List;
-import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
-/**
- * LLM工具元数据，用于工具调用功能
- */
 @Data
 @Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class LLMToolMetadata {
+    @JsonProperty("name")
     private String name;
+    @JsonProperty("description")
     private String description;
-    private Map<String, Object> parameters; // 工具参数的JSON Schema
-    private List<String> required; // 必填参数列表
+    @JsonProperty("parameters")
+    private List<ToolParameter> parameters;
 
-    public String getName() {
-        return name;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public Map<String, Object> getParameters() {
-        return parameters;
-    }
-
-    public List<String> getRequired() {
-        return required;
+    @Data
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class ToolParameter {
+        @JsonProperty("name")
+        private String name;
+        @JsonProperty("type")
+        private String type;
+        @JsonProperty("description")
+        private String description;
+        @JsonProperty("required")
+        private boolean required;
     }
 }

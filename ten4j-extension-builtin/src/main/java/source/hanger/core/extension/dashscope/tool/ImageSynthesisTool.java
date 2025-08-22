@@ -11,8 +11,8 @@ import com.alibaba.dashscope.exception.NoApiKeyException;
 
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.base.tool.LLMTool;
+import source.hanger.core.extension.base.tool.LLMToolMetadata;
 import source.hanger.core.extension.base.tool.LLMToolResult;
-import source.hanger.core.extension.base.tool.ToolMetadata;
 import source.hanger.core.extension.dashscope.task.BailianPollingTask;
 import source.hanger.core.extension.dashscope.task.BailianPollingTaskRunner;
 import source.hanger.core.message.DataMessage;
@@ -53,24 +53,24 @@ public class ImageSynthesisTool implements LLMTool {
     }
 
     @Override
-    public ToolMetadata getToolMetadata() {
+    public LLMToolMetadata getToolMetadata() {
         // 定义工具的元数据，包括名称、描述和参数
-        return  new ToolMetadata("qwen_image_generate_tool",
+        return new LLMToolMetadata("qwen_image_generate_tool",
                         "当用户想要生成图片时非常有用。可以根据用户需求生成图片。",
                         List.of(
-                                new ToolMetadata.ToolParameter(
+                            new LLMToolMetadata.ToolParameter(
                                         "prompt",
                                         "string",
                                         "正向提示词，用来描述生成图像中期望包含的元素和视觉特点。支持中英文，长度不超过800个字符。示例：一只坐着的橘黄色的猫，表情愉悦，活泼可爱，逼真准确。",
                                         true
                                 ),
-                                new ToolMetadata.ToolParameter(
+                            new LLMToolMetadata.ToolParameter(
                                         "n",
                                         "integer",
                                         "生成图片的数量。取值范围为1~4张，默认为1；请甄别用户需求，注意该参数为图片张数，不是图片中的元素数量",
                                         false
                                 ),
-                                new ToolMetadata.ToolParameter(
+                            new LLMToolMetadata.ToolParameter(
                                         "size",
                                         "string",
                                         "输出图像的分辨率。默认值是512*512。图像宽高边长的像素范围为：[512, 1440]，单位像素。",

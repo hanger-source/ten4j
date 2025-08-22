@@ -6,7 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.extension.base.tool.ToolMetadata;
+import source.hanger.core.extension.base.tool.LLMToolMetadata;
 import source.hanger.core.extension.component.context.LLMContextManager;
 import source.hanger.core.extension.component.llm.LLMStreamAdapter;
 import source.hanger.core.extension.component.llm.ToolCallOutputBlock;
@@ -33,7 +33,7 @@ public abstract class BaseLLMToolOrchestrator<MESSAGE, LLM_TOOL_FUNCTION> implem
     LLMToolOrchestrator<LLM_TOOL_FUNCTION> {
 
     protected final LLMContextManager<MESSAGE> llmContextManager;
-    private final Map<String, ToolMetadata> toolMap = new ConcurrentHashMap<>();
+    private final Map<String, LLMToolMetadata> toolMap = new ConcurrentHashMap<>();
     private final LLMStreamAdapter<MESSAGE, LLM_TOOL_FUNCTION> llmStreamAdapter;
 
     public BaseLLMToolOrchestrator(
@@ -44,9 +44,9 @@ public abstract class BaseLLMToolOrchestrator<MESSAGE, LLM_TOOL_FUNCTION> implem
     }
 
     @Override
-    public void registerTool(ToolMetadata toolMetadata) {
+    public void registerTool(LLMToolMetadata LLMToolMetadata) {
         // 实现注册逻辑，这里可以直接调用 ExtensionToolRegistry 的注册方法
-        toolMap.computeIfAbsent(toolMetadata.getName(), k -> toolMetadata);
+        toolMap.computeIfAbsent(LLMToolMetadata.getName(), k -> LLMToolMetadata);
     }
 
     @Override
@@ -59,7 +59,7 @@ public abstract class BaseLLMToolOrchestrator<MESSAGE, LLM_TOOL_FUNCTION> implem
     }
 
     // 辅助方法：将 LLMTool 转换为 特定厂商 期望的 ToolFunction 格式
-    protected abstract LLM_TOOL_FUNCTION toToolFunction(ToolMetadata toolMetadata);
+    protected abstract LLM_TOOL_FUNCTION toToolFunction(LLMToolMetadata LLMToolMetadata);
 
     /**
      * 处理 LLM 工具调用命令。
@@ -73,8 +73,8 @@ public abstract class BaseLLMToolOrchestrator<MESSAGE, LLM_TOOL_FUNCTION> implem
         log.info("[{}] 开始处理工具调用. Tool Name: {}, Arguments: {}",
             env.getExtensionName(), toolCallOutputBlock.getToolName(), toolCallOutputBlock.getArgumentsJson());
 
-        ToolMetadata toolMetadata = toolMap.get(toolCallOutputBlock.getToolName());
-        if (toolMetadata == null) {
+        LLMToolMetadata LLMToolMetadata = toolMap.get(toolCallOutputBlock.getToolName());
+        if (LLMToolMetadata == null) {
             log.warn("[{}] 未注册的工具: {}. 返回错误信息。", env.getExtensionName(), toolCallOutputBlock.getToolName());
         }
 

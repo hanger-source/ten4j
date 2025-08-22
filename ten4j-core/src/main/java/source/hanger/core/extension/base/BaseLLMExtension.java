@@ -7,7 +7,7 @@ import java.util.function.Supplier;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.extension.base.tool.ToolMetadata;
+import source.hanger.core.extension.base.tool.LLMToolMetadata;
 import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.context.LLMContextManager;
 import source.hanger.core.extension.component.flush.DefaultFlushOperationCoordinator;
@@ -147,8 +147,8 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
             try {
                 // 工具元数据
                 String toolJson = (String)command.getProperty(CMD_PROPERTY_TOOL);
-                ToolMetadata toolMetadata = objectMapper.readValue(toolJson, ToolMetadata.class);
-                LLMToolOrchestrator.registerTool(toolMetadata);
+                LLMToolMetadata LLMToolMetadata = objectMapper.readValue(toolJson, LLMToolMetadata.class);
+                LLMToolOrchestrator.registerTool(LLMToolMetadata);
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }

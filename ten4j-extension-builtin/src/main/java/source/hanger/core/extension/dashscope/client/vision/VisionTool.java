@@ -19,9 +19,9 @@ import com.alibaba.dashscope.exception.UploadFileException;
 
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.base.tool.LLMTool;
+import source.hanger.core.extension.base.tool.LLMToolMetadata;
+import source.hanger.core.extension.base.tool.LLMToolMetadata.ToolParameter;
 import source.hanger.core.extension.base.tool.LLMToolResult;
-import source.hanger.core.extension.base.tool.ToolMetadata;
-import source.hanger.core.extension.base.tool.ToolMetadata.ToolParameter;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
 
@@ -46,7 +46,7 @@ public class VisionTool implements LLMTool {
     }
 
     @Override
-    public ToolMetadata getToolMetadata() {
+    public LLMToolMetadata getToolMetadata() {
         ToolParameter promptParameter = ToolParameter.builder()
             .name("prompt")
             .type("string")
@@ -54,7 +54,7 @@ public class VisionTool implements LLMTool {
             .required(true)
             .build();
 
-        return ToolMetadata.builder()
+        return LLMToolMetadata.builder()
             .name(getToolName())
             .description(
                 "Get the image from camera and describe it using a vision model. Call this whenever you need to "

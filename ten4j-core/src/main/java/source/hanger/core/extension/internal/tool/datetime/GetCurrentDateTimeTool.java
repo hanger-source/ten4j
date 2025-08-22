@@ -6,16 +6,16 @@ import java.util.Collections;
 import java.util.Map;
 
 import source.hanger.core.extension.base.tool.LLMTool;
+import source.hanger.core.extension.base.tool.LLMToolMetadata;
 import source.hanger.core.extension.base.tool.LLMToolResult;
-import source.hanger.core.extension.base.tool.ToolMetadata;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
 
 public class GetCurrentDateTimeTool implements LLMTool {
 
     @Override
-    public ToolMetadata getToolMetadata() {
-        return ToolMetadata.builder()
+    public LLMToolMetadata getToolMetadata() {
+        return LLMToolMetadata.builder()
                 .name("get_current_datetime")
             .description("当用户询问当前日期/时间时，获取最新的日期和时间，精确到秒。")
                 .parameters(Collections.emptyList())
