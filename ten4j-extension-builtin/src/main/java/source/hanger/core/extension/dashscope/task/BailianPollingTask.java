@@ -1,4 +1,4 @@
-package source.hanger.core.extension.dashscope.client.task;
+package source.hanger.core.extension.dashscope.task;
 
 public interface BailianPollingTask<T> {
     BailianPollingTaskRunner.PollingResult<T> execute() throws Throwable;

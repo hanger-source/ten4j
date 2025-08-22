@@ -69,7 +69,7 @@
       {
         "type": "extension",
         "name": "image_generate",
-        "addon": "source.hanger.core.extension.dashscope.client.image.ImageSynthesisExtension",
+        "addon": "source.hanger.core.extension.dashscope.extension.ImageSynthesisExtension",
         "extension_group": "default",
         "property": {
           "api_key": "{{env:bailian.dashscope.api.key}}"

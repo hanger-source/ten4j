@@ -1,4 +1,4 @@
-package source.hanger.core.extension.dashscope.client.image;
+package source.hanger.core.extension.dashscope.tool;
 
 import java.util.List;
 import java.util.Map;
@@ -13,8 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.base.tool.LLMTool;
 import source.hanger.core.extension.base.tool.LLMToolResult;
 import source.hanger.core.extension.base.tool.ToolMetadata;
-import source.hanger.core.extension.dashscope.client.task.BailianPollingTask;
-import source.hanger.core.extension.dashscope.client.task.BailianPollingTaskRunner;
+import source.hanger.core.extension.dashscope.task.BailianPollingTask;
+import source.hanger.core.extension.dashscope.task.BailianPollingTaskRunner;
 import source.hanger.core.message.DataMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;

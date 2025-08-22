@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.base.tool.LLMTool;
@@ -82,8 +83,9 @@ public abstract class BaseLLMToolExtension extends BaseExtension {
             return;
         }
         try {
-            Map<String, Object> arguments = command.getProperty(CMD_TOOL_CALL_PROPERTY_ARGUMENTS, Map.class);
-            LLMToolResult toolResult = tools.get(toolName).runTool(env, command, arguments);
+            String arguments = command.getPropertyString(CMD_TOOL_CALL_PROPERTY_ARGUMENTS).orElse("{}");
+            Map<String, Object> args = objectMapper.readValue(arguments, new TypeReference<>() {});
+            LLMToolResult toolResult = tools.get(toolName).runTool(env, command, args);
 
             String toolResultJson = objectMapper.writeValueAsString(toolResult);
             // 将工具结果放入 CMD_PROPERTY_RESULT 属性中

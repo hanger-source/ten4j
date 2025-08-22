@@ -1,4 +1,4 @@
-package source.hanger.core.extension.dashscope.client.task;
+package source.hanger.core.extension.dashscope.task;
 
 import java.time.Duration;
 import java.util.Objects;
