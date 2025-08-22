@@ -1,18 +1,11 @@
 package source.hanger.core.extension.base;
 
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import lombok.extern.slf4j.Slf4j;
-import org.agrona.concurrent.UnsafeBuffer;
-import org.agrona.concurrent.ringbuffer.ManyToOneRingBuffer;
-import org.agrona.concurrent.ringbuffer.RingBuffer;
-import org.agrona.concurrent.ringbuffer.RingBufferDescriptor;
 import source.hanger.core.extension.base.tool.LLMTool;
 import source.hanger.core.extension.base.tool.LLMToolMetadata;
 import source.hanger.core.extension.base.tool.LLMToolMetadata.ToolParameter;
@@ -24,6 +17,7 @@ import source.hanger.core.message.VideoFrameMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
 import source.hanger.core.util.ImageUtils;
+import source.hanger.core.util.LatestNBuffer;
 
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL;
 import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_IS_FINAL;
@@ -38,9 +32,13 @@ import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_TEX
 @Slf4j
 public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLLMExtension<MESSAGE, TOOL_FUNCTION> {
 
-    private static final int VIDEO_FRAME_COUNT = 3;
-    // 使用RingBuffer作为帧缓冲
-    private RingBuffer imageRingBuffer;
+    private static final int MAX_VIDEO_FRAME_COUNT = 10;
+    private static final int VIDEO_FRAME_COUNT = 4;
+    // 定义每帧图像的最大字节大小，例如 2MB
+    private static final int MAX_FRAME_BYTE_SIZE = 2 * 1024 * 1024;
+
+    // 使用 LatestNBuffer 作为帧缓冲，直接管理最新N帧
+    private LatestNBuffer latestNBuffer;
     // 生产者线程池，使用虚拟线程处理帧转换
     private ExecutorService producerExecutor;
 
@@ -51,12 +49,9 @@ public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLL
         super.onExtensionConfigure(env, properties);
         producerExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
-        // 缓冲区容量为 16MB，确保足够存放多帧图像数据
-        final int bufferCapacity = 16 * 1024 * 1024 + RingBufferDescriptor.TRAILER_LENGTH;
-        // 使用直接缓冲区，性能更高
-        final UnsafeBuffer unsafeBuffer = new UnsafeBuffer(ByteBuffer.allocateDirect(bufferCapacity));
-        this.imageRingBuffer = new ManyToOneRingBuffer(unsafeBuffer);
-        log.info("[{}] RingBuffer 初始化完成，容量：{} 字节", env.getExtensionName(), bufferCapacity);
+        // 初始化 LatestNBuffer
+        this.latestNBuffer = new LatestNBuffer(MAX_VIDEO_FRAME_COUNT, MAX_FRAME_BYTE_SIZE);
+        log.info("[{}] LatestNBuffer 初始化完成，容量：{} 帧，每帧最大 {} 字节", env.getExtensionName(), MAX_VIDEO_FRAME_COUNT, MAX_FRAME_BYTE_SIZE);
 
         extensionToolDelegate = new ExtensionToolDelegate() {
             @Override
@@ -64,14 +59,32 @@ public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLL
                 return List.of(new LLMTool() {
                     @Override
                     public LLMToolMetadata getToolMetadata() {
-                        return new LLMToolMetadata("vision", "查看用户视频画面", List.of(new ToolParameter[] {
-                            new ToolParameter("prompt", "string", "用户提示词", true)
-                        }));
+                        return new LLMToolMetadata("vision",
+                            """
+                               - 用于分析用户摄像头捕获的实时画面，以增强模型对用户当前环境的感知。
+                              - 工具本身无需输出给用户，调用与否仅用于辅助模型决策。
+                              调用规则：
+                              1. 当且仅当用户明确或隐含提及视觉内容时调用，例如：
+                                 - 明确请求：
+                                   - “你能看到我吗？”
+                                   - “画面里有什么？”
+                                   - “我的背景如何？”
+                                   - “你能看到摄像头吗？”
+                                 - 隐含请求：
+                                   - “描述一下场景”
+                                   - “你看到了什么？”
+                                   - “我现在的环境怎么样？”
+                                 - 连续追问：用户重复询问与视觉相关的问题时，也必须调用。
+                              2. 禁止调用场景：
+                                 - 用户的问题与视觉完全无关（文本、代码、新闻、天气等）。
+                                 - 用户未涉及查看画面或感知环境的需求。
+                            """.stripIndent(),
+                            List.of(new ToolParameter[] {}));
                     }
 
                     @Override
                     public LLMToolResult runTool(TenEnv env, Command command, Map<String, Object> args) {
-                        String prompt = (String)args.get("prompt");
+                        String prompt = (String)command.getProperty(DATA_OUT_PROPERTY_TEXT);
                         onTextWithVideo(command, prompt);
                         return LLMToolResult.noop();
                     }
@@ -101,9 +114,9 @@ public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLL
     @Override
     public void onStop(TenEnv env) {
         super.onStop(env);
-        // 优雅地关闭消费者线程
+        // 优雅地关闭生产者线程池
         producerExecutor.shutdown();
-        log.info("[{}] 消费者线程和生产者线程池已关闭", env.getExtensionName());
+        log.info("[{}] 生产者线程池已关闭", env.getExtensionName());
     }
 
     @Override
@@ -126,7 +139,7 @@ public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLL
     private void onTextWithVideo(Message message, String userText) {
         // 将用户输入添加到上下文
         if (!userText.isEmpty()) {
-            llmContextManager.onUserVideoMsg(userText, readNMessagesFromRingBuffer(VIDEO_FRAME_COUNT));
+            llmContextManager.onUserVideoMsg(userText, latestNBuffer.getLatest(VIDEO_FRAME_COUNT));
 
             List<MESSAGE> messagesForLlm = llmContextManager.getMessagesForLLM();
             List<TOOL_FUNCTION> registeredTools = LLMToolOrchestrator.getRegisteredToolFunctions();
@@ -145,16 +158,9 @@ public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLL
                     videoFrame.getWidth(), videoFrame.getHeight(), videoFrame.getPixelFormat());
 
                 if (base64Image != null) {
-                    // 将字符串转为字节，以便写入RingBuffer
-                    byte[] imageBytes = base64Image.getBytes(StandardCharsets.US_ASCII);
-                    // 写入数据到 RingBuffer。注意：如果RingBuffer已满，将直接覆盖旧数据
-                    boolean success = imageRingBuffer.write(1, new UnsafeBuffer(imageBytes), 0, imageBytes.length);
-                    if (success) {
-                        log.info("[{}] 成功写入最新 Base64 图片到 RingBuffer。", env.getExtensionName());
-                    } else {
-                        // 写入失败通常是由于RingBuffer容量已满且未及时消费，但在此设计中这正是预期行为（覆盖）
-                        log.warn("[{}] 写入失败，可能因RingBuffer容量不足，旧数据将被覆盖。", env.getExtensionName());
-                    }
+                    // 将 Base64 图像添加到 LatestNBuffer
+                    latestNBuffer.add(base64Image);
+                    log.info("[{}] 成功将 Base64 图片添加到 LatestNBuffer。", env.getExtensionName());
                 } else {
                     log.error("[{}] 转换视频帧到 JPEG Base64 失败。", env.getExtensionName());
                 }
@@ -162,32 +168,6 @@ public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLL
                 log.error("[{}] 处理视频帧时出错：{}", env.getExtensionName(), e.getMessage());
             }
         });
-    }
-
-    /**
-     * 从 RingBuffer 中读取指定数量的最新图像数据消息。
-     * 此方法会读取并消费 RingBuffer 中最多 n 条类型为1（视频帧）的消息。
-     * 如果 RingBuffer 中可用的消息少于 n 条，则读取所有可用消息。
-     *
-     * @param n 要读取的消息数量。
-     * @return 包含最新图像数据字节数组的列表，如果无数据或 n <= 0 则返回空列表。
-     */
-    public List<String> readNMessagesFromRingBuffer(int n) {
-        if (n <= 0) {
-            return new ArrayList<>();
-        }
-
-        List<String> messages = new ArrayList<>(n);
-
-        // 使用带 messageCountLimit 的 read 方法，只读取指定数量的消息
-        // 同时指定 msgTypeId 为 1，确保只读取视频帧消息
-        imageRingBuffer.read((msgTypeId, buffer, index, length) -> {
-            byte[] data = new byte[length];
-            buffer.getBytes(index, data); // 从 UnsafeBuffer 读取数据
-            messages.add(new String(data));
-        }, n);
-
-        return messages;
     }
 
 }

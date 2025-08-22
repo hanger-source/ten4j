@@ -3,7 +3,11 @@ package source.hanger.core.util;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Base64;
 
 import javax.imageio.ImageIO;
@@ -64,6 +68,34 @@ public class ImageUtils {
             return Base64.getEncoder().encodeToString(baos.toByteArray());
         } catch (IOException e) {
             log.error("[ImageUtils] Error converting image to JPEG Base64: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 将 Base64 编码的图片字符串保存为 JPEG 文件。
+     *
+     * @param base64Image Base64 编码的图片字符串。
+     * @param directory 保存图片的目录。
+     * @param fileName 图片文件名，不包含扩展名。
+     * @return 保存成功返回文件路径，否则返回 null。
+     */
+    public static String saveBase64AsJpeg(String base64Image, String directory, String fileName) {
+        try {
+            byte[] imageBytes = Base64.getDecoder().decode(base64Image);
+            Path dirPath = Paths.get(directory);
+            if (!Files.exists(dirPath)) {
+                Files.createDirectories(dirPath);
+            }
+            String fullFileName = fileName + ".jpeg";
+            Path filePath = dirPath.resolve(fullFileName);
+            try (FileOutputStream fos = new FileOutputStream(filePath.toFile())) {
+                fos.write(imageBytes);
+            }
+            log.info("[ImageUtils] 图片已保存到: {}", filePath.toAbsolutePath());
+            return filePath.toAbsolutePath().toString();
+        } catch (IOException e) {
+            log.error("[ImageUtils] 保存图片失败: {}", e.getMessage());
             return null;
         }
     }

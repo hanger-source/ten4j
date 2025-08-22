@@ -25,6 +25,7 @@ import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL;
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL_PROPERTY_ARGUMENTS;
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL_PROPERTY_NAME;
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL_PROPERTY_TOOL_CALL_ID;
+import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_TEXT;
 
 /**
  * ToolRegistryAndCallerImpl 是工具注册和调用的实现类。
@@ -87,6 +88,7 @@ public abstract class BaseLLMToolOrchestrator<MESSAGE, LLM_TOOL_FUNCTION> implem
         toolCallCommand.setProperty(CMD_TOOL_CALL_PROPERTY_NAME, toolCallOutputBlock.getToolName());
         toolCallCommand.setProperty(CMD_TOOL_CALL_PROPERTY_ARGUMENTS, toolCallOutputBlock.getArgumentsJson());
         toolCallCommand.setProperty(CMD_TOOL_CALL_PROPERTY_TOOL_CALL_ID, toolCallOutputBlock.getId());
+        toolCallCommand.setProperty(DATA_OUT_PROPERTY_TEXT, originalMessage.getProperty(DATA_OUT_PROPERTY_TEXT));
         toolCallCommand.setParentCommandId(originalMessage.getId()); // 关联原始消息
 
         llmContextManager.onAssistantMsg(createToolCallAssistantMessage(toolCallOutputBlock));

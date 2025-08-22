@@ -28,7 +28,7 @@
           "api_key": "{{env:bailian.dashscope.api.key}}",
           "prompt": "{{prompt}}",
           "greeting": "{{greeting}}",
-          "model": "qwen-turbo"
+          "model": "qwen-max"
         }
       },
       {

@@ -61,7 +61,9 @@ public class DefaultStreamPipelineChannel implements StreamPipelineChannel<Outpu
                 packet -> env.postTask(() -> {
                     streamOutputBlockConsumer.consumeOutputBlock(packet.item(), packet.originalMessage(), env);
                 }),
-                error -> log.error("[{}] StreamPipelineManager: 主管道处理错误", env.getExtensionName(), error),
+                error -> {
+                    log.error("[{}] StreamPipelineManager: 主管道处理错误", env.getExtensionName(), error);
+                },
                 () -> log.info("[{}] StreamPipelineManager: 主管道处理完成", env.getExtensionName())
             );
     }
