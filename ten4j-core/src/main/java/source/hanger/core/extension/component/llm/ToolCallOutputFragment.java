@@ -8,5 +8,5 @@ package source.hanger.core.extension.component.llm;
  * @param argumentsJson 当前片段的参数 (JSON 字符串)
  * @param id            工具调用 ID (用于流式聚合)
  */
-public record ToolCallOutputFragment(String name, String argumentsJson, String id) {
+public record ToolCallOutputFragment(String name, String argumentsJson, String id, String toolCallId) {
 }

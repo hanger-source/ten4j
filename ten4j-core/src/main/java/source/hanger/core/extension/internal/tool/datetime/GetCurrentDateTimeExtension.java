@@ -1,12 +1,15 @@
 package source.hanger.core.extension.internal.tool.datetime;
 
-import source.hanger.core.extension.base.BaseExtension;
+import java.util.List;
 
-public class GetCurrentDateTimeExtension extends BaseExtension {
+import source.hanger.core.extension.base.BaseLLMToolExtension;
+import source.hanger.core.extension.base.tool.LLMTool;
+import source.hanger.core.tenenv.TenEnv;
 
-    public GetCurrentDateTimeExtension() {
-        // 扩展名称，通常与 extension.json 中的 name 字段一致
-        // 父类 BaseExtension 默认构造函数，不需要传入 name
-        //super();
+public class GetCurrentDateTimeExtension extends BaseLLMToolExtension {
+
+    @Override
+    protected List<LLMTool> initTools(TenEnv env) {
+        return List.of(new GetCurrentDateTimeTool());
     }
 }

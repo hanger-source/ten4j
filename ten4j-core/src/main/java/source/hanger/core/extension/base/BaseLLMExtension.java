@@ -4,18 +4,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.extension.base.tool.LLMTool;
+import source.hanger.core.extension.base.tool.ToolMetadata;
 import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.context.LLMContextManager;
+import source.hanger.core.extension.component.flush.DefaultFlushOperationCoordinator;
 import source.hanger.core.extension.component.flush.FlushOperationCoordinator;
 import source.hanger.core.extension.component.flush.InterruptionStateProvider;
-import source.hanger.core.extension.component.flush.DefaultFlushOperationCoordinator;
-import source.hanger.core.extension.component.stream.DefaultStreamPipelineChannel;
 import source.hanger.core.extension.component.llm.LLMStreamAdapter;
 import source.hanger.core.extension.component.llm.TextOutputBlock;
 import source.hanger.core.extension.component.llm.ToolCallOutputBlock;
+import source.hanger.core.extension.component.stream.DefaultStreamPipelineChannel;
 import source.hanger.core.extension.component.stream.StreamOutputBlockConsumer;
 import source.hanger.core.extension.component.stream.StreamPipelineChannel;
 import source.hanger.core.extension.component.tool.LLMToolOrchestrator;
@@ -29,7 +30,6 @@ import static source.hanger.core.common.ExtensionConstants.CMD_IN_FLUSH;
 import static source.hanger.core.common.ExtensionConstants.CMD_IN_ON_USER_JOINED;
 import static source.hanger.core.common.ExtensionConstants.CMD_OUT_FLUSH;
 import static source.hanger.core.common.ExtensionConstants.CMD_PROPERTY_TOOL;
-import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL;
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_REGISTER;
 import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_IS_FINAL;
 import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_TEXT;
@@ -89,32 +89,6 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
         super.onStart(env);
         log.info("[{}] BaseLLMExtension 启动，初始化管道。", env.getExtensionName());
         streamPipelineChannel.initPipeline(env);
-        // 注册工具
-        registerTools(env);
-    }
-
-    private void registerTools(TenEnv env) {
-        // 从 BaseLLMToolExtension 迁移的逻辑：注册和发送工具元数据
-        log.info("[{}] 工具扩展启动阶段", env.getExtensionName());
-        List<LLMTool> tools = getTools(env); // 调用抽象方法获取工具
-        if (tools != null && !tools.isEmpty()) {
-            for (LLMTool tool : tools) {
-                LLMToolOrchestrator.registerTool(tool);
-                try {
-                    // 将工具元数据发送给LLM扩展
-                    Command registerCmd = GenericCommand.create(CMD_TOOL_REGISTER);
-                    String toolJson = objectMapper.writeValueAsString(tool.getToolMetadata());
-                    registerCmd.setProperty(CMD_PROPERTY_TOOL, toolJson);
-                    env.sendCmd(registerCmd);
-                    log.info("[{}] 工具注册命令发送成功: toolName={}", env.getExtensionName(), tool.getToolName());
-                } catch (Exception e) {
-                    log.error("[{}] 发送工具注册命令失败: toolName={}, error={}", env.getExtensionName(),
-                        tool.getToolName(), e.getMessage(), e);
-                }
-            }
-        } else {
-            log.warn("[{}] 工具扩展未注册任何工具", env.getExtensionName());
-        }
     }
 
     @Override
@@ -169,6 +143,17 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
             return;
         }
 
+        if (CMD_TOOL_REGISTER.equals(command.getName())) {
+            try {
+                // 工具元数据
+                String toolJson = (String)command.getProperty(CMD_PROPERTY_TOOL);
+                ToolMetadata toolMetadata = objectMapper.readValue(toolJson, ToolMetadata.class);
+                LLMToolOrchestrator.registerTool(toolMetadata);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         // 处理 CMD_FLUSH 命令
         if (CMD_IN_FLUSH.equals(command.getName())) {
             log.info("[{}] 收到 CMD_FLUSH 命令，执行刷新操作并重置历史。", env.getExtensionName());
@@ -176,14 +161,6 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
             env.sendCmd(GenericCommand.create(CMD_OUT_FLUSH, command.getId(), command.getType()));
             return;
         }
-        // 处理 CMD_TOOL_CALL 命令
-        if (CMD_TOOL_CALL.equals(command.getName())) {
-            log.info("[{}] 收到 CMD_TOOL_CALL 命令，处理工具调用。", env.getExtensionName());
-            LLMToolOrchestrator.handleToolCallCommand(env, command);
-        } else {
-            super.onCmd(env, command);
-        }
-
     }
 
     /**
@@ -271,14 +248,4 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
         return new DefaultFlushOperationCoordinator(interruptionStateProvider,
             streamPipelineChannel, onCancelFlushCallback);
     }
-
-    /**
-     * 抽象方法：获取此扩展提供的 LLM 工具列表。
-     * 子类应实现此方法以返回其支持的 LLMTool 实例列表。
-     *
-     * @param env 当前的 TenEnv 环境。
-     * @return 此扩展提供的 LLMTool 实例列表。
-     */
-    protected abstract List<LLMTool> getTools(TenEnv env);
-
 }

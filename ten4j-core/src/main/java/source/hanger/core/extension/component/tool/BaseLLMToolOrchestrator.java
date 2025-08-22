@@ -5,10 +5,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.extension.base.tool.LLMTool;
-import source.hanger.core.extension.base.tool.LLMToolResult;
+import source.hanger.core.extension.base.tool.ToolMetadata;
 import source.hanger.core.extension.component.context.LLMContextManager;
 import source.hanger.core.extension.component.llm.LLMStreamAdapter;
 import source.hanger.core.extension.component.llm.ToolCallOutputBlock;
@@ -24,8 +22,6 @@ import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL;
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL_PROPERTY_ARGUMENTS;
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL_PROPERTY_NAME;
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL_PROPERTY_TOOL_CALL_ID;
-import static source.hanger.core.message.CommandResult.fail;
-import static source.hanger.core.message.CommandResult.success;
 
 /**
  * ToolRegistryAndCallerImpl 是工具注册和调用的实现类。
@@ -33,12 +29,11 @@ import static source.hanger.core.message.CommandResult.success;
  * 同时，它也负责协调 LLM Agent 循环的继续，并在工具执行完成后将结果反馈给 LLM。
  */
 @Slf4j
-public abstract class BaseLLMToolOrchestrator<GENERATION_RESULT, MESSAGE, LLM_TOOL_FUNCTION> implements
+public abstract class BaseLLMToolOrchestrator<MESSAGE, LLM_TOOL_FUNCTION> implements
     LLMToolOrchestrator<LLM_TOOL_FUNCTION> {
 
     protected final LLMContextManager<MESSAGE> llmContextManager;
-    private final ObjectMapper objectMapper = new ObjectMapper();
-    private final Map<String, LLMTool> toolMap = new ConcurrentHashMap<>();
+    private final Map<String, ToolMetadata> toolMap = new ConcurrentHashMap<>();
     private final LLMStreamAdapter<MESSAGE, LLM_TOOL_FUNCTION> llmStreamAdapter;
 
     public BaseLLMToolOrchestrator(
@@ -49,9 +44,9 @@ public abstract class BaseLLMToolOrchestrator<GENERATION_RESULT, MESSAGE, LLM_TO
     }
 
     @Override
-    public void registerTool(LLMTool tool) {
+    public void registerTool(ToolMetadata toolMetadata) {
         // 实现注册逻辑，这里可以直接调用 ExtensionToolRegistry 的注册方法
-        toolMap.computeIfAbsent(tool.getToolName(), k -> tool);
+        toolMap.computeIfAbsent(toolMetadata.getName(), k -> toolMetadata);
     }
 
     @Override
@@ -64,31 +59,7 @@ public abstract class BaseLLMToolOrchestrator<GENERATION_RESULT, MESSAGE, LLM_TO
     }
 
     // 辅助方法：将 LLMTool 转换为 特定厂商 期望的 ToolFunction 格式
-    protected abstract LLM_TOOL_FUNCTION toToolFunction(LLMTool tool);
-
-    @Override
-    public void handleToolCallCommand(TenEnv env, Command command) {
-        String toolName = command.getProperty(CMD_TOOL_CALL_PROPERTY_NAME, String.class);
-        if (toolName == null || !toolMap.containsKey(toolName)) {
-            log.warn("[{}] 收到非本扩展的工具调用或工具名称为空，忽略。toolName={}", env.getExtensionName(), toolName);
-            return;
-        }
-        try {
-            Map<String, Object> arguments = command.getProperty(CMD_TOOL_CALL_PROPERTY_ARGUMENTS, Map.class);
-
-            LLMToolResult toolResult = toolMap.get(toolName).runTool(env, command, arguments);
-            String toolResultJson = objectMapper.writeValueAsString(toolResult);
-            // 将工具结果放入 CMD_PROPERTY_RESULT 属性中
-            Map<String, Object> properties = new java.util.HashMap<>();
-            properties.put(CMD_PROPERTY_RESULT, toolResultJson);
-            log.info("[{}] 工具 {} 执行并返回结果，发送成功命令。", env.getExtensionName(), toolName);
-            env.sendResult(success(command, "Tool executed successfully.", properties)); // 使用带 properties 的重载
-        } catch (Exception e) {
-            String errorMessage = "工具执行失败: %s".formatted(e.getMessage());
-            log.error("[{}] 工具 {} 执行失败，发送失败命令: {}", env.getExtensionName(), toolName, errorMessage, e);
-            env.sendResult(fail(command, errorMessage));
-        }
-    }
+    protected abstract LLM_TOOL_FUNCTION toToolFunction(ToolMetadata toolMetadata);
 
     /**
      * 处理 LLM 工具调用命令。
@@ -102,8 +73,8 @@ public abstract class BaseLLMToolOrchestrator<GENERATION_RESULT, MESSAGE, LLM_TO
         log.info("[{}] 开始处理工具调用. Tool Name: {}, Arguments: {}",
             env.getExtensionName(), toolCallOutputBlock.getToolName(), toolCallOutputBlock.getArgumentsJson());
 
-        LLMTool tool = toolMap.get(toolCallOutputBlock.getToolName());
-        if (tool == null) {
+        ToolMetadata toolMetadata = toolMap.get(toolCallOutputBlock.getToolName());
+        if (toolMetadata == null) {
             log.warn("[{}] 未注册的工具: {}. 返回错误信息。", env.getExtensionName(), toolCallOutputBlock.getToolName());
         }
 
@@ -138,7 +109,7 @@ public abstract class BaseLLMToolOrchestrator<GENERATION_RESULT, MESSAGE, LLM_TO
      * 抽象方法：创建一个 MESSAGE 对象，用于表示带有 toolCallId 的工具消息。
      * 子类需要实现此方法来创建具体的 MESSAGE 类型。
      *
-     * @param cmdThrowable
+     * @param cmdThrowable cmdThrowable
      * @return 创建的 MESSAGE 对象。
      */
     protected abstract MESSAGE createErrorToolCallMessage(ToolCallOutputBlock toolCallOutputBlock,

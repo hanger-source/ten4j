@@ -5,7 +5,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import io.reactivex.Flowable;
-import io.reactivex.schedulers.Schedulers;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.common.PipelinePacket;
@@ -148,16 +147,17 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RESULT, MESSAGE, TOOL_FUNC
                     originalMessage
                 ));
             }
-        }
 
-        // 如果是流结束或当前文本段的结束，并且缓冲区中还有文本，则发出剩余文本作为最终片段
-        if ((isStreamEnding || endOfSegment)) {
-            packetsToEmit.add(new PipelinePacket<>(
-                new TextOutputBlock(originalMessage.getId(), textBuffer.toString(), true, fullTextBuffer.toString()),
-                originalMessage
-            ));
-            textBuffer.setLength(0);
-            fullTextBuffer.setLength(0);
+            // 如果是流结束或当前文本段的结束，并且缓冲区中还有文本，则发出剩余文本作为最终片段
+            if ((isStreamEnding || endOfSegment)) {
+                packetsToEmit.add(new PipelinePacket<>(
+                    new TextOutputBlock(originalMessage.getId(), textBuffer.toString(), true,
+                        fullTextBuffer.toString()),
+                    originalMessage
+                ));
+                textBuffer.setLength(0);
+                fullTextBuffer.setLength(0);
+            }
         }
     }
 
@@ -259,30 +259,31 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RESULT, MESSAGE, TOOL_FUNC
             return null; // 没有传入片段，直接返回 null
         }
 
-        String toolCallId = incomingFragment.id();
-        if (toolCallId == null) {
+        String id = incomingFragment.id();
+        if (id == null) {
             log.warn("[{}] 收到没有toolCallId的工具调用片段，将忽略. 名称: {}", env.getExtensionName(),
                 incomingFragment.name());
             return null; // 没有 ID 无法累积
         }
 
-        accumulatingToolCallFragments.compute(toolCallId, (key, existingFragment) -> {
-            String newArguments = incomingFragment.argumentsJson() != null ? incomingFragment.argumentsJson()
-                : "";
-            if (existingFragment != null) {
-                newArguments = (existingFragment.argumentsJson() != null ? existingFragment.argumentsJson() : "")
-                    + newArguments;
+        accumulatingToolCallFragments.compute(id, (_, existingFragment) -> {
+            if (existingFragment == null) {
+                return incomingFragment;
+            } else {
+                String newArguments = incomingFragment.argumentsJson() != null ? incomingFragment.argumentsJson()
+                    : "";
+                return new ToolCallOutputFragment(
+                    existingFragment.name(),
+                    existingFragment.argumentsJson() + newArguments,
+                    id,
+                    existingFragment.toolCallId()
+                );
             }
-            return new ToolCallOutputFragment(
-                existingFragment != null ? existingFragment.name() : incomingFragment.name(),
-                newArguments,
-                toolCallId
-            );
         });
 
         // 如果结束原因是工具调用完成，则返回当前累积的完整工具调用
         if ("tool_calls".equalsIgnoreCase(finishReason)) {
-            ToolCallOutputFragment completeToolCall = accumulatingToolCallFragments.remove(toolCallId);
+            ToolCallOutputFragment completeToolCall = accumulatingToolCallFragments.remove(id);
             if (completeToolCall != null) {
                 log.info("[{}] 工具调用 {} 聚合完成并移除. ID: {}", env.getExtensionName(), completeToolCall.name(),
                     completeToolCall.id());
@@ -291,7 +292,8 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RESULT, MESSAGE, TOOL_FUNC
                     completeToolCall.name(),
                     completeToolCall.argumentsJson(),
                     null,
-                    completeToolCall.id()
+                    completeToolCall.id(),
+                    completeToolCall.toolCallId()
                 );
             }
             return null; // 即使 finishReason 是 tool_calls，如果没有完整工具调用，也返回 null
