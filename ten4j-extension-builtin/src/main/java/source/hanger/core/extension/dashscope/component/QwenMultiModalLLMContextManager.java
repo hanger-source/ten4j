@@ -160,15 +160,10 @@ public class QwenMultiModalLLMContextManager
         if (content != null && !content.isEmpty()) {
             contents.add(Map.of("text", content));
         }
-        //if (base64Images.size() < 4) {
+
         for (String base64Image : base64Images) {
             contents.add(Map.of("image", "data:image/jpeg;base64,%s".formatted(base64Image)));
         }
-        //} else {
-        //    contents.add(Map.of(
-        //        "video", base64Images.stream().map("data:image/jpeg;base64,%s"::formatted).toList(),
-        //        "type", "video"));
-        //}
 
         MultiModalMessage userMessage = MultiModalMessage.builder()
             .role(Role.USER.getValue())

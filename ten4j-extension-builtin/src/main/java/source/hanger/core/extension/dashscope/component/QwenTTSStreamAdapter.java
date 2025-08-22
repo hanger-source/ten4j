@@ -26,7 +26,6 @@ import source.hanger.core.tenenv.TenEnv;
 @Slf4j
 public class QwenTTSStreamAdapter extends BaseTTSStreamAdapter<MultiModalConversationResult> {
 
-    private static final String MODEL = "qwen-tts";
     private final MultiModalConversation multiModalConversation;
 
     public QwenTTSStreamAdapter(
@@ -40,10 +39,11 @@ public class QwenTTSStreamAdapter extends BaseTTSStreamAdapter<MultiModalConvers
     protected Flowable<MultiModalConversationResult> getRawTtsFlowable(TenEnv env, String text) {
         String apiKey = env.getPropertyString("api_key").orElseThrow(() -> new IllegalStateException("No api key found"));
         String voiceName = env.getPropertyString("voice_name").orElseThrow(() -> new IllegalStateException("No voiceName found"));
+        String model = env.getPropertyString("model").orElseThrow(() -> new IllegalStateException("No model found"));
         AudioParameters.Voice voice = AudioParameters.Voice.valueOf(voiceName.toUpperCase());
 
         MultiModalConversationParam param = MultiModalConversationParam.builder()
-            .model(MODEL)
+            .model(model)
             .apiKey(apiKey)
             .text(text)
             .voice(voice)
