@@ -22,6 +22,7 @@ import source.hanger.core.extension.component.stream.StreamPipelineChannel;
 import source.hanger.core.extension.component.tool.LLMToolOrchestrator;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
+import source.hanger.core.message.Message;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.message.command.GenericCommand;
 import source.hanger.core.tenenv.TenEnv;
@@ -119,6 +120,10 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
             return;
         }
 
+        onUserTextInput(env, userText, dataMessage);
+    }
+
+    protected void onUserTextInput(TenEnv env, String userText, Message originalMessage) {
         // 将用户输入添加到上下文
         if (!userText.isEmpty()) {
             llmContextManager.onUserMsg(userText);
@@ -126,7 +131,7 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
             List<MESSAGE> messagesForLlm = llmContextManager.getMessagesForLLM();
             List<TOOL_FUNCTION> registeredTools = LLMToolOrchestrator.getRegisteredToolFunctions();
             // 请求 LLM 并处理流
-            llmStreamAdapter.onRequestLLMAndProcessStream(env, messagesForLlm, registeredTools, dataMessage);
+            llmStreamAdapter.onRequestLLMAndProcessStream(env, messagesForLlm, registeredTools, originalMessage);
         }
     }
 

@@ -90,7 +90,7 @@ public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLL
                     @Override
                     public LLMToolResult runTool(TenEnv env, Command command, Map<String, Object> args) {
                         String prompt = (String)command.getProperty(DATA_OUT_PROPERTY_TEXT);
-                        onTextWithVideo(command, prompt);
+                        onUserTextInput(env, prompt, command);
                         return LLMToolResult.noop("已分析摄像头实时画面");
                     }
 
@@ -126,23 +126,7 @@ public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLL
     }
 
     @Override
-    public void onDataMessage(TenEnv env, DataMessage dataMessage) {
-        if (!isRunning()) {
-            log.warn("[{}] Extension未运行，忽略 DataMessage。", env.getExtensionName());
-            return;
-        }
-
-        String userText = dataMessage.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse("");
-        if (!dataMessage.getPropertyBool(DATA_OUT_PROPERTY_IS_FINAL).orElse(false)) {
-            log.info("[{}] LLM扩展收到非最终数据: text={}", env.getExtensionName(), userText);
-            return;
-        }
-
-        onTextWithVideo(dataMessage, userText);
-
-    }
-
-    private void onTextWithVideo(Message message, String userText) {
+    protected void onUserTextInput(TenEnv env, String userText, Message originalMessage) {
         // 将用户输入添加到上下文
         if (!userText.isEmpty()) {
             llmContextManager.onUserVideoMsg(userText, latestNBuffer.getLatest(VIDEO_FRAME_COUNT));
@@ -150,7 +134,7 @@ public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLL
             List<MESSAGE> messagesForLlm = llmContextManager.getMessagesForLLM();
             List<TOOL_FUNCTION> registeredTools = LLMToolOrchestrator.getRegisteredToolFunctions();
             // 请求 LLM 并处理流
-            llmStreamAdapter.onRequestLLMAndProcessStream(env, messagesForLlm, registeredTools, message);
+            llmStreamAdapter.onRequestLLMAndProcessStream(env, messagesForLlm, registeredTools, originalMessage);
         }
     }
 
