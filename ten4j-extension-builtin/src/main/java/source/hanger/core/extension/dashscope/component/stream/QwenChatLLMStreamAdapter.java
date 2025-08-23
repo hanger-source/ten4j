@@ -46,7 +46,7 @@ public class QwenChatLLMStreamAdapter extends BaseLLMStreamAdapter<GenerationRes
         this.generation = new Generation();
         flushOperationCoordinator = new DefaultFlushOperationCoordinator(interruptionStateProvider,
             streamPipelineChannel, tenEnv -> {
-                String delegateLlm = tenEnv.getPropertyString("delegate_extension").orElse("");
+                String delegateLlm = tenEnv.getPropertyString("chat_delegate_to").orElse("");
                 log.info("[{}] delegate to {}", tenEnv.getExtensionName(), delegateLlm);
             });
     }
@@ -80,7 +80,7 @@ public class QwenChatLLMStreamAdapter extends BaseLLMStreamAdapter<GenerationRes
     @Override
     protected Flowable<PipelinePacket<OutputBlock>> transformSingleGenerationResult(GenerationResult generationResult,
         source.hanger.core.message.Message originalMessage, Map<String, Object> streamContexts, TenEnv env) {
-        String specifiedTool = env.getPropertyString("delegate_extension").orElse("");
+        String specifiedTool = env.getPropertyString("chat_delegate_to").orElse("");
         // 如果没有指定工具，直接委托到另一个llm
         if (!specifiedTool.isEmpty() && isEmpty(generationResult.getOutput().getChoices().getFirst().getMessage().getToolCalls())) {
             originalMessage.setName(ExtensionConstants.DELEGATE_TEXT_DATA_OUT_NAME);
