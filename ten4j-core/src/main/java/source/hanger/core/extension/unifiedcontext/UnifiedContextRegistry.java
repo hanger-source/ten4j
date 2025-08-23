@@ -12,12 +12,13 @@ public class UnifiedContextRegistry {
 
     private static final ConcurrentHashMap<String, LLMContextManager<UnifiedMessage>> registry = new ConcurrentHashMap<>();
 
-    // 修改方法签名，接收 TenEnv 和 Supplier<String> initialSystemPromptSupplier
-    public static LLMContextManager<UnifiedMessage> getOrCreateContextManager(TenEnv env, Supplier<String> initialSystemPromptSupplier) {
+    // 修改方法签名，不再接收 uniqueSystemPromptSupplier
+    public static LLMContextManager<UnifiedMessage> getOrCreateContextManager(TenEnv env) {
         String graphId = env.getGraphId();
+        String commonSystemPrompt = env.getPropertyString("prompt").orElse(null); // 从 TenEnv 获取公共系统提示
         return registry.computeIfAbsent(graphId, k -> {
             log.info("[UnifiedContextRegistry] Creating new UnifiedLLMContextManager for graphId: {}", k);
-            return new UnifiedLLMContextManager(initialSystemPromptSupplier.get()); // 使用 Supplier 提供初始 systemPrompt
+            return new UnifiedLLMContextManager(commonSystemPrompt); // 传入 commonSystemPrompt
         });
     }
 
@@ -30,7 +31,7 @@ public class UnifiedContextRegistry {
     }
 
     // 新增一个方法，用于在需要更新 systemPrompt 时获取 UnifiedLLMContextManager 实例
-    public static LLMContextManager<UnifiedMessage> getContextManager(String graphId) {
-        return registry.get(graphId);
+    public static UnifiedLLMContextManager getContextManager(String graphId) { // 返回具体类型，方便调用 setCommonSystemPrompt
+        return (UnifiedLLMContextManager) registry.get(graphId);
     }
 }

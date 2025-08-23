@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Supplier; // 新增导入
 
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.component.context.LLMContextManager;
@@ -13,11 +14,11 @@ import source.hanger.core.extension.component.context.LLMContextManager;
 public class UnifiedLLMContextManager implements LLMContextManager<UnifiedMessage> {
 
     private final List<UnifiedMessage> history = new CopyOnWriteArrayList<>();
-    private String systemPrompt; // 内部管理系统提示
+    private String commonSystemPrompt; // 公共系统提示部分，由 UnifiedLLMContextManager 维护
     private int maxHistory = 20;
 
-    public UnifiedLLMContextManager(String initialSystemPrompt) {
-        this.systemPrompt = initialSystemPrompt;
+    public UnifiedLLMContextManager(String commonSystemPrompt) { // 构造函数接收 commonSystemPrompt
+        this.commonSystemPrompt = commonSystemPrompt;
     }
 
     private void smartTruncateHistory() {
@@ -74,17 +75,36 @@ public class UnifiedLLMContextManager implements LLMContextManager<UnifiedMessag
         return -1; // 未找到匹配的assistant消息
     }
 
-    @Override
-    public List<UnifiedMessage> getMessagesForLLM() {
+    // 修改 getMessagesForLLM 方法，接收 uniqueSystemPromptSupplier
+    public List<UnifiedMessage> getMessagesForLLM(Supplier<String> uniqueSystemPromptSupplier) { // 接收 uniqueSystemPromptSupplier
         List<UnifiedMessage> llmMessages = new ArrayList<>();
-        if (systemPrompt != null && !systemPrompt.isEmpty()) {
+        StringBuilder combinedSystemPrompt = new StringBuilder();
+
+        if (commonSystemPrompt != null && !commonSystemPrompt.isEmpty()) {
+            combinedSystemPrompt.append(commonSystemPrompt);
+        }
+
+        String currentUniqueSystemPrompt = uniqueSystemPromptSupplier.get(); // 从 Supplier 获取独特的 systemPrompt
+        if (currentUniqueSystemPrompt != null && !currentUniqueSystemPrompt.isEmpty()) {
+            if (!combinedSystemPrompt.isEmpty()) {
+                combinedSystemPrompt.append("\n"); // 添加换行符或分隔符
+            }
+            combinedSystemPrompt.append(currentUniqueSystemPrompt);
+        }
+
+        if (!combinedSystemPrompt.isEmpty()) {
             llmMessages.add(UnifiedMessage.builder()
                 .role("system")
-                .text(systemPrompt)
+                .text(combinedSystemPrompt.toString())
                 .build());
         }
         llmMessages.addAll(history);
         return llmMessages;
+    }
+
+    @Override
+    public List<UnifiedMessage> getMessagesForLLM() {
+        return getMessagesForLLM(() -> "");
     }
 
     @Override
@@ -157,13 +177,11 @@ public class UnifiedLLMContextManager implements LLMContextManager<UnifiedMessag
         history.clear();
     }
 
-    // 注意：LLMContextManager 接口没有 setSystemPrompt 方法
-    // systemPrompt 只能在构造时设置，后续通过更新 UnifiedLLMContextManager 实例来实现
-    public void setSystemPrompt(String systemPrompt) {
-        if (systemPrompt != null && !systemPrompt.isEmpty()) {
-            if (this.systemPrompt == null || !this.systemPrompt.equals(systemPrompt)) {
-                log.info("[UnifiedContext] Updating system prompt. Old: '{}', New: '{}'", this.systemPrompt, systemPrompt);
-                this.systemPrompt = systemPrompt;
+    public void setCommonSystemPrompt(String commonSystemPrompt) { // 提供更新 commonSystemPrompt 的方法
+        if (commonSystemPrompt != null && !commonSystemPrompt.isEmpty()) {
+            if (this.commonSystemPrompt == null || !this.commonSystemPrompt.equals(commonSystemPrompt)) {
+                log.info("[UnifiedContext] Updating common system prompt. Old: \'{}\', New: \'{}\'", this.commonSystemPrompt, commonSystemPrompt);
+                this.commonSystemPrompt = commonSystemPrompt;
             }
         }
     }
