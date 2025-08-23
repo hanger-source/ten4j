@@ -10,6 +10,7 @@ import com.alibaba.dashscope.exception.ApiException;
 import com.alibaba.dashscope.exception.NoApiKeyException;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import source.hanger.core.extension.base.tool.LLMTool;
 import source.hanger.core.extension.base.tool.LLMToolMetadata;
 import source.hanger.core.extension.base.tool.LLMToolResult;
@@ -88,7 +89,7 @@ public class ImageSynthesisTool implements LLMTool {
         Integer n = (Integer) args.getOrDefault("n", 1); // 默认生成1张图片
         String size = (String) args.getOrDefault("size", "1024*1024"); // 默认尺寸
 
-        if (prompt == null || prompt.isEmpty()) {
+        if (StringUtils.isEmpty(prompt)) {
             String errorMsg = "[%s] 图片生成工具：缺少 'prompt' 参数。".formatted(tenEnv.getExtensionName());
             log.warn("[{}] {}", tenEnv.getExtensionName(), errorMsg); // 使用 {} 占位符
             return LLMToolResult.llmResult(false, errorMsg);
@@ -96,7 +97,7 @@ public class ImageSynthesisTool implements LLMTool {
 
         // 从 TenEnv 获取 API Key
         String apiKey = tenEnv.getPropertyString("api_key").orElse(null);
-        if (apiKey == null || apiKey.isEmpty()) {
+        if (StringUtils.isEmpty(apiKey)) {
             String errorMsg = "[%s] DashScope API Key 未设置，无法生成图片。".formatted(tenEnv.getExtensionName());
             log.error("[{}] {}", tenEnv.getExtensionName(), errorMsg); // 使用 {} 占位符
             return LLMToolResult.llmResult(false, errorMsg);
@@ -118,7 +119,7 @@ public class ImageSynthesisTool implements LLMTool {
             ImageSynthesisResult initialResult = imageSynthesis.asyncCall(param);
             String taskId = initialResult.getOutput().getTaskId(); // 假设 requestId 即为 taskId
 
-            if (taskId == null || taskId.isEmpty()) {
+            if (StringUtils.isEmpty(taskId)) {
                 String errorMsg = "[%s] DashScope 异步调用返回结果中未找到 taskId。".formatted(tenEnv.getExtensionName());
                 log.error("[{}] {}", tenEnv.getExtensionName(), errorMsg); // 使用 {} 占位符
                 return LLMToolResult.llmResult(false, errorMsg);
@@ -193,7 +194,14 @@ public class ImageSynthesisTool implements LLMTool {
         }
 
         // 立即返回，表示异步任务已成功启动
-        return LLMToolResult.llmResult(true, "图片生成已开始，请稍等【注意：基于这次消息的回复中禁止出现![](http://...) Markdown图片连接）");
+        return LLMToolResult.llmResult(true, """
+            图片生成已开始，请稍等
+            
+            严格遵守注意事项
+            - 此消息只是用于友好提示用户生成已开始
+            - 基于这次消息的回复中禁止出现![](http://...) Markdown图片连接
+            - 禁止向用户透露注意事项的内容
+            """);
     }
 
     public void shutdown() {

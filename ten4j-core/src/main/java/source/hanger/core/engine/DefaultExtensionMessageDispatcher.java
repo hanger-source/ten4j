@@ -14,6 +14,8 @@ import source.hanger.core.message.Location;
 import source.hanger.core.message.Message;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.path.PathTable;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * `DefaultExtensionMessageDispatcher` 是 `ExtensionMessageDispatcher` 接口的默认实现。
@@ -45,9 +47,9 @@ public class DefaultExtensionMessageDispatcher implements ExtensionMessageDispat
         List<Location> targetLocations = message.getDestLocs();
 
         // 如果消息没有明确的目的地，则尝试从图配置中确定
-        if (targetLocations == null || targetLocations.isEmpty()) {
+        if (CollectionUtils.isEmpty(targetLocations)) {
             targetLocations = determineMessageDestinationsFromGraph(message);
-            if (targetLocations.isEmpty()) {
+            if (CollectionUtils.isEmpty(targetLocations)) {
                 log.warn(
                     "DefaultExtensionMessageDispatcher: 消息 {} (Name: {}, Type: {}) 没有明确的 Extension "
                         + "目的地，也无法从图配置中确定，无法派发。",
@@ -71,7 +73,7 @@ public class DefaultExtensionMessageDispatcher implements ExtensionMessageDispat
             // 只有当原始消息有多个目的地，并且需要为每个目的地克隆时，才执行克隆
             // 现在 targetLocations 已经是经过处理的最终目的地列表，如果列表中有多个目的地
             // 并且消息是可变的，我们才需要为每个目的地创建副本
-            if (targetLocations.size() > 1 && !(message instanceof CommandResult)) { // CommandResult 不应被克隆以避免 PathTable
+            if (CollectionUtils.size(targetLocations) > 1 && !(message instanceof CommandResult)) { // CommandResult 不应被克隆以避免 PathTable
                 // 混乱
                 try {
                     finalMessageToSend = message.clone();
@@ -124,7 +126,7 @@ public class DefaultExtensionMessageDispatcher implements ExtensionMessageDispat
     private List<Location> determineMessageDestinationsFromGraph(Message message) {
         // 1. 获取消息的源 Extension 名称
         String sourceExtensionName = message.getSrcLoc() != null ? message.getSrcLoc().getExtensionName() : null;
-        if (sourceExtensionName == null) {
+        if (StringUtils.isEmpty(sourceExtensionName)) {
             log.warn(
                 "DefaultExtensionMessageDispatcher: 消息 {} (Name: {}, Type: {}) 没有源 Extension，无法从图配置中确定目的地。",
                 message.getId(), message.getName(), message.getType());
@@ -161,7 +163,7 @@ public class DefaultExtensionMessageDispatcher implements ExtensionMessageDispat
                 return Collections.emptyList();
         }
 
-        if (rules == null || rules.isEmpty()) {
+        if (CollectionUtils.isEmpty(rules)) {
             log.debug("DefaultExtensionMessageDispatcher: 源 Extension {} 没有为消息类型 {} 配置路由规则。",
                 sourceExtensionName, message.getType());
             return Collections.emptyList();
@@ -175,16 +177,16 @@ public class DefaultExtensionMessageDispatcher implements ExtensionMessageDispat
         for (RoutingRuleDefinition rule : rules) {
             // 消息名称匹配：如果规则定义了名称，则消息的名称必须与规则名称匹配。
             // 否则，如果规则名称为 null，则视为匹配成功（不进行名称过滤）。
-            boolean nameMatches = rule.getName() == null
-                || message.getName() != null && rule.getName().equals(message.getName());
+            boolean nameMatches = StringUtils.isEmpty(rule.getName())
+                || StringUtils.isNotEmpty(message.getName()) && rule.getName().equals(message.getName());
 
-            if (nameMatches && rule.getDestinations() != null) { // 修正：getDest() -> getDestinations()
+            if (nameMatches && CollectionUtils.isNotEmpty(rule.getDestinations())) { // 修正：getDest() -> getDestinations()
                 for (DestinationInfo destInfo : rule.getDestinations()) { // 修正：getDest() -> getDestinations()
                     // 将 DestinationInfo 转换为 Location
                     // 假设目的地在同一个 App 和 Graph 内，只关心 ExtensionName
                     // 复杂的跨 App/Graph 路由在 Engine/App 层面处理
                     String targetExtensionName = destInfo.getExtensionName(); // 修正：getExtension() -> getExtensionName()
-                    if (targetExtensionName != null) {
+                    if (StringUtils.isNotEmpty(targetExtensionName)) {
                         determinedLocations.add(new Location(appUri, graphId, targetExtensionName));
                     } else {
                         log.warn("DefaultExtensionMessageDispatcher: 路由规则中目的地 Extension 名称为空，规则: {}",

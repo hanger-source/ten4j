@@ -38,6 +38,8 @@ import source.hanger.core.path.PathTableAttachedTo;
 import source.hanger.core.remote.Remote;
 import source.hanger.core.runloop.Runloop;
 import source.hanger.core.tenenv.TenEnvProxy;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import static source.hanger.core.message.MessageType.CMD_TIMEOUT;
 import static source.hanger.core.message.MessageType.CMD_TIMER;
@@ -234,14 +236,14 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
      * @return 一个 CompletableFuture，表示消息发送的结果。
      */
     private void routeMessageToRemote(Message message) {
-        if (message.getDestLocs() == null || message.getDestLocs().size() != 1) {
+        if (CollectionUtils.size(message.getDestLocs()) != 1) {
             log.warn("Engine {}: 消息 {} 没有单一的 Remote 目的地，无法通过 Remote 路由。",
                 graphId, message.getId());
             return;
         }
 
         String destUri = message.getDestLocs().getFirst().getAppUri();
-        if (destUri == null || destUri.isEmpty()) {
+        if (StringUtils.isEmpty(destUri)) {
             log.warn("Engine {}: 消息 {} 的目的地 Remote URI 为空，无法路由。",
                 graphId, message.getId());
             return;
@@ -295,7 +297,7 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
             // Engine 接收到 CommandResult 后，需要通过自己的 PathTable 查找原始的 PathIn
             // 从 PathIn 获取 originalMessage (原始 Command) 和 sourceConnection，
             // 然后将 CommandResult 发送回 sourceConnection。
-            if (commandResult.getOriginalCommandId() != null && !commandResult.getOriginalCommandId().isEmpty()) {
+            if (StringUtils.isNotEmpty(commandResult.getOriginalCommandId())) {
                 Optional<PathIn> pathInOpt = pathTable.getInPath(commandResult.getOriginalCommandId());
                 if (pathInOpt.isPresent()) {
                     PathIn pathIn = pathInOpt.get();
@@ -313,18 +315,18 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
                     log.warn("Engine {}: 未找到与命令结果 {} 对应的 PathIn。可能已超时或已被处理。", graphId,
                         commandResult.getOriginalCommandId());
                     // 如果没有 PathIn，尝试按目的地路由，或者如果来自 Remote 且有 sourceConnection，则发送回去
-                    if (commandResult.getDestLocs() != null && !commandResult.getDestLocs().isEmpty()) {
+                    if (CollectionUtils.isNotEmpty(commandResult.getDestLocs())) {
                         routeMessageToRemote(commandResult); // 对于没有 PathIn 的结果，尝试按目的地路由
                     } else if (connection != null) { // 如果有来源连接 (例如来自 Extension 的内部结果)，则直接回传给它
                         connection.sendOutboundMessage(commandResult);
                     }
                 }
             } else { // 对于没有 originalCommandId 的 CommandResult，或者其他非命令消息
-                if (message.getDestLocs() != null && !message.getDestLocs().isEmpty()) {
+                if (CollectionUtils.isNotEmpty(message.getDestLocs())) {
                     Location firstDest = message.getDestLocs().getFirst();
                     if (graphId.equals(firstDest.getGraphId())) { // 目标是当前 Engine 内部的 Extension
                         messageDispatcher.dispatchMessage(message);
-                    } else if (firstDest.getAppUri() != null && !firstDest.getAppUri().isEmpty()) { // 目标是其他 App/Remote
+                    } else if (StringUtils.isNotEmpty(firstDest.getAppUri())) { // 目标是其他 App/Remote
                         routeMessageToRemote(message);
                     } else {
                         log.warn("Engine {}: 消息 {} (Type: {}) 无法路由，目的地 Loc 无效。",
@@ -345,7 +347,7 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
 
             Location firstDest = null;
             // 检查消息是否有目的地，并尝试路由
-            if (message.getDestLocs() != null && !message.getDestLocs().isEmpty()) {
+            if (CollectionUtils.isNotEmpty(message.getDestLocs())) {
                 firstDest = message.getDestLocs().getFirst();
             }
             if (firstDest == null || graphId.equals(firstDest.getGraphId())) {
@@ -363,7 +365,7 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
      */
     private void processCommand(Command command) {
         // 如果是 App 级别或 Engine 级别的命令，由 Engine 自身处理
-        if (command.getDestLocs() != null && !command.getDestLocs().isEmpty()) {
+        if (CollectionUtils.isNotEmpty(command.getDestLocs())) {
             Location destLoc = command.getDestLocs().getFirst(); // 假设只处理第一个目的地
 
             if (graphId.equals(destLoc.getGraphId())) { // 目标是当前 Engine
@@ -400,18 +402,18 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
                 } else { // 目标是当前 Engine 内部的 Extension
                     messageDispatcher.dispatchMessage(command);
                 }
-            } else if (destLoc.getAppUri() != null && !destLoc.getAppUri().isEmpty() &&
+            } else if (StringUtils.isNotEmpty(destLoc.getAppUri()) &&
                 app.getAppUri().equals(destLoc.getAppUri())) { // 目标是当前 App 但不是当前 Engine
                 log.debug("Engine {}: 将指向同一 App 内其他 Engine 的命令 {} 重新路由回 App。", graphId,
                     command.getId());
                 app.handleInboundMessage(command, null); // 重新提交给 App 的队列
-            } else if (destLoc.getAppUri() != null && !destLoc.getAppUri().isEmpty()) { // 目标是其他 App/Remote
+            } else if (StringUtils.isNotEmpty(destLoc.getAppUri())) { // 目标是其他 App/Remote
                 routeMessageToRemote(command); // 修正：直接通过 Engine 路由到 Remote
             } else {
                 // 没有目的地，无法处理
                 submitCommandResult(CommandResult.fail(command, "Command has no destination.")); // Changed to
             }
-        } else if (command.getDestLocs() == null || command.getDestLocs().isEmpty()) {
+        } else if (CollectionUtils.isEmpty(command.getDestLocs())) {
             messageDispatcher.dispatchMessage(command);
         } else {
             // 没有目的地，无法处理
@@ -554,7 +556,7 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
         }
 
         // 如果命令结果有返回地址，可能需要向上路由或发送给 Remote
-        if (commandResult.getDestLocs() != null && !commandResult.getDestLocs().isEmpty()) {
+        if (CollectionUtils.isNotEmpty(commandResult.getDestLocs())) {
             // 路由到目标 Engine 或 App (通过 App 的路由机制)
             app.sendMessageToLocation(commandResult, null);
         }
@@ -628,7 +630,7 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
 
     // 新增：从 Engine 中移除 Remote 实例
     public void removeRemote(String remoteUri) {
-        if (remoteUri != null) {
+        if (StringUtils.isNotEmpty(remoteUri)) {
             Remote removedRemote = remotes.remove(remoteUri);
             if (removedRemote != null) {
                 log.info("Engine {}: 移除 Remote: {} (剩余: {})", graphId, remoteUri, remotes.size());

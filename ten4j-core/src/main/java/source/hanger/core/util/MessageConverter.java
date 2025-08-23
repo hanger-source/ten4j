@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import source.hanger.core.message.MessageConversionContext;
 import source.hanger.core.message.Message;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
 
 import java.util.Map;
 import java.util.HashMap;
@@ -16,8 +18,6 @@ import java.util.HashMap;
  */
 @Slf4j
 public class MessageConverter {
-
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private MessageConverter() {
         // Utility class
@@ -84,7 +84,7 @@ public class MessageConverter {
      * 或者更复杂的规则，例如 {"src_field": "dst_field", "type_cast": "int"}
      */
     private static Message remapJsonProperties(Message originalMessage, Map<String, Object> rules) {
-        if (originalMessage.getProperties() == null || rules == null || rules.isEmpty()) {
+        if (MapUtils.isEmpty(originalMessage.getProperties()) || MapUtils.isEmpty(rules)) {
             return originalMessage;
         }
 

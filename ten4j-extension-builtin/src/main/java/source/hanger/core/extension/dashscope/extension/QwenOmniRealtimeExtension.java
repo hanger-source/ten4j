@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.Flowable;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.base.BaseRealtimeExtension;
 import source.hanger.core.extension.dashscope.client.realtime.QwenOmniRealtimeClient;
@@ -115,7 +116,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension<RealtimeEve
             vadType, vadThreshold,
             vadPrefixPaddingMs, vadSilenceDurationMs, maxHistory, enableStorage);
 
-        if (apiKey.isEmpty()) {
+        if (StringUtils.isEmpty(apiKey)) {
             log.error("[{}] API Key is not set. Please configure in manifest.json/property.json.", env
                 .getExtensionName());
         }
@@ -140,7 +141,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension<RealtimeEve
             // Implement Python's _on_memory_expired logic
             // This involves sending ItemDelete if item_id is present.
             String itemId = (String)memoryEntry.get("id"); // 'id' is the key for item_id in the map
-            if (itemId != null && !itemId.isEmpty()) {
+            if (StringUtils.isNotEmpty(itemId)) {
                 try {
                     ObjectNode itemDelete = objectMapper.createObjectNode();
                     itemDelete.put("type", "conversation.item.delete");
@@ -218,7 +219,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension<RealtimeEve
             String model = (String)this.configuration.getOrDefault("model", "qwen-omni-turbo-realtime-latest");
             int sampleRate = (Integer)this.configuration.getOrDefault("sample_rate", 16000);
 
-            if (apiKey == null || apiKey.isEmpty()) {
+            if (StringUtils.isEmpty(apiKey)) {
                 throw new NoApiKeyException();
             }
 
@@ -417,7 +418,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension<RealtimeEve
     private void handleUserJoined(TenEnv env, Command command) {
         log.info("[{}] User joined. Sending greeting if configured.", env.getExtensionName());
         String greeting = env.getPropertyString("greeting").orElse("");
-        if (!greeting.isEmpty()) {
+        if (!StringUtils.isEmpty(greeting)) {
             try {
                 String eventId = UUID.randomUUID().toString(); // Generate a unique event_id
                 // 使用 Jackson 将对象转换为 JSON 字符串
@@ -799,7 +800,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension<RealtimeEve
         long currentMs = System.currentTimeMillis();
         long audioEndMs = currentMs - sessionStartTimestampMs;
 
-        if (lastItemId != null && !lastItemId.isEmpty() && audioEndMs > 0) {
+        if (StringUtils.isNotEmpty(lastItemId) && audioEndMs > 0) {
             try {
                 ItemTruncateMessage itemTruncateMessage = ItemTruncateMessage.builder()
                     .type("conversation.item.truncate")

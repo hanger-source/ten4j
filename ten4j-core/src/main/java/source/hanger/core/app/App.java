@@ -16,6 +16,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.ManyToOneConcurrentArrayQueue;
+import org.apache.commons.lang3.StringUtils;
 import source.hanger.core.command.app.AppCommandHandler;
 import source.hanger.core.command.app.CloseAppCommandHandler;
 import source.hanger.core.command.app.StartGraphCommandHandler;
@@ -41,6 +42,7 @@ import source.hanger.core.runloop.Runloop;
 import source.hanger.core.tenenv.TenEnvProxy;
 import source.hanger.core.message.CommandExecutionHandle; 
 import source.hanger.core.common.StatusCode; 
+import org.apache.commons.collections4.CollectionUtils;
 
 /**
  * App 类作为 Ten 框架的顶层容器和协调器。
@@ -311,7 +313,7 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
      */
     public void sendMessageToLocation(Message message, Connection sourceConnection) {
         // 或者，如果从外部线程调用，则应通过 TenEnvProxy 进行代理，TenEnvProxy 会负责 postTask
-        if (message.getDestLocs() == null || message.getDestLocs().isEmpty()) {
+        if (CollectionUtils.isEmpty(message.getDestLocs())) {
             log.warn("App: 消息 {} 没有目的地 Location，无法路由。", message.getId());
             return;
         }
@@ -358,7 +360,7 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
      */
     private void routeMessageToDestination(Message message, Connection sourceConnection) {
         List<Location> destinations = message.getDestLocs();
-        if (destinations == null || destinations.isEmpty()) {
+        if (CollectionUtils.isEmpty(destinations)) {
             log.warn("App: 消息 {} 没有目的地，无法路由。", message.getId());
             return;
         }
@@ -425,7 +427,7 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
             if (message instanceof Command command) {
                 // C 端 App 处理入站消息时，会将其添加到 PathTable
                 // 仅对非内部消息且有 ID 的命令进行 PathIn 记录
-                if (command.getId() != null && !command.getId().isEmpty()) { // 检查 ID 是否存在
+                if (StringUtils.isNotEmpty(command.getId())) { // 检查 ID 是否存在
                     // 对于来自外部连接的命令，记录其 PathIn
                     if (connection != null) { // 仅当有实际连接时才记录 PathIn
                         pathTable.createInPath(command, connection); // <-- 记录 PathIn
@@ -484,14 +486,14 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
                     log.warn("[{}] App {}：未找到与命令结果 {} 对应的 CommandExecutionHandle。可能已超时或已被处理。",
                         "CommandResultProcessor", appUri, originalCommandId);
                     // 如果没有 handle，则尝试按照 destLocs 路由
-                    if (commandResult.getDestLocs() != null && !commandResult.getDestLocs().isEmpty()) {
+                    if (CollectionUtils.isNotEmpty(commandResult.getDestLocs())) {
                         routeMessageToDestination(commandResult, connection); // 对于没有 handle 的结果，尝试按目的地路由
                     } else if (connection != null) { // 如果有来源连接 (例如来自 Engine 的内部结果)，则直接回传给它
                         connection.sendOutboundMessage(commandResult);
                     }
                 }
             } else { // 对于非命令消息，尝试路由到目标 Engine 或 Remote
-                if (message.getDestLocs() != null && !message.getDestLocs().isEmpty()) {
+                if (CollectionUtils.isNotEmpty(message.getDestLocs())) {
                     routeMessageToDestination(message, connection);
                 } else {
                     log.warn("App: 消息 {} (Type: {}) 没有目的地，无法处理。", message.getId(), message.getType());

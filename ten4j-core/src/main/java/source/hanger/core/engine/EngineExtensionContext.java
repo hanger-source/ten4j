@@ -28,6 +28,7 @@ import source.hanger.core.message.command.Command;
 import source.hanger.core.path.PathTable;
 import source.hanger.core.util.MessageConverter;
 import source.hanger.core.util.ReflectionUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
@@ -362,7 +363,7 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
      * @param extensionName 目标 Extension 的 ID。
      */
     public void dispatchMessageToExtension(Message message, String extensionName) {
-        if (extensionName == null || extensionName.isEmpty()) {
+        if (StringUtils.isEmpty(extensionName)) {
             EngineExtensionContext.log.warn(
                 "ExtensionContext: 目标 Extension ID 为空或 null，无法分发消息 {}.getId()。跳过分发。",
                 message.getId());
@@ -421,7 +422,7 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
      * @param targetExtensionId 目标 Extension 的 ID。
      */
     public void dispatchCommandToExtension(Command command, String targetExtensionId) {
-        if (targetExtensionId == null || targetExtensionId.isEmpty()) {
+        if (StringUtils.isEmpty(targetExtensionId)) {
             EngineExtensionContext.log.warn(
                 "ExtensionContext: 目标 Extension ID 为空或 null，无法分发命令 {}.getId()。跳过分发。",
                 command.getId());

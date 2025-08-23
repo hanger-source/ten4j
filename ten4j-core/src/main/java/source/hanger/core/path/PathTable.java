@@ -17,6 +17,8 @@ import source.hanger.core.message.command.Command;
 import source.hanger.core.server.GraphStoppedException;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import source.hanger.core.message.Message;
 
 /**
@@ -226,7 +228,7 @@ public class PathTable {
                     commandResult.getId());
         }
 
-        if (pathOut.getParentCommandId() != null && !pathOut.getParentCommandId().isEmpty()) { // 检查是否为 null 或空字符串
+        if (StringUtils.isNotEmpty(pathOut.getParentCommandId())) { // 检查是否为 null 或空字符串
             CommandResult backtrackResult = commandResult.clone();
 
             String parentCmdId = pathOut.getParentCommandId();
@@ -250,7 +252,7 @@ public class PathTable {
      * @param graphId 要清理的图实例ID
      */
     public void cleanupPathsForGraph(String graphId) {
-        if (graphId == null || graphId.isEmpty()) {
+        if (StringUtils.isEmpty(graphId)) {
             log.warn("PathTable: 尝试清理空的或无效的Graph ID相关的路径");
             return;
         }
@@ -268,7 +270,7 @@ public class PathTable {
                 .map(Map.Entry::getKey) // 直接获取 String 类型的键
                 .collect(Collectors.toList());
 
-        if (commandIdsToCleanup.isEmpty()) {
+        if (CollectionUtils.isEmpty(commandIdsToCleanup)) {
             log.debug("PathTable: 没有发现与Graph {} 相关的PathOut需要清理", graphId);
             return;
         }

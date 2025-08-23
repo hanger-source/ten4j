@@ -81,6 +81,7 @@ public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLL
                              - 用户的问题与视觉完全无关（如文本、代码、新闻、天气等）。
                              - 用户未涉及查看画面或感知环境的需求。
                              - 根据上下文，无法明确判断用户是否在询问视觉内容时，默认不调用。
+                             - 如果上下文已经有画面的描述，可以不调用，除非用户明确重新分析画面
 
                           """.stripIndent(),
                             List.of(new ToolParameter[] {}));

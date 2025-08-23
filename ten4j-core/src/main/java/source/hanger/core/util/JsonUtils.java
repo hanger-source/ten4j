@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.Map;
 import java.util.Optional;
@@ -31,7 +33,7 @@ public class JsonUtils {
      * @return JSON Pointer路径字符串
      */
     public static String convertDotPathToJsonPointer(String dotPath) {
-        if (dotPath == null || dotPath.isEmpty()) {
+        if (StringUtils.isEmpty(dotPath)) {
             return "/"; // 根路径
         }
         // JSON Pointer中的特殊字符需要转义：/~ -> ~0, / -> ~1
@@ -48,7 +50,7 @@ public class JsonUtils {
      * @return 值的Optional，如果路径不存在或值为空则为Optional.empty()。
      */
     public static Optional<Object> getValueByPath(Map<String, Object> sourceMap, String dotPath) {
-        if (sourceMap == null || dotPath == null || dotPath.isEmpty()) {
+        if (MapUtils.isEmpty(sourceMap) || StringUtils.isEmpty(dotPath)) {
             return Optional.empty();
         }
 
@@ -77,7 +79,7 @@ public class JsonUtils {
      */
     @SuppressWarnings("unchecked")
     public static void setValueByPath(Map<String, Object> targetMap, String dotPath, Object value) {
-        if (targetMap == null || dotPath == null || dotPath.isEmpty()) {
+        if (MapUtils.isEmpty(targetMap) || StringUtils.isEmpty(dotPath)) {
             return;
         }
 
@@ -120,7 +122,7 @@ public class JsonUtils {
      */
     @SuppressWarnings("unchecked")
     public static void deleteValueByPath(Map<String, Object> targetMap, String dotPath) {
-        if (targetMap == null || dotPath == null || dotPath.isEmpty()) {
+        if (MapUtils.isEmpty(targetMap) || StringUtils.isEmpty(dotPath)) {
             return;
         }
 
