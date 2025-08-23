@@ -193,7 +193,7 @@ public class ImageSynthesisTool implements LLMTool {
         }
 
         // 立即返回，表示异步任务已成功启动
-        return LLMToolResult.llmResult(true, "图片生成已开始。");
+        return LLMToolResult.llmResult(true, "图片生成已开始，请稍等【注意：基于这次消息的回复中禁止出现![](http://...) Markdown图片连接）");
     }
 
     public void shutdown() {
