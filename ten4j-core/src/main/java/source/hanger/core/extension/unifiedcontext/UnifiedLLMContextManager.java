@@ -5,9 +5,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Function;
 import java.util.function.Supplier; // 新增导入
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import source.hanger.core.extension.component.context.LLMContextManager;
 
 @Slf4j
@@ -75,28 +77,32 @@ public class UnifiedLLMContextManager implements LLMContextManager<UnifiedMessag
         return -1; // 未找到匹配的assistant消息
     }
 
-    // 修改 getMessagesForLLM 方法，接收 uniqueSystemPromptSupplier
-    public List<UnifiedMessage> getMessagesForLLM(Supplier<String> uniqueSystemPromptSupplier) { // 接收 uniqueSystemPromptSupplier
-        List<UnifiedMessage> llmMessages = new ArrayList<>();
-        StringBuilder combinedSystemPrompt = new StringBuilder();
-
-        if (commonSystemPrompt != null && !commonSystemPrompt.isEmpty()) {
-            combinedSystemPrompt.append(commonSystemPrompt);
-        }
-
-        String currentUniqueSystemPrompt = uniqueSystemPromptSupplier.get(); // 从 Supplier 获取独特的 systemPrompt
-        if (currentUniqueSystemPrompt != null && !currentUniqueSystemPrompt.isEmpty()) {
-            if (!combinedSystemPrompt.isEmpty()) {
-                combinedSystemPrompt.append("\n"); // 添加换行符或分隔符
+    public List<UnifiedMessage> getMessagesForLLM(Supplier<String> uniqueSystemPromptSupplier) {
+        return getMessagesForLLM(s -> {
+            StringBuilder combinedSystemPrompt = new StringBuilder();
+            if (StringUtils.isNoneEmpty(commonSystemPrompt)) {
+                combinedSystemPrompt.append(commonSystemPrompt);
             }
-            combinedSystemPrompt.append(currentUniqueSystemPrompt);
-        }
+            String currentUniqueSystemPrompt = uniqueSystemPromptSupplier.get(); // 从 Supplier 获取独特的 systemPrompt
+            if (StringUtils.isNoneEmpty(currentUniqueSystemPrompt)) {
+                combinedSystemPrompt.append("\n").append(currentUniqueSystemPrompt);
+            }
+            if (!combinedSystemPrompt.isEmpty()) {
+                return UnifiedMessage.builder()
+                    .role("system")
+                    .text(combinedSystemPrompt.toString())
+                    .build();
+            }
+            return null;
+        });
+    }
 
-        if (!combinedSystemPrompt.isEmpty()) {
-            llmMessages.add(UnifiedMessage.builder()
-                .role("system")
-                .text(combinedSystemPrompt.toString())
-                .build());
+        // 修改 getMessagesForLLM 方法，接收 uniqueSystemPromptSupplier
+    public List<UnifiedMessage> getMessagesForLLM(Function<String, UnifiedMessage> func) {
+        List<UnifiedMessage> llmMessages = new ArrayList<>();
+        UnifiedMessage systemUnifiedMessage = func.apply(commonSystemPrompt);
+        if (systemUnifiedMessage != null) {
+            llmMessages.add(systemUnifiedMessage);
         }
         llmMessages.addAll(history);
         return llmMessages;
