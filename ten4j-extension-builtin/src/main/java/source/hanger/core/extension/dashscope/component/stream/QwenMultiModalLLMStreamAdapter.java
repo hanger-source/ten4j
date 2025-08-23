@@ -1,15 +1,16 @@
-package source.hanger.core.extension.dashscope.component;
+package source.hanger.core.extension.dashscope.component.stream;
 
 import java.util.List;
 import java.util.Optional;
 
-import com.alibaba.dashscope.aigc.generation.Generation;
-import com.alibaba.dashscope.aigc.generation.GenerationOutput.Choice;
-import com.alibaba.dashscope.aigc.generation.GenerationParam;
-import com.alibaba.dashscope.aigc.generation.GenerationResult;
-import com.alibaba.dashscope.common.Message;
-import com.alibaba.dashscope.exception.InputRequiredException;
+import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversation;
+import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationOutput.Choice;
+import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationParam;
+import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationParam.MultiModalConversationParamBuilder;
+import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationResult;
+import com.alibaba.dashscope.common.MultiModalMessage;
 import com.alibaba.dashscope.exception.NoApiKeyException;
+import com.alibaba.dashscope.exception.UploadFileException;
 import com.alibaba.dashscope.tools.ToolCallFunction;
 import com.alibaba.dashscope.tools.ToolFunction;
 
@@ -22,63 +23,70 @@ import source.hanger.core.extension.component.llm.ToolCallOutputFragment;
 import source.hanger.core.extension.component.stream.StreamPipelineChannel;
 import source.hanger.core.tenenv.TenEnv;
 
+import static java.util.Optional.ofNullable;
+
 /**
  * DashScope LLM 流服务实现类。
  * 负责与 DashScope LLM 进行交互，并实现 AbstractLLMStreamService 中定义的抽象方法。
  */
 @Slf4j
-public class QwenChatLLMStreamAdapter extends BaseLLMStreamAdapter<GenerationResult, Message, ToolFunction> {
+public class QwenMultiModalLLMStreamAdapter
+    extends BaseLLMStreamAdapter<MultiModalConversationResult, MultiModalMessage, ToolFunction> {
 
-    private final Generation generation;
+    private final MultiModalConversation conversation;
 
-    public QwenChatLLMStreamAdapter(
+    public QwenMultiModalLLMStreamAdapter(
         InterruptionStateProvider interruptionStateProvider,
         StreamPipelineChannel<OutputBlock> streamPipelineChannel) {
         super(interruptionStateProvider, streamPipelineChannel);
-        this.generation = new Generation();
+        this.conversation = new MultiModalConversation();
     }
 
     @Override
-    protected Flowable<GenerationResult> getRawLlmFlowable(TenEnv env, List<Message> messages,
+    protected Flowable<MultiModalConversationResult> getRawLlmFlowable(TenEnv env, List<MultiModalMessage> messages,
         List<ToolFunction> tools) {
         // 构建 GenerationParam
-        GenerationParam.GenerationParamBuilder paramBuilder = GenerationParam.builder()
+        MultiModalConversationParamBuilder paramBuilder
+            = MultiModalConversationParam.builder()
             .apiKey(env.getPropertyString("api_key").orElseThrow(() -> new RuntimeException("api_key 为空")))
             .model(env.getPropertyString("model").orElseThrow(() -> new RuntimeException("model 为空")))
-            .messages(messages)
-            .resultFormat(GenerationParam.ResultFormat.MESSAGE)
-            .incrementalOutput(true);
+            .incrementalOutput(true)
+            .messages(messages);
 
         if (tools != null && !tools.isEmpty()) {
             paramBuilder.tools(tools);
         }
 
-        GenerationParam param = paramBuilder.build();
+        MultiModalConversationParam param = paramBuilder.build();
 
         try {
             // 使用注入的 DashScope Generation 客户端进行调用
-            return generation.streamCall(param);
-        } catch (NoApiKeyException | InputRequiredException e) {
+            return conversation.streamCall(param);
+        } catch (NoApiKeyException | UploadFileException e) {
             log.error("[{}] Error calling DashScope stream: {}", env.getExtensionName(), e.getMessage());
             return Flowable.error(e);
         }
     }
 
     @Override
-    protected String extractTextFragment(GenerationResult result) {
-        return Optional.ofNullable(result.getOutput())
+    protected String extractTextFragment(MultiModalConversationResult result) {
+        return ofNullable(result.getOutput())
             .map(output -> output.getChoices().stream().findFirst())
             .filter(Optional::isPresent)
             .map(Optional::get)
             .map(Choice::getMessage)
-            .map(Message::getContent)
+            .map(MultiModalMessage::getContent)
+            .map(contentList -> contentList.stream()
+                .filter(c -> c.containsKey("text"))
+                .findAny().map(c -> c.get("text"))
+                .map(String::valueOf).orElse(""))
             .orElse(null);
     }
 
     @Override
-    protected boolean isEndOfTextSegment(GenerationResult result) {
+    protected boolean isEndOfTextSegment(MultiModalConversationResult result) {
         // 根据 DashScope 的结束标志判断，例如 `finish_reason` 是 `stop` 或 `tool_calls`
-        return Optional.ofNullable(result.getOutput())
+        return ofNullable(result.getOutput())
             .map(output -> output.getChoices().stream().findFirst())
             .filter(Optional::isPresent)
             .map(Optional::get)
@@ -88,13 +96,14 @@ public class QwenChatLLMStreamAdapter extends BaseLLMStreamAdapter<GenerationRes
     }
 
     @Override
-    protected ToolCallOutputFragment extractAndConvertToolCallFragment(TenEnv env, GenerationResult result) {
-        return Optional.ofNullable(result.getOutput())
+    protected ToolCallOutputFragment extractAndConvertToolCallFragment(TenEnv env,
+        MultiModalConversationResult result) {
+        return ofNullable(result.getOutput())
             .map(output -> output.getChoices().stream().findFirst())
             .filter(Optional::isPresent)
             .map(Optional::get)
             .map(Choice::getMessage)
-            .map(Message::getToolCalls)
+            .map(MultiModalMessage::getToolCalls)
             .filter(toolCalls -> !toolCalls.isEmpty())
             .map(List::getFirst) // 假设目前只处理第一个工具调用
             .map(toolCallBase -> {
@@ -112,8 +121,8 @@ public class QwenChatLLMStreamAdapter extends BaseLLMStreamAdapter<GenerationRes
     }
 
     @Override
-    protected String getFinishReason(GenerationResult result) {
-        return Optional.ofNullable(result.getOutput())
+    protected String getFinishReason(MultiModalConversationResult result) {
+        return ofNullable(result.getOutput())
             .map(output -> output.getChoices().stream().findFirst())
             .filter(Optional::isPresent)
             .map(Optional::get)

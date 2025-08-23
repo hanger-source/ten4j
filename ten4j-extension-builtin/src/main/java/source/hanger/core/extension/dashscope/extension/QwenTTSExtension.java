@@ -7,7 +7,7 @@ import source.hanger.core.extension.base.BaseTTSExtension;
 import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.stream.StreamPipelineChannel;
 import source.hanger.core.extension.component.tts.TTSStreamAdapter;
-import source.hanger.core.extension.dashscope.component.QwenTTSStreamAdapter;
+import source.hanger.core.extension.dashscope.component.stream.QwenTTSStreamAdapter;
 import source.hanger.core.tenenv.TenEnv;
 
 /**

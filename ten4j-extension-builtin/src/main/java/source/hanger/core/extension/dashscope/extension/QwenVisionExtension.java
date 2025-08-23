@@ -10,17 +10,18 @@ import source.hanger.core.extension.base.BaseVisionExtension;
 import source.hanger.core.extension.component.context.LLMContextManager;
 import source.hanger.core.extension.component.llm.LLMStreamAdapter;
 import source.hanger.core.extension.component.tool.LLMToolOrchestrator;
-import source.hanger.core.extension.dashscope.component.QwenMultiModalLLMContextManager;
-import source.hanger.core.extension.dashscope.component.QwenMultiModalLLMStreamAdapter;
-import source.hanger.core.extension.dashscope.component.QwenMultiModelLLMToolOrchestrator;
+import source.hanger.core.extension.dashscope.component.context.QwenMultiModalLLMContextManager;
+import source.hanger.core.extension.dashscope.component.stream.QwenMultiModalLLMStreamAdapter;
+import source.hanger.core.extension.dashscope.component.tool.QwenMultiModelLLMToolOrchestrator;
+import source.hanger.core.tenenv.TenEnv;
 
 @Slf4j
 public class QwenVisionExtension extends BaseVisionExtension<MultiModalMessage, ToolFunction> {
 
     @Override
-    protected LLMContextManager<MultiModalMessage> createLLMContextManager(
+    protected LLMContextManager<MultiModalMessage> createLLMContextManager(TenEnv env,
         Supplier<String> systemPromptSupplier) {
-        return new QwenMultiModalLLMContextManager(systemPromptSupplier);
+        return new QwenMultiModalLLMContextManager(env, systemPromptSupplier);
     }
 
     @Override

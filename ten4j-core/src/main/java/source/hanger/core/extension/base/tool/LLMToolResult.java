@@ -21,8 +21,8 @@ public interface LLMToolResult {
         return LLMResult.builder().success(success).content(content).build();
     }
 
-    static LLMToolResult noop() {
-        return Noop.builder().build();
+    static LLMToolResult noop(String content) {
+        return Noop.builder().content(content).build();
     }
 
     // 静态工厂方法，用于创建 Requery 实例
@@ -40,6 +40,7 @@ public interface LLMToolResult {
     @NoArgsConstructor
     @JsonTypeName("noop")
     class Noop implements LLMToolResult {
+        private String content;
     }
 
     @Data @SuperBuilder @NoArgsConstructor @AllArgsConstructor @JsonTypeName("llmresult")

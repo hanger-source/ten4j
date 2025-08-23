@@ -1,4 +1,4 @@
-package source.hanger.core.extension.dashscope.component;
+package source.hanger.core.extension.dashscope.component.stream;
 
 import java.util.Base64;
 

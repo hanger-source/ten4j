@@ -60,7 +60,7 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
         log.info("[{}] 配置中，初始化核心组件。", env.getExtensionName());
 
         // 2. 初始化 LLMContextManager (由子类提供具体实现)
-        this.llmContextManager = createLLMContextManager(() -> (String)properties.get("prompt"));
+        this.llmContextManager = createLLMContextManager(env, () -> (String)properties.get("prompt"));
         log.info("[{}] 配置中，初始化 LLMContextManager。", env.getExtensionName());
 
         // 3. 初始化 StreamPipelineManager，需要 StreamItemHandler (由子类提供具体实现)
@@ -168,7 +168,7 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
      * 抽象方法：创建 LLMContextManager 实例。
      * 子类应返回 LLMContextManager 的具体实现，例如 DashScopeLLMContextManager。
      */
-    protected abstract LLMContextManager<MESSAGE> createLLMContextManager(Supplier<String> systemPromptSupplier);
+    protected abstract LLMContextManager<MESSAGE> createLLMContextManager(TenEnv env, Supplier<String> systemPromptSupplier);
 
     protected void onUserJoined(TenEnv env, Command command) {
         log.info("[{}] LLM扩展收到用户加入事件", env.getExtensionName());

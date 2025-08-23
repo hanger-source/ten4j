@@ -11,7 +11,7 @@ import source.hanger.core.message.Location;
 import source.hanger.core.message.Message;
 import source.hanger.core.message.command.StopGraphCommand;
 import source.hanger.core.runloop.Runloop;
-import java.util.concurrent.CompletableFuture; // 新增导入
+import java.util.concurrent.CompletableFuture; 
 
 /**
  * Remote 代表 TEN Framework 中的一个远程实体（例如另一个 App 或客户端）。

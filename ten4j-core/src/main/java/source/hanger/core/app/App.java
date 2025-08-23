@@ -39,8 +39,8 @@ import source.hanger.core.path.PathTableAttachedTo;
 import source.hanger.core.remote.Remote;
 import source.hanger.core.runloop.Runloop;
 import source.hanger.core.tenenv.TenEnvProxy;
-import source.hanger.core.message.CommandExecutionHandle; // 新增导入
-import source.hanger.core.common.StatusCode; // 修正导入
+import source.hanger.core.message.CommandExecutionHandle; 
+import source.hanger.core.common.StatusCode; 
 
 /**
  * App 类作为 Ten 框架的顶层容器和协调器。

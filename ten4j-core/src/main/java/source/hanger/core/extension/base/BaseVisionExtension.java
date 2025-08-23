@@ -6,6 +6,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.base.tool.LLMTool;
 import source.hanger.core.extension.base.tool.LLMToolMetadata;
 import source.hanger.core.extension.base.tool.LLMToolMetadata.ToolParameter;
@@ -86,7 +87,7 @@ public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLL
                     public LLMToolResult runTool(TenEnv env, Command command, Map<String, Object> args) {
                         String prompt = (String)command.getProperty(DATA_OUT_PROPERTY_TEXT);
                         onTextWithVideo(command, prompt);
-                        return LLMToolResult.noop();
+                        return LLMToolResult.noop("已分析摄像头实时画面");
                     }
 
                     @Override
