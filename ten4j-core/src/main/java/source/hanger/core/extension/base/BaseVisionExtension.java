@@ -20,8 +20,6 @@ import source.hanger.core.tenenv.TenEnv;
 import source.hanger.core.util.ImageUtils;
 import source.hanger.core.util.LatestNBuffer;
 
-import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL;
-import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_IS_FINAL;
 import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_TEXT;
 
 /**
@@ -31,7 +29,7 @@ import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_TEX
  * @param <TOOL_FUNCTION> LLM工具函数类型
  */
 @Slf4j
-public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLLMExtension<MESSAGE, TOOL_FUNCTION> {
+public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLLMToolExtension<MESSAGE, TOOL_FUNCTION> {
 
     private static final int MAX_VIDEO_FRAME_COUNT = 10;
     private static final int VIDEO_FRAME_COUNT = 4;
@@ -43,78 +41,59 @@ public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLL
     // 生产者线程池，使用虚拟线程处理帧转换
     private ExecutorService producerExecutor;
 
-    private ExtensionToolDelegate extensionToolDelegate;
+    @Override
+    protected List<LLMTool> initTools(TenEnv env) {
+        return List.of(new LLMTool() {
+            @Override
+            public LLMToolMetadata getToolMetadata() {
+                return new LLMToolMetadata("vision",
+                    """
+                      - 用于分析用户摄像头捕获的实时画面，以增强模型对用户当前环境的感知。
+                      - 工具本身无需输出给用户，调用与否仅用于辅助模型决策。
+                      调用规则：
+                      1. 仅在用户的当前输入中明确或隐含提及视觉内容时调用：
+                         - 明确请求：
+                           - “你能看到我吗？”
+                           - “画面里有什么？”
+                           - “我的背景如何？”
+                           - “你能看到摄像头吗？”
+                         - 隐含请求：
+                           - “描述一下场景”
+                           - “你看到了什么？”
+                           - “我现在的环境怎么样？”
+                         - 连续追问：
+                           - 仅当用户在短时间内连续提出与画面直接相关的问题，才继续调用。
+                      2. 禁止调用场景：
+                         - 用户的问题与视觉完全无关（如文本、代码、新闻、天气等）。
+                         - 用户未涉及查看画面或感知环境的需求。
+                         - 根据上下文，无法明确判断用户是否在询问视觉内容时，默认不调用。
+                         - 如果上下文已经有画面的描述，可以不调用，除非用户明确重新分析画面
+
+                      """.stripIndent(),
+                    List.of(new ToolParameter[] {}));
+            }
+
+            @Override
+            public LLMToolResult runTool(TenEnv env, Command command, Map<String, Object> args) {
+                String prompt = (String)command.getProperty(DATA_OUT_PROPERTY_TEXT);
+                onUserTextInput(env, prompt, command);
+                return LLMToolResult.noop("已分析摄像头实时画面");
+            }
+
+            @Override
+            public String getToolName() {
+                return "vision";
+            }
+        });
+    }
 
     @Override
     protected void onExtensionConfigure(TenEnv env, Map<String, Object> properties) {
         super.onExtensionConfigure(env, properties);
         producerExecutor = Executors.newVirtualThreadPerTaskExecutor();
-
         // 初始化 LatestNBuffer
         this.latestNBuffer = new LatestNBuffer(MAX_VIDEO_FRAME_COUNT, MAX_FRAME_BYTE_SIZE);
         log.info("[{}] LatestNBuffer 初始化完成，容量：{} 帧，每帧最大 {} 字节", env.getExtensionName(), MAX_VIDEO_FRAME_COUNT, MAX_FRAME_BYTE_SIZE);
-
-        extensionToolDelegate = new ExtensionToolDelegate() {
-            @Override
-            public List<LLMTool> initTools() {
-                return List.of(new LLMTool() {
-                    @Override
-                    public LLMToolMetadata getToolMetadata() {
-                        return new LLMToolMetadata("vision",
-                        """
-                          - 用于分析用户摄像头捕获的实时画面，以增强模型对用户当前环境的感知。
-                          - 工具本身无需输出给用户，调用与否仅用于辅助模型决策。
-                          调用规则：
-                          1. 仅在用户的当前输入中明确或隐含提及视觉内容时调用：
-                             - 明确请求：
-                               - “你能看到我吗？”
-                               - “画面里有什么？”
-                               - “我的背景如何？”
-                               - “你能看到摄像头吗？”
-                             - 隐含请求：
-                               - “描述一下场景”
-                               - “你看到了什么？”
-                               - “我现在的环境怎么样？”
-                             - 连续追问：
-                               - 仅当用户在短时间内连续提出与画面直接相关的问题，才继续调用。
-                          2. 禁止调用场景：
-                             - 用户的问题与视觉完全无关（如文本、代码、新闻、天气等）。
-                             - 用户未涉及查看画面或感知环境的需求。
-                             - 根据上下文，无法明确判断用户是否在询问视觉内容时，默认不调用。
-                             - 如果上下文已经有画面的描述，可以不调用，除非用户明确重新分析画面
-
-                          """.stripIndent(),
-                            List.of(new ToolParameter[] {}));
-                    }
-
-                    @Override
-                    public LLMToolResult runTool(TenEnv env, Command command, Map<String, Object> args) {
-                        String prompt = (String)command.getProperty(DATA_OUT_PROPERTY_TEXT);
-                        onUserTextInput(env, prompt, command);
-                        return LLMToolResult.noop("已分析摄像头实时画面");
-                    }
-
-                    @Override
-                    public String getToolName() {
-                        return "vision";
-                    }
-                });
-            }
-        };
-    }
-
-    @Override
-    public void onStart(TenEnv env) {
-        super.onStart(env);
-        extensionToolDelegate.sendRegisterToolCommands(env);
-    }
-
-    @Override
-    public void onCmd(TenEnv env, Command command) {
-        super.onCmd(env, command);
-        if (CMD_TOOL_CALL.equals(command.getName())) {
-            extensionToolDelegate.handleToolCallCommand(env, command);
-        }
     }
 
     @Override

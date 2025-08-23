@@ -5,7 +5,6 @@ import java.util.Map;
 
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.base.tool.LLMTool;
-import source.hanger.core.extension.base.tool.LLMToolMetadata;
 import source.hanger.core.extension.component.tool.ExtensionToolDelegate;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
@@ -13,20 +12,18 @@ import source.hanger.core.tenenv.TenEnv;
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL;
 
 /**
- * 既有llm能力、又有能被作为工具的扩展
  * @author fuhangbo.hanger.uhfun
  **/
 @Slf4j
-public abstract class BaseLLMToolExtension<MESSAGE, TOOL_FUNCTION> extends BaseLLMExtension<MESSAGE, TOOL_FUNCTION> {
+public abstract class BaseToolExtension extends BaseExtension {
 
     protected ExtensionToolDelegate extensionToolDelegate;
     @Override
     protected void onExtensionConfigure(TenEnv env, Map<String, Object> properties) {
-        super.onExtensionConfigure(env, properties);
         extensionToolDelegate = new ExtensionToolDelegate() {
             @Override
             public List<LLMTool> initTools() {
-                return BaseLLMToolExtension.this.initTools(env);
+                return BaseToolExtension.this.initTools(env);
             }
         };
     }
@@ -41,7 +38,6 @@ public abstract class BaseLLMToolExtension<MESSAGE, TOOL_FUNCTION> extends BaseL
     @Override
     public void onCmd(TenEnv env, Command command) {
         // 处理 CMD_TOOL_CALL 命令
-        super.onCmd(env, command);
         if (CMD_TOOL_CALL.equals(command.getName())) {
             log.info("[{}] 收到 CMD_TOOL_CALL 命令，处理工具调用。", env.getExtensionName());
             extensionToolDelegate.handleToolCallCommand(env, command);
