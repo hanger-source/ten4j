@@ -110,6 +110,7 @@ public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLL
 
     @Override
     public void onCmd(TenEnv env, Command command) {
+        super.onCmd(env, command);
         if (CMD_TOOL_CALL.equals(command.getName())) {
             extensionToolDelegate.handleToolCallCommand(env, command);
         }

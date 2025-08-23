@@ -21,17 +21,29 @@
         <!-- 版本管理 -->
         <netty.version>4.1.116.Final</netty.version> <!-- 升级版本 -->
         <agrona.version>2.2.4</agrona.version>
-        <jackson.version>2.18.2</jackson.version>
+        <jackson.version>2.18.4</jackson.version> <!-- 使用最新的 Jackson 版本 -->
         <spring.version>6.2.1</spring.version>
         <slf4j.version>2.0.16</slf4j.version>
         <logback.version>1.5.12</logback.version>
-        <msgpack.version>0.9.8</msgpack.version>
+        <msgpack.version>0.9.10</msgpack.version> <!-- 使用最新的 MsgPack 版本 -->
         <junit.version>5.11.3</junit.version>
-        <mockito.version>5.14.2</mockito.version>
+        <mockito.version>5.3.1</mockito.version>
         <micrometer.version>1.15.3</micrometer.version>
-        <lombok.version>1.18.36</lombok.version>
-        <dashscope.version>2.20.9</dashscope.version> <!-- 新增 DashScope SDK 版本 -->
-        <gson.version>2.10.1</gson.version> <!-- 新增 Gson 版本 -->
+        <lombok.version>1.18.38</lombok.version> <!-- 使用最新的 Lombok 版本 -->
+        <dashscope.version>2.20.9</dashscope.version>
+        <gson.version>2.10.1</gson.version>
+        <commons-lang3.version>3.14.0</commons-lang3.version>
+        <commons-collections4.version>4.4</commons-collections4.version>
+        <mvel2.version>2.5.0.Final</mvel2.version>
+        <reactor-core.version>3.5.17</reactor-core.version>
+        <okhttp.version>4.12.0</okhttp.version>
+        <dropwizard.metrics.version>4.2.25</dropwizard.metrics.version>
+        <jemoji.version>1.7.4</jemoji.version>
+        <junit-jupiter.version>5.10.0</junit-jupiter.version>
+        <mockito.version>5.3.1</mockito.version>
+        <maven-shade-plugin.version>3.5.3</maven-shade-plugin.version>
+        <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
+        <maven-surefire-plugin.version>3.1.2</maven-surefire-plugin.version>
     </properties>
 
     <modules>
@@ -74,6 +86,21 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
 
             <!-- 日志框架 -->
             <dependency>
@@ -84,6 +111,11 @@
             <dependency>
                 <groupId>ch.qos.logback</groupId>
                 <artifactId>logback-classic</artifactId>
+                <version>${logback.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-core</artifactId>
                 <version>${logback.version}</version>
             </dependency>
 
@@ -131,11 +163,74 @@
                 <artifactId>gson</artifactId>
                 <version>${gson.version}</version>
             </dependency>
+            <!-- Apache Commons Lang3 for string utilities -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>${commons-lang3.version}</version>
+            </dependency>
+            <!-- Apache Commons Collections4 for collection utilities -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-collections4</artifactId>
+                <version>${commons-collections4.version}</version>
+            </dependency>
+            <!-- MVEL Expression Language -->
+            <dependency>
+                <groupId>org.mvel</groupId>
+                <artifactId>mvel2</artifactId>
+                <version>${mvel2.version}</version>
+            </dependency>
+
+            <!-- Project Reactor for reactive programming -->
+            <dependency>
+                <groupId>io.projectreactor</groupId>
+                <artifactId>reactor-core</artifactId>
+                <version>${reactor-core.version}</version>
+            </dependency>
+
+            <!-- OkHttp for HTTP requests -->
+            <dependency>
+                <groupId>com.squareup.okhttp3</groupId>
+                <artifactId>okhttp</artifactId>
+                <version>${okhttp.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.squareup.okhttp3</groupId>
+                <artifactId>okhttp-sse</artifactId>
+                <version>${okhttp.version}</version>
+            </dependency>
+
+            <!-- Dropwizard Metrics -->
+            <dependency>
+                <groupId>io.dropwizard.metrics</groupId>
+                <artifactId>metrics-core</artifactId>
+                <version>${dropwizard.metrics.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dropwizard.metrics</groupId>
+                <artifactId>metrics-healthchecks</artifactId>
+                <version>${dropwizard.metrics.version}</version>
+            </dependency>
+
+            <!-- JEmoji for Emoji processing -->
+            <dependency>
+                <groupId>net.fellbaum</groupId>
+                <artifactId>jemoji</artifactId>
+                <version>${jemoji.version}</version>
+            </dependency>
+
 
             <!-- 测试依赖 -->
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
-                <artifactId>junit-jupiter</artifactId>
+                <artifactId>junit-jupiter-api</artifactId>
+                <version>${junit.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter-engine</artifactId>
                 <version>${junit.version}</version>
                 <scope>test</scope>
             </dependency>
@@ -149,6 +244,13 @@
                 <groupId>org.mockito</groupId>
                 <artifactId>mockito-junit-jupiter</artifactId>
                 <version>${mockito.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <!-- SLF4J Simple Implementation for tests -->
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-simple</artifactId>
+                <version>${slf4j.version}</version>
                 <scope>test</scope>
             </dependency>
         </dependencies>
@@ -176,8 +278,18 @@
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <version>${maven-shade-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>${maven-jar-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.5.2</version>
+                    <version>${maven-surefire-plugin.version}</version>
                     <configuration>
                         <argLine>--enable-preview --add-opens
                             java.base/jdk.internal.misc=ALL-UNNAMED --add-opens
