@@ -97,11 +97,11 @@ public abstract class BaseTTSExtension extends BaseExtension {
             .replace("\n", "").strip();
 
         if (filteredInputText.isEmpty()) {
-            log.warn("[qwen_tts] Received empty text for TTS, ignoring.");
+            log.warn("[{}] Received empty text for TTS, ignoring.", env.getExtensionName());
             return;
         }
 
-        log.info("[qwen_tts] Received TTS request for text: \"{}\"", filteredInputText);
+        log.info("[{}] Received TTS request for text: \"{}\"", env.getExtensionName(), filteredInputText);
         // 使用 QwenTtsClient 进行流式 TTS 调用
         ttsStreamAdapter.onRequestSpeechTranscription(env, filteredInputText, dataMessage);
     }
