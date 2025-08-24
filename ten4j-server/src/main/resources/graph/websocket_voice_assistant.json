@@ -34,12 +34,12 @@
       {
         "type": "extension",
         "name": "tts",
-        "addon": "source.hanger.core.extension.dashscope.extension.QwenTTSExtension",
+        "addon": "source.hanger.core.extension.dashscope.extension.CosyVoiceTTSExtension",
         "extension_group": "tts_group",
         "property": {
           "api_key": "{{env:bailian.dashscope.api.key}}",
-          "voice_name": "Cherry",
-          "model": "qwen-tts"
+          "voice_name": "longfeifei_v2",
+          "model": "cosyvoice-v2"
         }
       },
       {
