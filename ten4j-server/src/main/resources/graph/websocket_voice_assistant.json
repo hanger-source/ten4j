@@ -38,7 +38,7 @@
         "extension_group": "tts_group",
         "property": {
           "api_key": "{{env:bailian.dashscope.api.key}}",
-          "voice_name": "longfeifei_v2",
+          "voice_name": "{{cosy_voice_name}}",
           "model": "cosyvoice-v2"
         }
       },

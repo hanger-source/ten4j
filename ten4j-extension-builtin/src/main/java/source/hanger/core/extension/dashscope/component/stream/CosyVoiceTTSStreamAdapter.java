@@ -1,6 +1,8 @@
 package source.hanger.core.extension.dashscope.component.stream;
 
 import com.alibaba.dashscope.audio.tts.SpeechSynthesisResult;
+import com.alibaba.dashscope.audio.ttsv2.SpeechSynthesisAudioFormat;
+import com.alibaba.dashscope.audio.ttsv2.SpeechSynthesisParam;
 import com.alibaba.dashscope.audio.ttsv2.SpeechSynthesizer;
 import com.alibaba.dashscope.exception.NoApiKeyException;
 
@@ -36,6 +38,20 @@ public class CosyVoiceTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthe
             // resourceSupplier: 获取资源
             () -> {
                 SpeechSynthesizer synthesizer = pool.borrowObject();
+                String apiKey = env.getPropertyString("api_key").orElseThrow(
+                    () -> new IllegalStateException("No api key found"));
+                String voiceName = env.getPropertyString("voice_name").orElseThrow(
+                    () -> new IllegalStateException("No voiceName found"));
+                String model = env.getPropertyString("model").orElseThrow(
+                    () -> new IllegalStateException("No model found"));
+                SpeechSynthesisAudioFormat format = SpeechSynthesisAudioFormat.PCM_24000HZ_MONO_16BIT; // 固定格式
+
+                synthesizer.updateParamAndCallback(SpeechSynthesisParam.builder()
+                    .apiKey(apiKey)
+                    .model(model)
+                    .voice(voiceName)
+                    .format(format)
+                    .build(), null);
                 log.debug("[{}] 从对象池借用 SpeechSynthesizer 实例。", env.getExtensionName());
                 return synthesizer;
             },
