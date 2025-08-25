@@ -58,7 +58,11 @@ public class CosyVoiceTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthe
             // flowableSupplier: 使用资源创建 Flowable
             synthesizer -> {
                 try {
-                    return synthesizer.callAsFlowable(text);
+                    return synthesizer.callAsFlowable(text).doOnError(throwable -> {
+                        synthesizer.getDuplexApi().close(1000, "bye");
+                        log.error("[{}] 调用 DashScope Cosy Voice TTS API 错误: {}", env.getExtensionName(),
+                            throwable.getMessage(), throwable);
+                    });
                 } catch (NoApiKeyException e) {
                     log.error("[{}] 调用 DashScope Cosy Voice TTS API 出现错误: {}", env.getExtensionName(), e.getMessage(), e);
                     return Flowable.error(e);
@@ -68,12 +72,17 @@ public class CosyVoiceTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthe
             synthesizer -> {
                 try {
                     pool.returnObject(synthesizer);
-                    log.debug("[{}] 归还 SpeechSynthesizer 实例到对象池。", env.getExtensionName());
+                    log.info("[{}] '{}' 归还 SpeechSynthesizer 实例到对象池。", env.getExtensionName(), text);
                 } catch (Exception e) {
-                    log.error("[{}] 归还 SpeechSynthesizer 到对象池失败: {}", env.getExtensionName(), e.getMessage(), e);
+                    log.error("[{}] '{}' 归还 SpeechSynthesizer 到对象池失败: {}", env.getExtensionName(), text,
+                        e.getMessage(), e);
                 }
             }
-        );
+        ).doOnCancel(() -> {
+            log.info("[{}] TTS {} request adaptor cancelled.", env.getExtensionName(), text);
+        }).doOnError(throwable -> {
+            log.error("[{}] TTS {} request adaptor error ", env.getExtensionName(), text, throwable);
+        });
     }
 
     @Override

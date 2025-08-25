@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import source.hanger.core.app.App;
 import source.hanger.core.extension.Extension;
 import source.hanger.core.extension.ExtensionEnvImpl;
@@ -19,8 +20,8 @@ import source.hanger.core.extension.ExtensionThread;
 import source.hanger.core.extension.submitter.ExtensionCommandSubmitter;
 import source.hanger.core.extension.submitter.ExtensionMessageSubmitter;
 import source.hanger.core.graph.AllMessageDestInfo;
-import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.CommandExecutionHandle;
+import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.Location;
 import source.hanger.core.message.Message;
 import source.hanger.core.message.MessageConversionContext;
@@ -28,7 +29,6 @@ import source.hanger.core.message.command.Command;
 import source.hanger.core.path.PathTable;
 import source.hanger.core.util.MessageConverter;
 import source.hanger.core.util.ReflectionUtils;
-import org.apache.commons.lang3.StringUtils;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
@@ -531,8 +531,9 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
     @Override
     public CommandExecutionHandle<CommandResult> submitCommandFromExtension(Command command, String sourceExtensionName) {
         // 命令从 Extension 提交，委托给 Engine 的 commandSubmitter
-        EngineExtensionContext.log.info("ExtensionContext: Extension {} 提交命令 {} 到 Engine。", sourceExtensionName,
-            command.getId());
+        EngineExtensionContext.log.info("ExtensionContext: Extension {} 提交命令 {} {} {} 到 Engine。",
+            sourceExtensionName,
+            command.getId(), command.getName(), command.getProperties());
         // 修改 srcLoc 以反映真实的真实来源 Extension
         if (command.getSrcLoc() == null) {
             command.setSrcLoc(new Location(app.getAppUri(), engine.getGraphId(), sourceExtensionName));

@@ -16,9 +16,9 @@ import source.hanger.core.extension.component.stream.StreamOutputBlockConsumer;
 import source.hanger.core.extension.component.stream.StreamPipelineChannel;
 import source.hanger.core.extension.component.tts.TTSAudioOutputBlock;
 import source.hanger.core.extension.component.tts.TTSStreamAdapter;
+import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
 import source.hanger.core.message.MessageType;
-import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.message.command.GenericCommand;
 import source.hanger.core.tenenv.TenEnv;
@@ -127,8 +127,11 @@ public abstract class BaseTTSExtension extends BaseExtension {
         return (item, originalMessage, env) -> {
             if (item instanceof TTSAudioOutputBlock ttsAudioBlock) {
                 // TTS 音频块
-                log.info("[{}] TTSStream输出 (Audio): dataSize={}, sampleRate={}, channels={}, sampleBytes={}",
-                    env.getExtensionName(), ttsAudioBlock.getData().length,
+                log.info(
+                    "[{}] TTSStream输出 (Audio): text={} 原始消息ID={} dataSize={}, sampleRate={}, channels={}, "
+                        + "sampleBytes={}",
+                    env.getExtensionName(), originalMessage.getProperty("text"), originalMessage.getId(),
+                    ttsAudioBlock.getData().length,
                     ttsAudioBlock.getSampleRate(), ttsAudioBlock.getChannels(), ttsAudioBlock.getSampleBytes());
 
                 MessageOutputSender.sendAudioOutput(env, originalMessage, ttsAudioBlock.getData(),
