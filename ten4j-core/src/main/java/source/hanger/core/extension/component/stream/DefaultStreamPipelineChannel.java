@@ -22,6 +22,7 @@ public class DefaultStreamPipelineChannel implements StreamPipelineChannel<Outpu
     private final StreamOutputBlockConsumer<OutputBlock> streamOutputBlockConsumer; // 类型改为新的 StreamItemHandler 接口
     private FlowableProcessor<Flowable<PipelinePacket<OutputBlock>>> streamProcessor;
     private Disposable disposable;
+    private TenEnv env;
 
     /**
      * 构造函数。
@@ -40,6 +41,7 @@ public class DefaultStreamPipelineChannel implements StreamPipelineChannel<Outpu
     @Override
     public void initPipeline(TenEnv env) {
         // 确保只初始化一次，或在重新创建之前调用 disposeCurrent()
+        this.env = env;
         if (streamProcessor == null) { // 简化检查，只检查是否为空
             recreatePipeline(env);
         }
@@ -72,9 +74,14 @@ public class DefaultStreamPipelineChannel implements StreamPipelineChannel<Outpu
     public void disposeCurrent() {
         if (disposable != null && !disposable.isDisposed()) {
             disposable.dispose();
+            if (streamProcessor != null) {
+                streamProcessor.onComplete(); // 完成并释放资源，无论是否有订阅者
+            }
+            log.info("[{}] StreamPipelineManager: 释放主管道资源", env.getExtensionName());
+            return;
         }
-        if (streamProcessor != null) {
-            streamProcessor.onComplete(); // 完成并释放资源，无论是否有订阅者
+        if (disposable != null) {
+            log.info("[{}] StreamPipelineManager: 释放主管道资源已完成，不需要再释放", env.getExtensionName());
         }
     }
 

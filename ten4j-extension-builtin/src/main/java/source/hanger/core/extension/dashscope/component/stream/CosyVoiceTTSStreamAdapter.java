@@ -46,13 +46,7 @@ public class CosyVoiceTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthe
 
         return Flowable.using(
             () -> { // resourceSupplier: 借用实例 (这里是关键)
-                long borrowStartTime = System.nanoTime(); // 记录借用开始时间
-                SpeechSynthesizer s = pool.borrowObject(); // 在这里借用
-                long borrowEndTime = System.nanoTime(); // 记录借用结束时间
-                long borrowDurationMillis = (borrowEndTime - borrowStartTime) / 1_000_000;
-                log.info("[{}] [TTS_PERF_DEBUG] 从对象池借用 SpeechSynthesizer 实例耗时: {} ms. (Text: {})",
-                    env.getExtensionName(), borrowDurationMillis, text);
-
+                SpeechSynthesizer s = pool.borrowObject();
                 // 在借用后更新参数
                 s.updateParamAndCallback(SpeechSynthesisParam.builder()
                     .apiKey(apiKey)

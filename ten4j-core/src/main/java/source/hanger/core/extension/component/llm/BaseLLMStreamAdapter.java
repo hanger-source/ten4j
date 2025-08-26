@@ -7,7 +7,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import io.reactivex.Flowable;
 import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.common.PipelinePacket;
 import source.hanger.core.extension.component.flush.InterruptionStateProvider;
@@ -15,6 +14,8 @@ import source.hanger.core.extension.component.stream.StreamPipelineChannel;
 import source.hanger.core.message.Message;
 import source.hanger.core.tenenv.TenEnv;
 import source.hanger.core.util.SentenceProcessor;
+
+import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_TEXT;
 
 /**
  * LLM 流服务抽象基类。
@@ -51,12 +52,14 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RAW_RESULT, MESSAGE, TOOL_
     @Override
     public void onRequestLLMAndProcessStream(TenEnv env, List<MESSAGE> messages, List<TOOL_FUNCTION> tools,
         Message originalMessage) {
-        log.info("[{}] 开始请求LLM并处理流. 原始消息ID: {} text={}", env.getExtensionName(),
-            originalMessage.getId(), originalMessage.getProperty(ExtensionConstants.DATA_OUT_PROPERTY_TEXT));
+        log.info("[{}] 开始请求LLM并处理流. 原始消息ID={} text={}", env.getExtensionName(),
+            originalMessage.getId(), originalMessage.getProperty(DATA_OUT_PROPERTY_TEXT));
 
         Map<String, Object> streamContexts = initStreamContexts(env, messages, tools);
 
         // 获取 LLM 原始响应流
+        log.info("[{}] 获取 LLM 原始响应流. 原始消息ID={} text={}", env.getExtensionName(), originalMessage.getId(),
+            originalMessage.getProperty(DATA_OUT_PROPERTY_TEXT));
         Flowable<GENERATION_RAW_RESULT> rawLlmFlowable = getRawLlmFlowable(env, messages, tools);
 
         // 转换原始 LLM 流为 LLMOutputBlock 流，实现真正的流式处理
@@ -100,6 +103,9 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RAW_RESULT, MESSAGE, TOOL_
         Message originalMessage,
         Map<String, Object> streamContexts, TenEnv env
     ) {
+        log.info("[{}] 处理单个 LLM 原始响应结果. 原始消息ID={} text={}", env.getExtensionName(),
+            originalMessage.getId(),
+            originalMessage.getProperty(DATA_OUT_PROPERTY_TEXT));
         StringBuilder textBuffer = (StringBuilder)streamContexts.get(TEXT_BUFFER_STATE);
         StringBuilder fullTextBuffer = (StringBuilder)streamContexts.get(FULL_TEXT_BUFFER_STATE);
 
@@ -121,6 +127,11 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RAW_RESULT, MESSAGE, TOOL_
 
         // 3. 处理其他片段
         processOtherStreamResult(result, originalMessage, env, finishReason, packetsToEmit, streamContexts);
+
+        if (endOfSegment && packetsToEmit.isEmpty()) {
+            log.warn("[{}] LLM流响应block为空 原始消息ID={} text={}", env.getExtensionName(),
+                originalMessage.getId(), originalMessage.getProperty(DATA_OUT_PROPERTY_TEXT));
+        }
 
         return Flowable.fromIterable(packetsToEmit);
     }

@@ -43,8 +43,6 @@ public class DefaultFlushOperationCoordinator implements FlushOperationCoordinat
         interruptionStateProvider.setInterrupted(true);
 
         // 3. 取消旧的管道订阅
-        streamPipelineChannel.disposeCurrent();
-
         // 4. 重新创建 streamProcessor 并重新订阅
         streamPipelineChannel.recreatePipeline(env); // 动态传递 TenEnv
 
