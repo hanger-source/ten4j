@@ -20,6 +20,18 @@ public class SentenceProcessor {
     }
 
     /**
+     * 判断给定的字符串是否只包含标点符号或为空。
+     * @param text 待检查的字符串。
+     * @return 如果字符串为空或只包含标点符号，则返回 true；否则返回 false。
+     */
+    public static boolean isPurePunctuation(String text) {
+        if (text == null || text.isEmpty()) {
+            return true;
+        }
+        return text.chars().allMatch(c -> isPunctuation((char) c));
+    }
+
+    /**
      * 辅助方法：解析句子片段
      * 返回完整的句子列表和剩余的片段
      * @param sentenceFragment 之前未完成的句子片段

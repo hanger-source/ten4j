@@ -23,6 +23,7 @@ import source.hanger.core.message.command.Command;
 import source.hanger.core.message.command.GenericCommand;
 import source.hanger.core.tenenv.TenEnv;
 import source.hanger.core.util.MessageUtils;
+import source.hanger.core.util.SentenceProcessor;
 
 import static source.hanger.core.common.ExtensionConstants.CMD_IN_FLUSH;
 import static source.hanger.core.common.ExtensionConstants.CMD_OUT_FLUSH;
@@ -96,7 +97,8 @@ public abstract class BaseTTSExtension extends BaseExtension {
             // 移除换行符和空格
             .replace("\n", "").strip();
 
-        if (filteredInputText.isEmpty()) {
+        // 【新增】过滤掉只包含标点符号的文本
+        if (SentenceProcessor.isPurePunctuation(filteredInputText)) {
             log.warn("[{}] Received empty text for TTS, ignoring.", env.getExtensionName());
             return;
         }
