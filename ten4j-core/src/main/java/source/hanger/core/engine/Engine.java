@@ -7,16 +7,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Flow;
-import java.util.concurrent.SubmissionPublisher;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.ManyToOneConcurrentArrayQueue;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import source.hanger.core.app.App;
 import source.hanger.core.app.MessageReceiver;
 import source.hanger.core.command.EngineCommandHandler;
@@ -26,8 +25,8 @@ import source.hanger.core.common.StatusCode;
 import source.hanger.core.connection.Connection;
 import source.hanger.core.graph.GraphDefinition;
 import source.hanger.core.graph.NodeDefinition;
-import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.CommandExecutionHandle;
+import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.Location;
 import source.hanger.core.message.Message;
 import source.hanger.core.message.MessageType;
@@ -38,8 +37,6 @@ import source.hanger.core.path.PathTableAttachedTo;
 import source.hanger.core.remote.Remote;
 import source.hanger.core.runloop.Runloop;
 import source.hanger.core.tenenv.TenEnvProxy;
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 
 import static source.hanger.core.message.MessageType.CMD_TIMEOUT;
 import static source.hanger.core.message.MessageType.CMD_TIMER;
@@ -134,6 +131,10 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
 
     @Override
     public int doWork() throws Exception {
+        // 如果 Engine 未就绪，且队列中有消息，则不处理，直接返回 0，让 Runloop 进入空闲策略
+        if (!isReadyToHandleMsg && !inMsgs.isEmpty()) {
+            return 0; // 返回 0，触发 IdleStrategy，Runloop 将暂停
+        }
         // 从输入队列中排水并处理消息
         return inMsgs.drain(message -> {
             processMessage(message.message(), message.connection()); // 传递 message 和 connection
@@ -176,8 +177,9 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
         // 统一触发 ExtensionGroup 生命周期方法
         engineExtensionContext.startExtensionGroups();
 
-        isReadyToHandleMsg = true;
-        log.info("Engine {}: 已启动。", graphId);
+        isReadyToHandleMsg = true; // Engine 准备就绪，可以处理消息
+        runloop.wakeup(); // 唤醒 Runloop 线程，确保它处理积压的消息
+        log.info("Engine {}: 启动完成。", graphId);
     }
 
     /**
@@ -270,11 +272,7 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
         if (!isReadyToHandleMsg && !isMessageAllowedWhenClosing(message)) {
             // 如果 Engine 未就绪，且消息不是允许在关闭时处理的命令结果，则尝试重新入队
             boolean offered = inMsgs.offer(new QueuedMessage(message, connection));
-            if (offered) {
-                log.warn("[{}] Engine {}: 未就绪，消息 {} (Type: {}) 已重新入队，等待处理。",
-                    "Engine", graphId, message.getId(), message.getType());
-                runloop.wakeup(); // 唤醒 Runloop 线程，以便它能处理重新入队的消息
-            } else {
+            if (!offered) {
                 log.warn("[{}] Engine {}: 未就绪且内部队列已满，消息 {} (Type: {}) 被丢弃。",
                     "Engine", graphId, message.getId(), message.getType());
                 // 如果队列已满，对于命令，返回失败结果以通知发送方
