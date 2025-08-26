@@ -1,10 +1,13 @@
 package source.hanger.core.extension.component.stream;
 
+import java.util.UUID;
+
 import io.reactivex.Flowable;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.processors.FlowableProcessor;
 import io.reactivex.processors.PublishProcessor;
 import io.reactivex.schedulers.Schedulers;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.common.PipelinePacket;
@@ -49,10 +52,13 @@ public class DefaultStreamPipelineChannel implements StreamPipelineChannel<Outpu
 
     @Override
     public void recreatePipeline(TenEnv env) {
-        disposeCurrent(); // 先清理旧的订阅
+        // 先清理旧的订阅
+        disposeCurrent();
+        String uuid = UUID.randomUUID().toString();
         streamProcessor = PublishProcessor.<Flowable<PipelinePacket<OutputBlock>>>create().toSerialized();
+
         // 建立主订阅，实际处理逻辑在这里
-        disposable = streamProcessor
+        Disposable delegate = streamProcessor
             .onBackpressureBuffer() // 防止上游发射过快
             .subscribeOn(Schedulers.io())
             .takeWhile(_ -> !interruptionStateProvider.isInterrupted())
@@ -64,10 +70,16 @@ public class DefaultStreamPipelineChannel implements StreamPipelineChannel<Outpu
                     streamOutputBlockConsumer.consumeOutputBlock(packet.item(), packet.originalMessage(), env);
                 }),
                 error -> {
-                    log.error("[{}] StreamPipelineManager: 主管道处理错误", env.getExtensionName(), error);
+                    log.error("[{}] StreamPipelineManager: 主管道处理错误 uuid={}", env.getExtensionName(),
+                        ((DisposableWrapper)disposable).uuid, error);
                 },
-                () -> log.info("[{}] StreamPipelineManager: 主管道处理完成", env.getExtensionName())
+                () -> log.info("[{}] StreamPipelineManager: 主管道处理完成 uuid={}", env.getExtensionName(), uuid)
             );
+
+        // 包装 Disposable 方便排查跟踪，disposable响应flush
+        disposable = new DisposableWrapper(delegate, env, uuid);
+        log.info("[{}] StreamPipelineManager: 订阅主管道成功 uuid={} isDisposed={}", env.getExtensionName(), uuid,
+            disposable.isDisposed());
     }
 
     @Override
@@ -94,8 +106,26 @@ public class DefaultStreamPipelineChannel implements StreamPipelineChannel<Outpu
             streamProcessor.onNext(flowable);
         } else {
             log.error(
-                "[{}] 管道未准备好或已中断，无法提交流。如果此错误在生产环境中频繁出现，请检查组件生命周期和 flush 逻辑。",
-                env.getExtensionName());
+                "[{}] 管道未准备好或已中断，无法提交流。如果此错误在生产环境中频繁出现，请检查组件生命周期和 flush 逻辑。disposable={}",
+                env.getExtensionName(), ((DisposableWrapper)disposable).uuid);
+        }
+    }
+
+    @AllArgsConstructor
+    static class DisposableWrapper implements Disposable {
+        private final Disposable delegate;
+        private final TenEnv env;
+        private final String uuid;
+
+        @Override
+        public void dispose() {
+            log.info("[{}] StreamPipelineManager: dispose {}", env.getExtensionName(), uuid);
+            delegate.dispose();
+        }
+
+        @Override
+        public boolean isDisposed() {
+            return delegate.isDisposed();
         }
     }
 }

@@ -1,19 +1,19 @@
 package source.hanger.core.extension.component.state;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * Extension 状态提供者的默认实现类。
  * 统一管理 Extension 的运行状态和中断状态。
+ *
+ * 不需要Atomic 多线程，实际上正常情况下 Extension只有一个runloop的线程来修改状态。
  */
 @Slf4j
 public class DefaultExtensionStateProvider implements ExtensionStateProvider {
 
-    private final AtomicBoolean running = new AtomicBoolean(false);
-    private final AtomicBoolean interrupted = new AtomicBoolean(false);
     private final String extensionName;
+    private volatile boolean running = false;
+    private volatile boolean interrupted = false;
 
     public DefaultExtensionStateProvider(String extensionName) {
         this.extensionName = extensionName != null ? extensionName : "UnknownExtension";
@@ -21,28 +21,22 @@ public class DefaultExtensionStateProvider implements ExtensionStateProvider {
 
     @Override
     public boolean isRunning() {
-        return running.get();
+        return running;
     }
 
     @Override
     public void setRunning(boolean running) {
-        boolean previous = this.running.getAndSet(running);
-        if (previous != running) {
-            log.debug("[{}] Extension 运行状态变更: {} -> {}", extensionName, previous, running);
-        }
+        this.running = running;
     }
 
     @Override
     public boolean isInterrupted() {
-        return interrupted.get();
+        return interrupted;
     }
 
     @Override
-    public void setInterrupted(boolean value) {
-        boolean previous = this.interrupted.getAndSet(value);
-        if (previous != value) {
-            log.debug("[{}] Extension 中断状态变更: {} -> {}", extensionName, previous, value);
-        }
+    public void setInterrupted(boolean interrupted) {
+        this.interrupted = interrupted;
     }
 
     @Override

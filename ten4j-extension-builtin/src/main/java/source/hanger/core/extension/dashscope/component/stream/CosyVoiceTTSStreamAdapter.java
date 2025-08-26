@@ -70,6 +70,13 @@ public class CosyVoiceTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthe
                     });
             },
             s -> { // disposeResource: 释放资源 (归还到池中)
+                if (interruptionStateProvider.isInterrupted()) {
+                    s.getDuplexApi().close(1000, "bye");
+                    // https://help.aliyun.com/zh/model-studio/sambert-in-high-concurrency-scenarios#6d104fd2e1jrm
+                    // 异常 4、服务端报错 Invalid action('run-task')! Please follow the protocol!
+                    log.info("[{}] [TTS_PERF_DEBUG] 检测到中断，关闭连接. (Text: {})",
+                        env.getExtensionName(), text);
+                }
                 pool.returnObject(s);
                 log.info("[{}] [TTS_PERF_DEBUG] '{}' 归还 SpeechSynthesizer 实例到对象池. (Text: {})",
                     env.getExtensionName(), text, text);
