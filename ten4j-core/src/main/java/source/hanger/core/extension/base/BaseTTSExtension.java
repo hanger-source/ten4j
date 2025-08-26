@@ -133,7 +133,8 @@ public abstract class BaseTTSExtension extends BaseExtension {
                 log.info(
                     "[{}] TTSStream输出 (Audio): text={} 原始消息ID={} dataSize={}, sampleRate={}, channels={}, "
                         + "sampleBytes={}",
-                    env.getExtensionName(), originalMessage.getProperty("text"), originalMessage.getId(),
+                    env.getExtensionName(), originalMessage.getProperty(DATA_OUT_PROPERTY_TEXT),
+                    originalMessage.getId(),
                     ttsAudioBlock.getData().length,
                     ttsAudioBlock.getSampleRate(), ttsAudioBlock.getChannels(), ttsAudioBlock.getSampleBytes());
 
