@@ -9,6 +9,7 @@ import io.reactivex.Flowable;
 import io.reactivex.schedulers.Schedulers;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.pool2.impl.GenericObjectPool;
+import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.common.PipelinePacket;
 import source.hanger.core.extension.component.flush.InterruptionStateProvider;
@@ -72,10 +73,6 @@ public class CosyVoiceTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthe
                         log.error("[{}] [TTS_PERF_DEBUG] 调用 DashScope Cosy Voice TTS API 错误: {}. (Text: {})",
                             env.getExtensionName(),
                             throwable.getMessage(), text, throwable);
-                    }).doOnCancel(() -> {
-                        s.getDuplexApi().close(1000, "bye");
-                        log.info("[{}] [TTS_PERF_DEBUG] TTS {} request adaptor cancelled. (Text: {})",
-                            env.getExtensionName(), text, text);
                     });
             },
             s -> { // disposeResource: 释放资源 (归还到池中)
@@ -93,7 +90,8 @@ public class CosyVoiceTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthe
             result.getAudioFrame().get(audioData); // 将 ByteBuffer 转换为 byte[]
             TTSAudioOutputBlock block = new TTSAudioOutputBlock(audioData, originalMessage.getId(), 24000, 2, 1); // 假设采样率等信息
             log.info("[{}] TTS原始流处理开始. text={} 原始消息ID: {}", env.getExtensionName(),
-                originalMessage.getProperty("text"), originalMessage.getId()); // 修改这里
+                originalMessage.getProperty(ExtensionConstants.DATA_OUT_PROPERTY_TEXT),
+                originalMessage.getId()); // 修改这里
             return Flowable.just(new PipelinePacket<>(block, originalMessage));
         } else {
             return Flowable.empty();
