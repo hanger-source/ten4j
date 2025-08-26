@@ -60,6 +60,7 @@ public abstract class BaseTTSExtension extends BaseExtension {
     public void onStart(TenEnv env) {
         super.onStart(env);
         log.info("[{}] BaseTTSExtension 启动，初始化管道。", env.getExtensionName());
+        EmojiManager.isEmoji("😄提前触发UnicodeInitialized");
         streamPipelineChannel.initPipeline(env);
     }
 
