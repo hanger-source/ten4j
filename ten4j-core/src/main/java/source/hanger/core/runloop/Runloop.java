@@ -19,6 +19,7 @@ import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.ManyToOneConcurrentArrayQueue;
 import org.jetbrains.annotations.NotNull;
+import org.apache.commons.lang3.time.StopWatch; // 引入 StopWatch
 
 /**
  * Runloop 类负责线程管理和任务调度，对齐 C 语言的 ten_runloop。
@@ -37,29 +38,26 @@ public class Runloop {
     private static final int DEFAULT_INTERNAL_TASK_BATCH = 64;
     public final AtomicBoolean running = new AtomicBoolean(false);
     public final AtomicBoolean shuttingDown = new AtomicBoolean(false);
-    private final ManyToOneConcurrentArrayQueue<Runnable> taskQueue;
+    private final ManyToOneConcurrentArrayQueue<TaskWrapper> taskQueue; // 修改队列类型
     private final Agent workAgent;
     private final LoopAgent coreAgent;
     private final int internalTaskBatchSize;
     private final ThreadLocal<Runloop> currentRunloopThreadLocal = new ThreadLocal<>();
     private final List<Runnable> tasks;
-
     /**
      * 单一虚拟线程 保证队列消费顺序
      */
     private final ExecutorService virtualThreadExecutor;
-
     private AgentRunner agentRunner;
     @Getter
     private volatile Thread coreThread;
-
     @Setter
     private volatile Runnable externalEventSourceNotifier;
 
     private Runloop(String name, Agent workAgent, int queueCapacity, int batchSize) {
         Objects.requireNonNull(name, "name");
         int capacity = adjustCapacity(queueCapacity);
-        this.taskQueue = new ManyToOneConcurrentArrayQueue<>(capacity);
+        this.taskQueue = new ManyToOneConcurrentArrayQueue<>(capacity); // 使用 TaskWrapper
         this.internalTaskBatchSize = Math.max(1, batchSize);
         this.workAgent = workAgent;
         this.coreAgent = new LoopAgent(name);
@@ -71,24 +69,10 @@ public class Runloop {
                 // 在虚拟线程中设置 ThreadLocal
                 return defaultFactory.newThread(() -> {
                     currentRunloopThreadLocal.set(Runloop.this); // 在虚拟线程中设置 ThreadLocal
-                    long taskStartTime = System.nanoTime(); // 记录任务开始时间
                     try {
-                        r.run();
+                        r.run(); // 直接运行 TaskWrapper，耗时和日志已在其 run() 方法中处理
                     } finally {
                         currentRunloopThreadLocal.remove();
-                        long taskEndTime = System.nanoTime(); // 记录任务结束时间
-                        long taskDurationMillis = (taskEndTime - taskStartTime) / 1_000_000; // 计算耗时，转换为毫秒
-                        String taskName = r.getClass().getSimpleName(); // 获取任务的简单类名
-                        // 如果任务是一个 Lambda 表达式，尝试获取其更具体的描述
-                        if (taskName.isEmpty() || taskName.startsWith("Lambda$")) {
-                            taskName = r.toString(); // 使用 toString 作为后备
-                        }
-
-                        if (taskDurationMillis > 500) {
-                            log.error("[{}] Runloop任务执行耗时过长 (超过 500ms): {} ms. Task: {}. 线程堆栈: {}", coreAgent.roleName(), taskDurationMillis, taskName, Thread.currentThread().getStackTrace()); // 增加线程堆栈
-                        } else if (taskDurationMillis > 200) {
-                            log.warn("[{}] Runloop任务执行耗时较长 (超过 200ms): {} ms. Task: {}", coreAgent.roleName(), taskDurationMillis, taskName);
-                        } 
                     }
                 });
             }
@@ -130,7 +114,8 @@ public class Runloop {
         if (!canAcceptTask()) {
             return false;
         }
-        boolean success = taskQueue.offer(task);
+        boolean success = taskQueue.offer(
+            new TaskWrapper(task, Thread.currentThread().getStackTrace(), task.toString(), coreAgent.roleName()));
         if (!success) {
             log.warn("Runloop queue full, task dropped.");
             return false;
@@ -198,12 +183,12 @@ public class Runloop {
     }
 
     private void drainRemainingTasks() {
-        Runnable r;
+        TaskWrapper r;
         while ((r = taskQueue.poll()) != null) {
             try {
                 virtualThreadExecutor.submit(r);
             } catch (Throwable e) {
-                log.error("Error executing remaining task", e);
+                log.error("Error executing remaining task: {}", r, e);
             }
         }
     }
@@ -243,6 +228,43 @@ public class Runloop {
         tasks.add(task);
     }
 
+    // 新增：内部类，用于存储任务和其提交时的堆栈信息
+    private record TaskWrapper(Runnable actualTask, StackTraceElement[] submissionStackTrace, String taskDescription,
+                               String runloopRoleName)
+        implements Runnable {
+
+        @Override
+        public void run() {
+            StopWatch stopWatch = StopWatch.createStarted(); // 启动 StopWatch
+            try {
+                actualTask.run();
+            } finally {
+                stopWatch.stop(); // 停止计时
+                long taskDurationMillis = stopWatch.getTime(); // 获取耗时
+
+                if (taskDurationMillis > 500) {
+                    RuntimeException submissionOriginException = new RuntimeException(
+                        "Runloop任务执行耗时过长 (超过 500ms): %d ms. Task: %s. 提交源堆栈：".formatted(
+                            taskDurationMillis, taskDescription));
+                    if (submissionStackTrace != null) {
+                        submissionOriginException.setStackTrace(submissionStackTrace); // 设置为提交时的堆栈
+                    }
+                    log.error("[{}] Runloop任务执行耗时过长 (超过 500ms): {} ms. Task: {}. 提交源堆栈：",
+                        runloopRoleName, taskDurationMillis, taskDescription, submissionOriginException);
+                } else if (taskDurationMillis > 200) {
+                    log.warn("[{}] Runloop任务执行耗时较长 (超过 200ms): {} ms. Task: {}", runloopRoleName,
+                        taskDurationMillis, taskDescription);
+                }
+            }
+        }
+
+        @NotNull
+        @Override
+        public String toString() {
+            return taskDescription; // 在日志中打印任务描述
+        }
+    }
+
     private class LoopAgent implements Agent {
         private final String name;
 
@@ -260,11 +282,11 @@ public class Runloop {
             int workDone = 0;
             // 批量处理内部任务
             for (int i = 0; i < internalTaskBatchSize; i++) {
-                Runnable r = taskQueue.poll();
+                TaskWrapper r = taskQueue.poll();
                 if (r == null) {
                     break;
                 }
-                safeRun(r);
+                safeRun(r); // safeRun 期望 Runnable，TaskWrapper 实现了 Runnable
                 workDone++;
             }
             for (Runnable task : tasks) {

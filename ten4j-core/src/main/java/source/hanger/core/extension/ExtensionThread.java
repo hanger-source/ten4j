@@ -12,6 +12,7 @@ import source.hanger.core.message.Message;
 import source.hanger.core.message.VideoFrameMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.runloop.Runloop;
+import org.apache.commons.lang3.time.StopWatch; // 引入 StopWatch
 
 /**
  * `ExtensionThread` 模拟 C 端 `ten_extension_thread_t`，
@@ -102,9 +103,14 @@ public class ExtensionThread implements Agent {
      * 关闭 Extension 线程及其内部的 Runloop。
      */
     public void close() {
-        // Runloop 内部已经管理了线程的关闭，直接调用其 shutdown 方法
         log.info("ExtensionThread {}: Initiating shutdown of Runloop.", threadName);
+        StopWatch stopWatch = StopWatch.createStarted(); // 启动 StopWatch
         runloop.shutdown(); // 关闭 Runloop，停止接受新任务
+        stopWatch.stop(); // 停止计时
+        long shutdownDuration = stopWatch.getTime(); // 获取耗时
+        if (shutdownDuration > 200) {
+            log.error("ExtensionThread {}: Runloop shutdown 耗时过长: {} ms.", threadName, shutdownDuration);
+        }
 
         // 调用 ExtensionGroup 的 onDeinit
         if (extensionGroup != null
@@ -168,82 +174,97 @@ public class ExtensionThread implements Agent {
      */
     public void dispatchMessage(Message message, String targetExtensionName) {
         runloop.postTask(() -> {
-            if (extensionGroup == null) {
-                log.error("ExtensionThread {}: ExtensionGroup 未设置，无法分发消息 {} 到 Extension {}.",
-                    threadName, message.getId(), targetExtensionName);
-                if (message instanceof Command command) {
-                    engineExtensionContext.routeCommandResultFromExtension(CommandResult.fail(command,
-                            "ExtensionGroup is null for ExtensionThread: %s".formatted(threadName)),
-                        targetExtensionName);
-                }
-                return;
-            }
-
-            ExtensionEnvImpl extensionEnv = extensionGroup.getManagedExtensionEnv(targetExtensionName);
-            Extension extension = (extensionEnv != null) ? extensionEnv.getExtension() : null;
-
-            if (extension == null) {
-                log.error(
-                    "ExtensionThread {}: 无法找到 Extension {} 或其环境，无法分发消息 {}. 请检查 extensionName 和 extensionGroup 配置。",
-                    threadName, targetExtensionName, message.getId());
-                if (message instanceof Command command) {
-                    engineExtensionContext.routeCommandResultFromExtension(CommandResult.fail(command,
-                            "Extension or ExtensionEnv not found in group: %s for message %s"
-                                .formatted(targetExtensionName, message.getId())),
-                        targetExtensionName);
-                }
-                return;
-            }
-
+            StopWatch stopWatch = StopWatch.createStarted(); // 启动 StopWatch
+            String messageId = message.getId();
+            String messageType = message.getType().name();
             try {
-                switch (message.getType()) {
-                    case CMD:
-                        extension.onCmd(extensionEnv, (Command)message);
-                        break;
-                    case CMD_RESULT:
-                        extension.onCmdResult(extensionEnv, (CommandResult)message);
-                        break;
-                    case DATA:
-                        extension.onDataMessage(extensionEnv, (DataMessage)message);
-                        break;
-                    case AUDIO_FRAME:
-                        extension.onAudioFrame(extensionEnv, (AudioFrameMessage)message);
-                        break;
-                    case VIDEO_FRAME:
-                        extension.onVideoFrame(extensionEnv, (VideoFrameMessage)message);
-                        break;
-                    case CMD_CLOSE_APP:
-                    case CMD_START_GRAPH:
-                    case CMD_STOP_GRAPH:
-                    case CMD_TIMER:
-                    case CMD_TIMEOUT:
-                        log.warn(
-                            "ExtensionThread {}: 收到不应由 Extension {} 直接处理的命令 {} (Type: {}), 已忽略。该命令应在 Engine/App 级别处理。",
-                            threadName, targetExtensionName, message.getId(), message.getType());
-                        if (message instanceof Command command) {
-                            engineExtensionContext.routeCommandResultFromExtension(CommandResult.fail(command,
-                                    "App/Engine-level command not handled by Extension: %s"
-                                        .formatted(command.getType())),
-                                targetExtensionName);
-                        }
-                        break;
-                    default:
-                        log.warn("ExtensionThread {}: 收到 Extension {} 未知消息类型 {} (ID: {}), 已忽略。",
-                            threadName, targetExtensionName, message.getType(), message.getId());
-                        if (message instanceof Command command) {
-                            engineExtensionContext.routeCommandResultFromExtension(CommandResult.fail(command,
-                                    "Unknown message type not handled by Extension: %s".formatted(command.getType())),
-                                targetExtensionName);
-                        }
-                        break;
+                if (extensionGroup == null) {
+                    log.error("ExtensionThread {}: ExtensionGroup 未设置，无法分发消息 {} (Type: {}) 到 Extension {}.",
+                        threadName, messageId, messageType, targetExtensionName);
+                    if (message instanceof Command command) {
+                        engineExtensionContext.routeCommandResultFromExtension(CommandResult.fail(command,
+                                "ExtensionGroup is null for ExtensionThread: %s".formatted(threadName)),
+                            targetExtensionName);
+                    }
+                    return;
                 }
-            } catch (Exception e) {
-                log.error("ExtensionThread {}: Extension {} 处理消息 {} 时发生异常: {}",
-                    threadName, targetExtensionName, message.getId(), e.getMessage(), e);
-                if (message instanceof Command command) {
-                    engineExtensionContext.routeCommandResultFromExtension(CommandResult.fail(command,
-                            "Error processing message by Extension: %s".formatted(e.getMessage())),
-                        targetExtensionName);
+
+                ExtensionEnvImpl extensionEnv = extensionGroup.getManagedExtensionEnv(targetExtensionName);
+                Extension extension = (extensionEnv != null) ? extensionEnv.getExtension() : null;
+
+                if (extension == null) {
+                    log.error(
+                        "ExtensionThread {}: 无法找到 Extension {} 或其环境，无法分发消息 {} (Type: {}). 请检查 extensionName 和 "
+                            + "extensionGroup 配置.",
+                        threadName, targetExtensionName, messageId, messageType);
+                    if (message instanceof Command command) {
+                        engineExtensionContext.routeCommandResultFromExtension(CommandResult.fail(command,
+                                "Extension or ExtensionEnv not found in group: %s for message %s"
+                                    .formatted(targetExtensionName, messageId)),
+                            targetExtensionName);
+                    }
+                    return;
+                }
+
+                try {
+                    switch (message.getType()) {
+                        case CMD:
+                            extension.onCmd(extensionEnv, (Command)message);
+                            break;
+                        case CMD_RESULT:
+                            extension.onCmdResult(extensionEnv, (CommandResult)message);
+                            break;
+                        case DATA:
+                            extension.onDataMessage(extensionEnv, (DataMessage)message);
+                            break;
+                        case AUDIO_FRAME:
+                            extension.onAudioFrame(extensionEnv, (AudioFrameMessage)message);
+                            break;
+                        case VIDEO_FRAME:
+                            extension.onVideoFrame(extensionEnv, (VideoFrameMessage)message);
+                            break;
+                        case CMD_CLOSE_APP:
+                        case CMD_START_GRAPH:
+                        case CMD_STOP_GRAPH:
+                        case CMD_TIMER:
+                        case CMD_TIMEOUT:
+                            log.warn(
+                                "ExtensionThread {}: 收到不应由 Extension {} 直接处理的命令 {} (Type: {}), 已忽略。该命令应在 Engine/App "
+                                    + "级别处理。",
+                                threadName, targetExtensionName, messageId, messageType);
+                            if (message instanceof Command command) {
+                                engineExtensionContext.routeCommandResultFromExtension(CommandResult.fail(command,
+                                        "App/Engine-level command not handled by Extension: %s"
+                                            .formatted(command.getType())),
+                                    targetExtensionName);
+                            }
+                            break;
+                        default:
+                            log.warn("ExtensionThread {}: 收到 Extension {} 未知消息类型 {} (ID: {}), 已忽略。",
+                                threadName, targetExtensionName, messageType, messageId);
+                            if (message instanceof Command command) {
+                                engineExtensionContext.routeCommandResultFromExtension(CommandResult.fail(command,
+                                        "Unknown message type not handled by Extension: %s".formatted(command.getType())),
+                                    targetExtensionName);
+                            }
+                            break;
+                    }
+                } catch (Exception e) {
+                    log.error("ExtensionThread {}: Extension {} 处理消息 {} (Type: {}) 时发生异常: {}",
+                        threadName, targetExtensionName, messageId, messageType, e.getMessage(), e);
+                    if (message instanceof Command command) {
+                        engineExtensionContext.routeCommandResultFromExtension(CommandResult.fail(command,
+                                "Error processing message by Extension: %s".formatted(e.getMessage())),
+                            targetExtensionName);
+                    }
+                }
+            } finally {
+                stopWatch.stop(); // 停止计时
+                long duration = stopWatch.getTime(); // 获取耗时
+                if (duration > 200) {
+                    log.error("ExtensionThread {}: 消息 {} (Type: {}) 分发到 Extension onXXX {} 耗时过长: {} ms. {}",
+                        threadName, messageId, messageType, targetExtensionName, duration,
+                        Thread.currentThread().getStackTrace());
                 }
             }
         });
