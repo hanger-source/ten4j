@@ -71,10 +71,24 @@ public class Runloop {
                 // 在虚拟线程中设置 ThreadLocal
                 return defaultFactory.newThread(() -> {
                     currentRunloopThreadLocal.set(Runloop.this); // 在虚拟线程中设置 ThreadLocal
+                    long taskStartTime = System.nanoTime(); // 记录任务开始时间
                     try {
                         r.run();
                     } finally {
                         currentRunloopThreadLocal.remove();
+                        long taskEndTime = System.nanoTime(); // 记录任务结束时间
+                        long taskDurationMillis = (taskEndTime - taskStartTime) / 1_000_000; // 计算耗时，转换为毫秒
+                        String taskName = r.getClass().getSimpleName(); // 获取任务的简单类名
+                        // 如果任务是一个 Lambda 表达式，尝试获取其更具体的描述
+                        if (taskName.isEmpty() || taskName.startsWith("Lambda$")) {
+                            taskName = r.toString(); // 使用 toString 作为后备
+                        }
+
+                        if (taskDurationMillis > 500) {
+                            log.error("[{}] Runloop任务执行耗时过长 (超过 500ms): {} ms. Task: {}. 线程堆栈: {}", coreAgent.roleName(), taskDurationMillis, taskName, Thread.currentThread().getStackTrace()); // 增加线程堆栈
+                        } else if (taskDurationMillis > 200) {
+                            log.warn("[{}] Runloop任务执行耗时较长 (超过 200ms): {} ms. Task: {}", coreAgent.roleName(), taskDurationMillis, taskName);
+                        } 
                     }
                 });
             }
