@@ -2,6 +2,7 @@ package source.hanger.core.extension.component.flush;
 
 import java.util.function.Consumer;
 
+import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.stream.StreamPipelineChannel;
 import source.hanger.core.tenenv.TenEnv;
@@ -10,6 +11,7 @@ import source.hanger.core.tenenv.TenEnv;
  * 刷新操作协调器接口的实现类。
  * 负责编排完整的 flush 操作流程，包括中断信号的设置、流管道的重置以及对外发送完成通知。
  */
+@Slf4j
 public class DefaultFlushOperationCoordinator implements FlushOperationCoordinator {
 
     private final InterruptionStateProvider interruptionStateProvider;

@@ -46,11 +46,6 @@ public class DefaultExtensionStateProvider implements ExtensionStateProvider {
     }
 
     @Override
-    public AtomicBoolean getInterruptedFlag() {
-        return interrupted;
-    }
-
-    @Override
     public void start() {
         log.info("[{}] Extension 状态提供者: 启动", extensionName);
         setRunning(true);

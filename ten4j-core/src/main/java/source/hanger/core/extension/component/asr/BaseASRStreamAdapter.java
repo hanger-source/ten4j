@@ -14,10 +14,9 @@ import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.common.PipelinePacket;
 import source.hanger.core.extension.component.state.ExtensionStateProvider;
 import source.hanger.core.extension.component.stream.StreamPipelineChannel;
-import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.tenenv.TenEnv;
 
-import static java.util.concurrent.TimeUnit.*;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
  * ASR 流服务抽象基类。
@@ -26,21 +25,16 @@ import static java.util.concurrent.TimeUnit.*;
 @Slf4j
 public abstract class BaseASRStreamAdapter<RECOGNITION_RESULT> implements ASRStreamAdapter {
 
-    protected final ExtensionStateProvider extensionStateProvider;
-    protected final StreamPipelineChannel<OutputBlock> streamPipelineChannel;
-
-    private final FlowableProcessor<ByteBuffer> audioInputStreamProcessor; // 新增的音频输入处理器
-
-
-    protected final AtomicBoolean reconnecting = new AtomicBoolean(false);
-    private final CompositeDisposable disposables = new CompositeDisposable();
-
-    // 新增：重连尝试次数计数器
-    private final AtomicInteger retryCount = new AtomicInteger(0);
-
     // 新增：最大重试次数和初始退避时间
     private static final int MAX_RETRY_ATTEMPTS = 5;
     private static final int INITIAL_DELAY_MS = 200;
+    protected final ExtensionStateProvider extensionStateProvider;
+    protected final StreamPipelineChannel<OutputBlock> streamPipelineChannel;
+    protected final AtomicBoolean reconnecting = new AtomicBoolean(false);
+    private final FlowableProcessor<ByteBuffer> audioInputStreamProcessor; // 新增的音频输入处理器
+    private final CompositeDisposable disposables = new CompositeDisposable();
+    // 新增：重连尝试次数计数器
+    private final AtomicInteger retryCount = new AtomicInteger(0);
     /**
      * 构造函数。
      *
