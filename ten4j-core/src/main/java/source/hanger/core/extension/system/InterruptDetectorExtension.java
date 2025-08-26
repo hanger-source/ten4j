@@ -64,7 +64,6 @@ public class InterruptDetectorExtension extends BaseExtension {
 
     @Override
     public void onCmd(TenEnv env, Command command) {
-        super.onCmd(env, command);
         String cmdName = command.getName();
         log.info("[{}] Received command: {}",env.getExtensionName(), cmdName);
 

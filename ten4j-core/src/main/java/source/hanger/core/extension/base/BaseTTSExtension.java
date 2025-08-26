@@ -78,7 +78,8 @@ public abstract class BaseTTSExtension extends BaseExtension {
         }
         // 处理 CMD_FLUSH 命令
         if (CMD_IN_FLUSH.equals(command.getName())) {
-            log.info("[{}] 收到 CMD_FLUSH 命令，执行刷新操作并重置历史。", env.getExtensionName());
+            log.info("[{}] 收到 来自 {} CMD_FLUSH 命令，执行刷新操作并重置历史。", env.getExtensionName(),
+                command.getSrcLoc().getExtensionName());
             flushOperationCoordinator.triggerFlush(env);
             env.sendCmd(GenericCommand.create(CMD_OUT_FLUSH, command.getId(), command.getType()));
             return;
