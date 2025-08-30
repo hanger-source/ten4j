@@ -1,5 +1,7 @@
 package source.hanger.core.graph;
 
+import java.util.Map;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -27,6 +29,8 @@ public class PredefinedGraphEntry {
     @JsonProperty("doc_url")
     private String docUrl;
 
+    @JsonProperty("metadata")
+    private Map<String, Object> metadata;
     /**
      * 图的原始 JSON 定义字符串。
      * 对应 property.json 中的 "graph" 字段。

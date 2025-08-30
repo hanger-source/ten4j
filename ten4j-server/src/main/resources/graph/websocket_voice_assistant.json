@@ -3,6 +3,465 @@
   "auto_start": true,
   "index": 0,
   "doc_url": "",
+  "metadata": {
+    "replaceableVoices": [{
+      "key": "cosy_voice_name",
+      "voice": "longhuohuo"
+    }],
+    "voices": [
+      {
+        "name": "龙火火",
+        "voice": "longhuohuo",
+        "tag": ["童声"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250813/rkzjiz/%E9%BE%99%E7%81%AB%E7%81%AB.mp3",
+        "feature": "声音清脆，适合儿童故事讲述"
+      },
+      {
+        "name": "龙呼呼",
+        "voice": "longhuhu",
+        "tag": ["童声"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250813/zfvpjw/%E9%BE%99%E5%91%BC%E5%91%BC.mp3",
+        "feature": "声音温柔，适合睡前故事"
+      },
+      {
+        "name": "龙川叔",
+        "voice": "longchuanshu",
+        "tag": ["方言"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250813/emxplk/%E9%BE%99%E5%B7%9D%E5%8F%94.mp3",
+        "feature": "地道方言，富有乡土气息"
+      },
+      {
+        "name": "龙应催",
+        "voice": "longyingcui",
+        "tag": ["客服"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/yyoson/%E9%BE%99%E5%BA%94%E5%82%AC.mp3",
+        "feature": "严肃催收男"
+      },
+      {
+        "name": "龙应答",
+        "voice": "longyingda",
+        "tag": ["客服"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/eoxghk/%E9%BE%99%E5%BA%94%E7%AD%94.mp3",
+        "feature": "开朗高音女"
+      },
+      {
+        "name": "龙应静",
+        "voice": "longyingjing",
+        "tag": ["客服"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/nbabuh/%E9%BE%99%E5%BA%94%E9%9D%99.mp3",
+        "feature": "低调冷静女"
+      },
+      {
+        "name": "龙应严",
+        "voice": "longyingyan",
+        "tag": ["客服"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/vufxoj/%E9%BE%99%E5%BA%94%E4%B8%A5.mp3",
+        "feature": "义正严辞女"
+      },
+      {
+        "name": "龙应甜",
+        "voice": "longyingtian",
+        "tag": ["客服"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/fiiebi/%E9%BE%99%E5%BA%94%E7%94%9C.mp3",
+        "feature": "温柔甜美女"
+      },
+      {
+        "name": "龙应冰",
+        "voice": "longyingbing",
+        "tag": ["客服"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/ucqara/%E9%BE%99%E5%BA%94%E5%86%B0.mp3",
+        "feature": "尖锐强势女"
+      },
+      {
+        "name": "龙应桃",
+        "voice": "longyingtao",
+        "tag": ["客服"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/ovwghc/%E9%BE%99%E5%BA%94%E6%A1%83.mp3",
+        "feature": "温柔淡定女"
+      },
+      {
+        "name": "龙应聆",
+        "voice": "longyingling",
+        "tag": ["客服"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/ldntih/%E9%BE%99%E5%BA%94%E8%81%86.mp3",
+        "feature": "温和共情女"
+      },
+      {
+        "name": "YUMI",
+        "voice": "longyumi_v2",
+        "tag": ["语音助手"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250618/rbfsft/YUMI.mp3",
+        "feature": "正经青年女"
+      },
+      {
+        "name": "龙小淳",
+        "voice": "longxiaochun_v2",
+        "tag": ["语音助手"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/lzchvc/%E9%BE%99%E5%B0%8F%E6%B7%B3.mp3",
+        "feature": "知性积极女"
+      },
+      {
+        "name": "龙小夏",
+        "voice": "longxiaoxia_v2",
+        "tag": ["语音助手"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/hefbjz/%E9%BE%99%E5%B0%8F%E5%A4%8F.mp3",
+        "feature": "沉稳权威女"
+      },
+      {
+        "name": "龙安燃",
+        "voice": "longanran",
+        "tag": ["直播带货"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/smffyb/%E9%BE%99%E5%AE%89%E7%87%83.mp3",
+        "feature": "活泼质感女"
+      },
+      {
+        "name": "龙安宣",
+        "voice": "longanxuan",
+        "tag": ["直播带货"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/kcnyee/%E9%BE%99%E5%AE%89%E5%AE%A3.mp3",
+        "feature": "经典直播女"
+      },
+      {
+        "name": "龙三叔",
+        "voice": "longsanshu",
+        "tag": ["有声书"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/otqtwd/%E9%BE%99%E4%B8%89%E5%8F%94.mp3",
+        "feature": "沉稳质感男"
+      },
+      {
+        "name": "龙修",
+        "voice": "longxiu_v2",
+        "tag": ["有声书"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250618/isfcla/%E9%BE%99%E4%BF%AE.mp3",
+        "feature": "博才说书男"
+      },
+      {
+        "name": "龙妙",
+        "voice": "longmiao_v2",
+        "tag": ["有声书"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/ynecbl/%E9%BE%99%E5%A6%99.mp3",
+        "feature": "抑扬顿挫女"
+      },
+      {
+        "name": "龙悦",
+        "voice": "longyue_v2",
+        "tag": ["有声书"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/xladsm/%E9%BE%99%E6%82%A6.mp3",
+        "feature": "温暖磁性女"
+      },
+      {
+        "name": "龙楠",
+        "voice": "longnan_v2",
+        "tag": ["有声书"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250618/tojjob/%E9%BE%99%E6%A5%A0.mp3",
+        "feature": "睿智青年男"
+      },
+      {
+        "name": "龙媛",
+        "voice": "longyuan_v2",
+        "tag": ["有声书"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250618/nqjskd/%E9%BE%99%E5%AA%9B.mp3",
+        "feature": "温暖治愈女"
+      },
+      {
+        "name": "龙安柔",
+        "voice": "longanrou",
+        "tag": ["社交陪伴"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/koxfwm/%E9%BE%99%E5%AE%89%E6%9F%94.mp3",
+        "feature": "温柔闺蜜女"
+      },
+      {
+        "name": "龙嫱",
+        "voice": "longqiang_v2",
+        "tag": ["社交陪伴"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250618/ycatrj/%E9%BE%99%E5%AB%B1.mp3",
+        "feature": "浪漫风情女"
+      },
+      {
+        "name": "龙寒",
+        "voice": "longhan_v2",
+        "tag": ["社交陪伴"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250618/npcvfg/%E9%BE%99%E5%AF%92.mp3",
+        "feature": "温暖痴情男"
+      },
+      {
+        "name": "龙星",
+        "voice": "longxing_v2",
+        "tag": ["社交陪伴"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250618/gqlaod/%E9%BE%99%E6%98%9F.mp3",
+        "feature": "温婉邻家女"
+      },
+      {
+        "name": "龙华",
+        "voice": "longhua_v2",
+        "tag": ["社交陪伴"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/cvtzjh/%E9%BE%99%E5%8D%8E.mp3",
+        "feature": "元气甜美女"
+      },
+      {
+        "name": "龙婉",
+        "voice": "longwan_v2",
+        "tag": ["社交陪伴"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/ybizun/%E9%BE%99%E5%A9%89.mp3",
+        "feature": "积极知性女"
+      },
+      {
+        "name": "龙橙",
+        "voice": "longcheng_v2",
+        "tag": ["社交陪伴"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/yxlcev/%E9%BE%99%E6%A9%99.mp3",
+        "feature": "智慧青年男"
+      },
+      {
+        "name": "龙菲菲",
+        "voice": "longfeifei_v2",
+        "tag": ["社交陪伴"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250618/afkidl/%E9%BE%99%E8%8F%B2%E8%8F%B2.mp3",
+        "feature": "甜美娇气女"
+      },
+      {
+        "name": "龙小诚",
+        "voice": "longxiaocheng_v2",
+        "tag": ["社交陪伴"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250618/sjhntj/%E9%BE%99%E5%B0%8F%E8%AF%9A.mp3",
+        "feature": "磁性低音男"
+      },
+      {
+        "name": "龙哲",
+        "voice": "longzhe_v2",
+        "tag": ["社交陪伴"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250618/wogvqz/%E9%BE%99%E5%93%B2.mp3",
+        "feature": "呆板大暖男"
+      },
+      {
+        "name": "龙颜",
+        "voice": "longyan_v2",
+        "tag": ["社交陪伴"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250618/xtfsbk/%E9%BE%99%E9%A2%9C.mp3",
+        "feature": "温暖春风女"
+      },
+      {
+        "name": "龙天",
+        "voice": "longtian_v2",
+        "tag": ["社交陪伴"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250618/vkbkhz/%E9%BE%99%E5%A4%A9.mp3",
+        "feature": "磁性理智男"
+      },
+      {
+        "name": "龙泽",
+        "voice": "longze_v2",
+        "tag": ["社交陪伴"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250618/mdolqm/%E9%BE%99%E6%B3%BD.mp3",
+        "feature": "温暖元气男"
+      },
+      {
+        "name": "龙邵",
+        "voice": "longshao_v2",
+        "tag": ["社交陪伴"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250618/krbwty/%E9%BE%99%E9%82%B5.mp3",
+        "feature": "积极向上男"
+      },
+      {
+        "name": "龙浩",
+        "voice": "longhao_v2",
+        "tag": ["社交陪伴"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250618/lbljnc/%E9%BE%99%E6%B5%A9.mp3",
+        "feature": "多情忧郁男"
+      },
+      {
+        "name": "龙深",
+        "voice": "kabuleshen_v2",
+        "tag": ["社交陪伴"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250624/uqtctc/%E9%BE%99%E6%B7%B1.mp3",
+        "feature": "实力歌手男"
+      },
+      {
+        "name": "龙杰力豆",
+        "voice": "longjielidou_v2",
+        "tag": ["童声"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/xqrzon/%E9%BE%99%E6%9D%B0%E5%8A%9B%E8%B1%86.mp3",
+        "feature": "阳光顽皮男"
+      },
+      {
+        "name": "龙铃",
+        "voice": "longling_v2",
+        "tag": ["童声"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250618/qunivx/%E9%BE%99%E9%93%83.mp3",
+        "feature": "稚气呆板女"
+      },
+      {
+        "name": "龙可",
+        "voice": "longke_v2",
+        "tag": ["童声"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250618/fpavdo/%E9%BE%99%E5%8F%AF.mp3",
+        "feature": "懵懂乖乖女"
+      },
+      {
+        "name": "龙仙",
+        "voice": "longxian_v2",
+        "tag": ["童声"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250618/hethqh/%E9%BE%99%E4%BB%99.mp3",
+        "feature": "豪放可爱女"
+      },
+      {
+        "name": "龙老铁",
+        "voice": "longlaotie_v2",
+        "tag": ["方言"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/vomcqn/%E9%BE%99%E8%80%81%E9%93%81.mp3",
+        "feature": "东北直率男"
+      },
+      {
+        "name": "龙嘉怡",
+        "voice": "longjiayi_v2",
+        "tag": ["方言"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250618/gzugcz/%E9%BE%99%E5%98%89%E6%80%A1.mp3",
+        "feature": "知性粤语女"
+      },
+      {
+        "name": "龙桃",
+        "voice": "longtao_v2",
+        "tag": ["方言"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250618/fqkjrp/%E9%BE%99%E6%A1%83.mp3",
+        "feature": "积极粤语女"
+      },
+      {
+        "name": "龙飞",
+        "voice": "longfei_v2",
+        "tag": ["诗词朗诵"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250618/liqtfn/%E9%BE%99%E9%A3%9E.mp3",
+        "feature": "热血磁性男"
+      },
+      {
+        "name": "李白",
+        "voice": "libai_v2",
+        "tag": ["诗词朗诵"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250618/jkrnti/%E6%9D%8E%E7%99%BD.mp3",
+        "feature": "古代诗仙男"
+      },
+      {
+        "name": "龙津",
+        "voice": "longjin_v2",
+        "tag": ["诗词朗诵"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250618/yfsrer/%E9%BE%99%E6%B4%A5.mp3",
+        "feature": "优雅温润男"
+      },
+      {
+        "name": "龙书",
+        "voice": "longshu_v2",
+        "tag": ["新闻播报"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/zihuud/%E9%BE%99%E4%B9%A6.mp3",
+        "feature": "沉稳青年男"
+      },
+      {
+        "name": "Bella2.0",
+        "voice": "loongbella_v2",
+        "tag": ["新闻播报"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/jbxouw/Bella2.0.mp3",
+        "feature": "精准干练女"
+      },
+      {
+        "name": "龙硕",
+        "voice": "longshuo_v2",
+        "tag": ["新闻播报"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/mhfnjs/%E9%BE%99%E7%A1%95.mp3",
+        "feature": "博才干练男"
+      },
+      {
+        "name": "龙小白",
+        "voice": "longxiaobai_v2",
+        "tag": ["新闻播报"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/ruqhkp/%E9%BE%99%E5%B0%8F%E7%99%BD.mp3",
+        "feature": "沉稳播报女"
+      },
+      {
+        "name": "龙婧",
+        "voice": "longjing_v2",
+        "tag": ["新闻播报"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/yryekx/%E9%BE%99%E5%A9%A7.mp3",
+        "feature": "典型播音女"
+      },
+      {
+        "name": "loongstella",
+        "voice": "loongstella_v2",
+        "tag": ["新闻播报"],
+        "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250617/jfnolr/loongstella.mp3",
+        "feature": "飒爽利落女"
+      }
+    ],
+    "replaceableModels": [{
+      "type": "文本生成",
+      "key": "text_model",
+      "model": "qwen-max"
+    },{
+      "type": "视频理解",
+      "key": "vision_model",
+      "model": "qwen-vl-max"
+    }],
+    "models" :[
+      {
+        "name": "通义千问-Plus-Character",
+        "model": "qwen-plus-character",
+        "type": ["文本生成"],
+        "tag": ["角色扮演模型"],
+        "vendor": "通义",
+        "description": "通义千问系列角色扮演模型，本模型是动态更新版本，模型更新会提前通知，适合拟人化的角色扮演，同时优化了限定人设指令遵循、话题推进、倾听共情等能力，支持个性化角色的深度还原。"
+      },
+      {
+        "name": "通义千问3",
+        "model": "qwen3",
+        "type": ["文本生成", "推理模型"],
+        "tag": ["语言模型"],
+        "vendor": "通义",
+        "description": "Qwen3全系列模型，实现思考模式和非思考模式的有效融合，可在对话中切换模式。"
+      },
+      {
+        "name": "通义千问plus",
+        "model": "qwen-plus",
+        "type": ["文本生成", "推理模型"],
+        "tag": ["语言模型"],
+        "vendor": "通义",
+        "description": "通义千问超大规模语言模型的增强版，支持中文英文等不同语言输入。主干模型、latest和快照04-28已升级Qwen3系列，实现思考模式和非思考模式的有效融合，可在对话中切换模式。"
+      },
+      {
+        "name": "通义千问flash",
+        "model": "qwen-flash",
+        "type": ["文本生成", "推理模型"],
+        "tag": ["语言模型"],
+        "vendor": "通义",
+        "description": "Qwen3系列Flash模型，实现思考模式和非思考模式的有效融合，可在对话中切换模式。复杂推理类任务性能优秀，指令遵循、文本理解等能力显著提高。支持1M上下文长度，按照上下文长度进行阶梯计费。"
+      },
+      {
+        "name": "通义千问max",
+        "model": "qwen-max",
+        "type": ["文本生成"],
+        "tag": ["语言模型"],
+        "vendor": "通义",
+        "description": "通义千问2.5系列千亿级别超大规模语言模型，支持中文英文等不同语言输入。随着模型的升级，qwen-max将滚动更新升级。如果希望使用固定版本，请使用历史快照版本。"
+      },
+      {
+        "name": "通义千问turbo",
+        "model": "qwen-turbo",
+        "type": ["文本生成"],
+        "tag": ["语言模型"],
+        "vendor": "通义",
+        "description": "通义千问超大规模语言模型，支持中文英文等不同语言输入。主干模型、latest和快照04-28已升级Qwen3系列，实现思考模式和非思考模式的有效融合，可在对话中切换模式。"
+      },{
+        "name": "通义千问 vl max",
+        "model": "qwen-vl-max",
+        "type": ["视频理解"],
+        "tag": ["视觉语言模型"],
+        "vendor": "通义",
+        "description": "通义千问VL-Max（qwen-vl-max），即通义千问超大规模视觉语言模型。相比增强版，再次提升视觉推理能力和指令遵循能力，提供更高的视觉感知和认知水平。在更多复杂任务上提供最佳的性能。"
+      },{
+        "name": "通义千问 vl plus",
+        "model": "qwen-vl-plus",
+        "type": ["视频理解"],
+        "tag": ["视觉语言模型"],
+        "vendor": "通义",
+        "description": "通义千问VL-Plus（qwen-vl-plus），即通义千问大规模视觉语言模型增强版。大幅提升细节识别能力和文字识别能力，支持超百万像素分辨率和任意长宽比规格的图像。在广泛的视觉任务上提供卓越的性能。"
+      }
+    ]
+  },
   "graph": {
     "nodes": [
       {
