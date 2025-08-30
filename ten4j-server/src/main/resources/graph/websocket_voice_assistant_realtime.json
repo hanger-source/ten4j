@@ -18,7 +18,7 @@
         "addon": "source.hanger.core.extension.dashscope.extension.QwenOmniRealtimeExtension",
         "extension_group": "v2v_group",
         "property": {
-          "api_key": "{{env:bailian.dashscope.api.key}}",
+          "api_key": "{{env('bailian.dashscope.api.key')}}",
           "vad_type": "server_vad",
           "temperature": 0.9,
           "prompt": "{{prompt}}",

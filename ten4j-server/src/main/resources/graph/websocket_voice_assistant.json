@@ -484,7 +484,7 @@
         "addon": "source.hanger.core.extension.dashscope.extension.QwenChatLlmExtension",
         "extension_group": "llm_group",
         "property": {
-          "api_key": "{{env:bailian.dashscope.api.key}}",
+          "api_key": "{{env('bailian.dashscope.api.key')}}",
           "prompt": "{{prompt}}",
           "greeting": "{{greeting}}",
           "model": "{{text_model or 'qwen-max'}}"
@@ -496,7 +496,7 @@
         "addon": "source.hanger.core.extension.dashscope.extension.CosyVoiceTTSExtension",
         "extension_group": "tts_group",
         "property": {
-          "api_key": "{{env:bailian.dashscope.api.key}}",
+          "api_key": "{{env('bailian.dashscope.api.key')}}",
           "voice_name": "{{cosy_voice_name}}",
           "model": "cosyvoice-v2"
         }
@@ -507,7 +507,7 @@
         "addon": "source.hanger.core.extension.dashscope.extension.ParaformerASRExtension",
         "extension_group": "asr_group",
         "property": {
-          "api_key": "{{env:bailian.dashscope.api.key}}",
+          "api_key": "{{env('bailian.dashscope.api.key')}}",
           "model": "paraformer-realtime-v2"
         }
       },
@@ -532,7 +532,7 @@
         "addon": "source.hanger.core.extension.dashscope.extension.ImageSynthesisExtension",
         "extension_group": "default",
         "property": {
-          "api_key": "{{env:bailian.dashscope.api.key}}"
+          "api_key": "{{env('bailian.dashscope.api.key')}}"
         }
       },
       {
@@ -541,7 +541,7 @@
         "addon": "source.hanger.core.extension.dashscope.extension.QwenVisionExtension",
         "extension_group": "vision_group",
         "property": {
-          "api_key": "{{env:bailian.dashscope.api.key}}",
+          "api_key": "{{env('bailian.dashscope.api.key')}}",
           "model": "{{vision_model or 'qwen-vl-max'}}",
           "prompt": "{{prompt}}"
         }

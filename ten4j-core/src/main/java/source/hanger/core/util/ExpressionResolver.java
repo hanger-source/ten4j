@@ -1,7 +1,6 @@
 package source.hanger.core.util;
 
 import java.io.Serializable;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -9,6 +8,14 @@ import java.util.regex.Pattern;
 
 import org.mvel2.MVEL;
 import lombok.extern.slf4j.Slf4j;
+import org.mvel2.ParserContext;
+import org.mvel2.integration.PropertyHandler;
+import org.mvel2.integration.PropertyHandlerFactory;
+import org.mvel2.integration.VariableResolver;
+import org.mvel2.integration.VariableResolverFactory;
+import org.mvel2.integration.impl.CachingMapVariableResolverFactory;
+import org.mvel2.integration.impl.SimpleValueResolver;
+import org.mvel2.util.MethodStub;
 
 @Slf4j
 public class ExpressionResolver {
@@ -34,16 +41,10 @@ public class ExpressionResolver {
             found = true;
             String mvelExpression = matcher.group(1).trim();
 
-            // This allows MVEL to correctly interpret {{env:VAR_NAME}}
-            if (mvelExpression.startsWith("env:")) {
-                String varName = mvelExpression.substring(4);
-                mvelExpression = "java.lang.System.getProperty('%s')".formatted(varName);
-            }
-
             try {
                 Serializable compiledExpression = MVEL.compileExpression(mvelExpression);
-                Object result = MVEL.executeExpression(compiledExpression, combinedContext);
-                log.debug("Resolved expression: {} -> {}", mvelExpression, result);
+                ParserContext parserContext = new ParserContext();
+                Object result = MVEL.executeExpression(compiledExpression, parserContext, new InnerVariableResolverFactory(combinedContext));
                 matcher.appendReplacement(sb, Matcher.quoteReplacement(String.valueOf(result)));
             } catch (Exception e) {
                 log.warn("Error resolving MVEL expression {}. Returning original placeholder. Error: {}", mvelExpression, e.getMessage());
@@ -74,5 +75,40 @@ public class ExpressionResolver {
             return resolvedList;
         }
         return value;
+    }
+
+    static class InnerVariableResolverFactory extends CachingMapVariableResolverFactory {
+        static {
+            PropertyHandlerFactory.registerPropertyHandler(ParserContext.class, new NullablePropertyHandler());
+        }
+
+        public InnerVariableResolverFactory(Map variables) {
+            super(variables);
+        }
+        @Override
+        public VariableResolver getVariableResolver(String name) {
+            if (name.equals("env")) {
+                return new SimpleValueResolver(new MethodStub(System.class, "getProperty")) {
+                };
+            }
+            return super.getVariableResolver(name);
+        }
+
+        @Override
+        public boolean isResolveable(String name) {
+            return name.equals("env") || super.isResolveable(name);
+        }
+    }
+
+    static class NullablePropertyHandler implements PropertyHandler {
+        @Override
+        public Object getProperty(String s, Object o, VariableResolverFactory variableResolverFactory) {
+            return null;
+        }
+
+        @Override
+        public Object setProperty(String s, Object o, VariableResolverFactory variableResolverFactory, Object o1) {
+            return null;
+        }
     }
 }
