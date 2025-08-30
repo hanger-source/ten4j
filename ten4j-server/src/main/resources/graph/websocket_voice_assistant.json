@@ -487,7 +487,7 @@
           "api_key": "{{env:bailian.dashscope.api.key}}",
           "prompt": "{{prompt}}",
           "greeting": "{{greeting}}",
-          "model": "qwen-max"
+          "model": "{{text_model or 'qwen-max'}}"
         }
       },
       {
@@ -542,7 +542,7 @@
         "extension_group": "vision_group",
         "property": {
           "api_key": "{{env:bailian.dashscope.api.key}}",
-          "model": "qwen-vl-max",
+          "model": "{{vision_model or 'qwen-vl-max'}}",
           "prompt": "{{prompt}}"
         }
       }

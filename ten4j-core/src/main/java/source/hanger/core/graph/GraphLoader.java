@@ -14,7 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.util.ResourceUtils;
-
+import source.hanger.core.util.ExpressionResolver; 
 @Slf4j
 public class GraphLoader {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
@@ -93,51 +93,7 @@ public class GraphLoader {
     }
 
     private static Object resolveGraphProperties(Object value, Map<String, Object> externalProperties) {
-        if (value instanceof Map) {
-            Map<String, Object> map = (Map<String, Object>) value;
-            Map<String, Object> resolvedMap = new java.util.LinkedHashMap<>();
-            map.forEach((k, v) -> resolvedMap.put(k, resolveGraphProperties(v, externalProperties)));
-            return resolvedMap;
-        } else if (value instanceof List) {
-            List<Object> list = (List<Object>) value;
-            List<Object> resolvedList = new java.util.ArrayList<>();
-            list.forEach(item -> resolvedList.add(resolveGraphProperties(item, externalProperties)));
-            return resolvedList;
-        } else if (value instanceof String) {
-            String str = (String) value;
-            // First, try to match {{key}} from externalProperties
-            java.util.regex.Matcher cmdPropMatcher = java.util.regex.Pattern.compile(
-                    "\\{\\{([a-zA-Z_][a-zA-Z0-9_]*)\\}\\}").matcher(str);
-            if (cmdPropMatcher.matches()) {
-                String key = cmdPropMatcher.group(1);
-                if (externalProperties != null && externalProperties.containsKey(key)) {
-                    Object resolvedValue = externalProperties.get(key);
-                    log.debug("Resolved command property: {} -> {}", key, resolvedValue != null ? "***" : "null");
-                    return resolvedValue; // Return the actual object, not just string
-                } else {
-                    log.warn("Command property '{}' not found in StartGraphCommand properties. Returning empty string.",
-                            key);
-                    return ""; // User requested empty string if not found
-                }
-            }
-
-            // If not a {{key}} placeholder, try to match {{env:VAR_NAME}} from
-            java.util.regex.Matcher envMatcher = java.util.regex.Pattern.compile(
-                "\\{\\{\\s*env:([a-zA-Z0-9_.]*)\\s*\\}\\}").matcher(str);
-            if (envMatcher.matches()) {
-                String varName = envMatcher.group(1);
-                String envValue = System.getProperty(varName);
-                if (envValue != null) {
-                    log.debug("Resolved environment variable: {} -> ***", varName);
-                    return envValue;
-                } else {
-                    log.warn("Environment variable '{}' not found. Returning original string for now: {}", varName,
-                            str);
-                    return str; // Return original string if env var not found
-                }
-            }
-        }
-        return value;
+        return ExpressionResolver.resolveProperties(value, externalProperties);
     }
 
     /**
@@ -162,18 +118,6 @@ public class GraphLoader {
                     if (entry.getGraph().getGraphId() == null) {
                         entry.getGraph().setGraphId(UUID.randomUUID().toString());
                     }
-                    // 解析环境变量
-                    // 假设 GraphDefinition 的属性都在 'nodes' 字段的 'property' 中
-                    // !!! REMOVED: resolve env variables at graph loading time (no command
-                    // properties here)
-                    // if (entry.getGraph().getNodes() != null) {
-                    // entry.getGraph().getNodes().forEach(node -> {
-                    // if (node.getProperty() != null) {
-                    // node.setProperty(
-                    // (Map<String, Object>)resolveGraphProperties(node.getProperty(), null));
-                    // }
-                    // });
-                    // }
                 }
                 predefinedGraphs.add(entry);
             } catch (IOException e) {
