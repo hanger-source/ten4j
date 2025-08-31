@@ -50,6 +50,7 @@ public abstract class MessageOutputSender {
     public static void sendAsrTranscriptionOutput(TenEnv env, ASRTranscriptionOutputBlock block) {
         try {
             Map<String, Object> properties = new HashMap<>();
+            properties.put("id", "%s_%d".formatted(block.getRequestId(), System.currentTimeMillis()));
             properties.put(DATA_OUT_PROPERTY_TEXT, block.getText());
             properties.put(DATA_OUT_PROPERTY_IS_FINAL, block.isFinal());
             properties.put(DATA_OUT_PROPERTY_END_OF_SEGMENT, block.isFinal());
