@@ -76,7 +76,7 @@ public abstract class MessageOutputSender {
         int numberOfChannels) {
         try {
             AudioFrameMessage audioFrame = AudioFrameMessage.create("pcm_frame");
-            audioFrame.setId(originalMessage.getId()); // 使用原始消息的ID
+            audioFrame.setId("%s_%d".formatted(originalMessage.getId(), System.currentTimeMillis())); // 使用原始消息的ID
             audioFrame.setSampleRate(sampleRate);
             audioFrame.setBytesPerSample(bytesPerSample);
             audioFrame.setNumberOfChannel(numberOfChannels);
