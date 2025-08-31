@@ -50,7 +50,6 @@ public abstract class MessageOutputSender {
     public static void sendAsrTranscriptionOutput(TenEnv env, ASRTranscriptionOutputBlock block) {
         try {
             Map<String, Object> properties = new HashMap<>();
-            properties.put("id", "%s_%d".formatted(block.getRequestId(), System.currentTimeMillis()));
             properties.put(DATA_OUT_PROPERTY_TEXT, block.getText());
             properties.put(DATA_OUT_PROPERTY_IS_FINAL, block.isFinal());
             properties.put(DATA_OUT_PROPERTY_END_OF_SEGMENT, block.isFinal());
@@ -61,6 +60,7 @@ public abstract class MessageOutputSender {
             properties.put("words", Collections.emptyList());
 
             DataMessage message = DataMessage.create(ASR_DATA_OUT_NAME);
+            message.setId("%s_%d".formatted(block.getRequestId(), System.currentTimeMillis()));
             properties.put(DATA_OUT_PROPERTY_ROLE, "user");
             properties.put("asr_request_id", block.getRequestId());
             message.setProperties(properties);
@@ -76,7 +76,7 @@ public abstract class MessageOutputSender {
         int numberOfChannels) {
         try {
             AudioFrameMessage audioFrame = AudioFrameMessage.create("pcm_frame");
-            audioFrame.setId("%s_%d".formatted(originalMessage.getId(), System.currentTimeMillis())); // 使用原始消息的ID
+            audioFrame.setId("%s_%d".formatted(originalMessage.getId(), System.currentTimeMillis()));
             audioFrame.setSampleRate(sampleRate);
             audioFrame.setBytesPerSample(bytesPerSample);
             audioFrame.setNumberOfChannel(numberOfChannels);
@@ -87,6 +87,7 @@ public abstract class MessageOutputSender {
             audioFrame.setProperty("audio_text", originalMessage.getProperty("text"));
             audioFrame.setProperty("group_timestamp", originalMessage.getProperty("group_timestamp"));
             env.sendMessage(audioFrame);
+
             log.debug("[{}] 发送音频帧成功: size={}", env.getExtensionName(), audioData.length);
         } catch (Exception e) {
             log.error("[{}] 发送音频帧异常: ", env.getExtensionName(), e);
