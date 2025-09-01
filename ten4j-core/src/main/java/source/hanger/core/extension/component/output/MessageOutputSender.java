@@ -6,7 +6,6 @@ import java.util.Map;
 
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.LoggerFactory;
-import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.component.asr.ASRTranscriptionOutputBlock;
 import source.hanger.core.extension.component.stream.StreamOutputBlockConsumer;
 import source.hanger.core.message.AudioFrameMessage;
@@ -20,6 +19,7 @@ import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_END
 import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_IS_FINAL;
 import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_ROLE;
 import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_TEXT;
+import static source.hanger.core.common.ExtensionConstants.TEXT_DATA_OUT_NAME;
 
 /**
  * @author fuhangbo.hanger.uhfun
@@ -29,8 +29,9 @@ public abstract class MessageOutputSender {
     public static void sendTextOutput(TenEnv env, Message originalMessage, String text,
         boolean endOfSegment) { // 使用 core 包的 Message
         try {
-            DataMessage outputData = DataMessage.create(ExtensionConstants.TEXT_DATA_OUT_NAME);
-            outputData.setId(originalMessage.getId()); // 使用原始消息的ID
+            DataMessage outputData = DataMessage.create(TEXT_DATA_OUT_NAME);
+            outputData.setId(
+                "%s_%s_%d".formatted(originalMessage.getId(), TEXT_DATA_OUT_NAME, System.currentTimeMillis()));
             outputData.setProperty(DATA_OUT_PROPERTY_TEXT, text);
             outputData.setProperty(DATA_OUT_PROPERTY_ROLE, "assistant");
             outputData.setProperty(DATA_OUT_PROPERTY_END_OF_SEGMENT, endOfSegment);
