@@ -1,5 +1,9 @@
 package source.hanger.core.extension.component.output;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.LoggerFactory;
 import source.hanger.core.common.ExtensionConstants;
@@ -11,15 +15,11 @@ import source.hanger.core.message.Message;
 import source.hanger.core.message.MessageType;
 import source.hanger.core.tenenv.TenEnv;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
+import static source.hanger.core.common.ExtensionConstants.ASR_DATA_OUT_NAME;
 import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_END_OF_SEGMENT;
+import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_IS_FINAL;
 import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_ROLE;
 import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_TEXT;
-import static source.hanger.core.common.ExtensionConstants.ASR_DATA_OUT_NAME; // 新增
-import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_IS_FINAL; // 新增
 
 /**
  * @author fuhangbo.hanger.uhfun
@@ -60,7 +60,7 @@ public abstract class MessageOutputSender {
             properties.put("words", Collections.emptyList());
 
             DataMessage message = DataMessage.create(ASR_DATA_OUT_NAME);
-            message.setId("%s_%d".formatted(block.getRequestId(), System.currentTimeMillis()));
+            message.setId("%s_%s_%d".formatted(block.getRequestId(), ASR_DATA_OUT_NAME, System.currentTimeMillis()));
             properties.put(DATA_OUT_PROPERTY_ROLE, "user");
             properties.put("asr_request_id", block.getRequestId());
             message.setProperties(properties);
@@ -76,7 +76,7 @@ public abstract class MessageOutputSender {
         int numberOfChannels) {
         try {
             AudioFrameMessage audioFrame = AudioFrameMessage.create("pcm_frame");
-            audioFrame.setId("%s_%d".formatted(originalMessage.getId(), System.currentTimeMillis()));
+            audioFrame.setId("%s_%s_%d".formatted(originalMessage.getId(), "pcm_frame", System.currentTimeMillis()));
             audioFrame.setSampleRate(sampleRate);
             audioFrame.setBytesPerSample(bytesPerSample);
             audioFrame.setNumberOfChannel(numberOfChannels);
