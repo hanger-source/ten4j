@@ -391,7 +391,13 @@
     "replaceableModels": [{
       "type": "文本生成",
       "key": "text_model",
-      "model": "qwen-max"
+      "model": "qwen-max",
+      "configurableOptions": [{
+          "name": "联网搜索",
+          "key": "enable_search",
+          "type": "boolean",
+          "defaultValue": false
+      }]
     },{
       "type": "视频理解",
       "key": "vision_model",
@@ -494,7 +500,8 @@
           "api_key": "{{env('bailian.dashscope.api.key')}}",
           "prompt": "{{prompt}}",
           "greeting": "{{greeting}}",
-          "model": "{{text_model or 'qwen-max'}}"
+          "model": "{{text_model or 'qwen-max'}}",
+          "enable_search": "{{text_model_enable_search}}"
         }
       },
       {

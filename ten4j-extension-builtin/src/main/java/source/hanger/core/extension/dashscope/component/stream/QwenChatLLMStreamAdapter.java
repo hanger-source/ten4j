@@ -59,6 +59,7 @@ public class QwenChatLLMStreamAdapter extends BaseLLMStreamAdapter<GenerationRes
             .apiKey(env.getPropertyString("api_key").orElseThrow(() -> new RuntimeException("api_key 为空")))
             .model(env.getPropertyString("model").orElseThrow(() -> new RuntimeException("model 为空")))
             .messages(messages)
+            .enableSearch(env.getProperty("enable_search").map(String::valueOf).map(Boolean::parseBoolean).orElse(false))
             .resultFormat(GenerationParam.ResultFormat.MESSAGE)
             .incrementalOutput(true);
 
