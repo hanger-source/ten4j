@@ -408,7 +408,7 @@
       },
       {
         "name": "通义千问3",
-        "model": "qwen-plus",
+        "model": "qwen3-30b-a3b-instruct-2507",
         "type": ["文本生成", "推理模型"],
         "tag": ["语言模型"],
         "vendor": "通义",
