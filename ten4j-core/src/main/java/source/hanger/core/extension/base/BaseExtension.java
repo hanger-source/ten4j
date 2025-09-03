@@ -1,7 +1,7 @@
 package source.hanger.core.extension.base;
 
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 import lombok.extern.slf4j.Slf4j;
@@ -41,7 +41,7 @@ public abstract class BaseExtension implements Extension {
     @Override
     public final void onConfigure(TenEnv env, Map<String, Object> properties) {
         this.env = env; // 确保 env 已设置
-        this.configuration = new ConcurrentHashMap<>(properties);
+        this.configuration = new HashMap<>(properties);
         // 初始化状态提供者
         this.extensionStateProvider = createExtensionStateProvider(env.getExtensionName());
         log.info("[{}] Extension配置完成", env.getExtensionName());

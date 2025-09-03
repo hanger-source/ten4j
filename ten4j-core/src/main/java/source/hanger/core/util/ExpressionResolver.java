@@ -45,6 +45,9 @@ public class ExpressionResolver {
                 Serializable compiledExpression = MVEL.compileExpression(mvelExpression);
                 ParserContext parserContext = new ParserContext();
                 Object result = MVEL.executeExpression(compiledExpression, parserContext, new InnerVariableResolverFactory(combinedContext));
+                if (result == null) {
+                    return null;
+                }
                 matcher.appendReplacement(sb, Matcher.quoteReplacement(String.valueOf(result)));
             } catch (Exception e) {
                 log.warn("Error resolving MVEL expression {}. Returning original placeholder. Error: {}", mvelExpression, e.getMessage());

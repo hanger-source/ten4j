@@ -8,6 +8,7 @@ import com.alibaba.dashscope.aigc.generation.Generation;
 import com.alibaba.dashscope.aigc.generation.GenerationOutput.Choice;
 import com.alibaba.dashscope.aigc.generation.GenerationParam;
 import com.alibaba.dashscope.aigc.generation.GenerationResult;
+import com.alibaba.dashscope.aigc.generation.TranslationOptions;
 import com.alibaba.dashscope.common.Message;
 import com.alibaba.dashscope.exception.InputRequiredException;
 import com.alibaba.dashscope.exception.NoApiKeyException;
@@ -16,6 +17,7 @@ import com.alibaba.dashscope.tools.ToolFunction;
 
 import io.reactivex.Flowable;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.common.PipelinePacket;
@@ -55,13 +57,23 @@ public class QwenChatLLMStreamAdapter extends BaseLLMStreamAdapter<GenerationRes
     protected Flowable<GenerationResult> getRawLlmFlowable(TenEnv env, List<Message> messages,
         List<ToolFunction> tools) {
         // 构建 GenerationParam
+        String model = env.getPropertyString("model").orElseThrow(() -> new RuntimeException("model 为空"));
+        boolean isTranslateModel = StringUtils.containsIgnoreCase(model, "mt");
+
         GenerationParam.GenerationParamBuilder paramBuilder = GenerationParam.builder()
             .apiKey(env.getPropertyString("api_key").orElseThrow(() -> new RuntimeException("api_key 为空")))
-            .model(env.getPropertyString("model").orElseThrow(() -> new RuntimeException("model 为空")))
+            .model(model)
             .messages(messages)
             .enableSearch(env.getProperty("enable_search").map(String::valueOf).map(Boolean::parseBoolean).orElse(false))
             .resultFormat(GenerationParam.ResultFormat.MESSAGE)
             .incrementalOutput(true);
+
+        if (isTranslateModel) {
+            paramBuilder.translationOptions(TranslationOptions.builder()
+                .sourceLang("auto")
+                .targetLang("English")
+                .build());
+        }
 
         if (tools != null && !tools.isEmpty()) {
             paramBuilder.tools(tools);
