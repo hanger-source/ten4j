@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.base.tool.LLMTool;
 import source.hanger.core.extension.base.tool.LLMToolResult;
@@ -39,7 +40,7 @@ public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLL
 
     @Override
     protected List<LLMTool> initTools(TenEnv env) {
-        return List.of(new VisionTool());
+        return List.of(new VisionTool(env));
     }
 
     @Override
@@ -94,7 +95,49 @@ public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLL
         });
     }
 
+    protected String visionToolDescription(TenEnv env) {
+        return """
+          - 用于分析用户摄像头捕获的实时画面，以增强模型对用户当前环境的感知。
+          - 工具本身无需输出给用户，调用与否仅用于辅助模型决策。
+          回答规范：
+          1. 当调用后拿到画面信息时，回答时应自然承认自己“能看到”或“注意到”这些视觉细节，
+             不要说“我看不到”或“我无法看到”，以避免违和感。
+          2. 如果没有触发调用，不要主动声称“我能看到”或“我看不到”，只需正常对话。
+          调用规则：
+          1. 仅在用户的当前输入中明确或隐含提及视觉内容时调用：
+             - 明确请求：
+               - “你能看到我吗？”
+               - “画面里有什么？”
+               - “我的背景如何？”
+               - “你能看到摄像头吗？”
+             - 隐含请求：
+               - “描述一下场景”
+               - “你看到了什么？”
+               - “我现在的环境怎么样？”
+             - 连续追问：
+               - 仅当用户在短时间内连续提出与画面直接相关的问题，才继续调用。
+          2. OCR识别规则：
+               - 当用户明确请求识别文字时，立即调用OCR：
+                 - “帮我读一下这份文件。”
+                 - “这个网页上写了什么？”
+               - 当画面包含大量可读文字（如文档、网页截图）且用户问题暗示与文字内容相关时，优先调用OCR。
+          2. 禁止调用场景：
+             - 用户的问题与视觉完全无关（如文本、代码、新闻、天气等）。
+             - 用户未涉及查看画面或感知环境的需求。
+             - 根据上下文，无法明确判断用户是否在询问视觉内容时，默认不调用。
+             - 如果上下文已经有画面的描述，可以不调用，除非用户明确重新分析画面
+
+          """.stripIndent();
+    }
+
+    protected String visionToolName(TenEnv env) {
+        return "vision";
+    }
+
+    @AllArgsConstructor
     class VisionTool implements ParameterlessLLMTool {
+        private TenEnv env;
+
         @Override
         public LLMToolResult runTool(TenEnv env, Command command, Map<String, Object> args) {
             String prompt = (String)command.getProperty(DATA_OUT_PROPERTY_TEXT);
@@ -104,39 +147,12 @@ public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLL
 
         @Override
         public String getToolName() {
-            return "vision";
+            return visionToolName(env);
         }
 
         @Override
         public String getDescription() {
-            return """
-                      - 用于分析用户摄像头捕获的实时画面，以增强模型对用户当前环境的感知。
-                      - 工具本身无需输出给用户，调用与否仅用于辅助模型决策。
-                      回答规范：
-                      1. 当调用后拿到画面信息时，回答时应自然承认自己“能看到”或“注意到”这些视觉细节，
-                         不要说“我看不到”或“我无法看到”，以避免违和感。
-                      2. 如果没有触发调用，不要主动声称“我能看到”或“我看不到”，只需正常对话。
-                      调用规则：
-                      1. 仅在用户的当前输入中明确或隐含提及视觉内容时调用：
-                         - 明确请求：
-                           - “你能看到我吗？”
-                           - “画面里有什么？”
-                           - “我的背景如何？”
-                           - “你能看到摄像头吗？”
-                         - 隐含请求：
-                           - “描述一下场景”
-                           - “你看到了什么？”
-                           - “我现在的环境怎么样？”
-                         - 连续追问：
-                           - 仅当用户在短时间内连续提出与画面直接相关的问题，才继续调用。
-                      2. 禁止调用场景：
-                         - 用户的问题与视觉完全无关（如文本、代码、新闻、天气等）。
-                         - 用户未涉及查看画面或感知环境的需求。
-                         - 根据上下文，无法明确判断用户是否在询问视觉内容时，默认不调用。
-                         - 如果上下文已经有画面的描述，可以不调用，除非用户明确重新分析画面
-
-                      """.stripIndent();
+            return visionToolDescription(env);
         }
     }
-
 }

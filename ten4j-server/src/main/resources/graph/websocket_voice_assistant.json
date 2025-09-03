@@ -399,7 +399,7 @@
     }],
     "models" :[
       {
-        "name": "通义千问-Plus-Character",
+        "name": "通义千问 PLUS CHARACTER",
         "model": "qwen-plus-character",
         "type": ["文本生成"],
         "tag": ["角色扮演模型"],
@@ -415,7 +415,7 @@
         "description": "Qwen3全系列模型，实现思考模式和非思考模式的有效融合，可在对话中切换模式。"
       },
       {
-        "name": "通义千问plus",
+        "name": "通义千问 PLUS",
         "model": "qwen-plus",
         "type": ["文本生成", "推理模型"],
         "tag": ["语言模型"],
@@ -423,7 +423,7 @@
         "description": "通义千问超大规模语言模型的增强版，支持中文英文等不同语言输入。主干模型、latest和快照04-28已升级Qwen3系列，实现思考模式和非思考模式的有效融合，可在对话中切换模式。"
       },
       {
-        "name": "通义千问flash",
+        "name": "通义千问 FLASH",
         "model": "qwen-flash",
         "type": ["文本生成", "推理模型"],
         "tag": ["语言模型"],
@@ -431,7 +431,7 @@
         "description": "Qwen3系列Flash模型，实现思考模式和非思考模式的有效融合，可在对话中切换模式。复杂推理类任务性能优秀，指令遵循、文本理解等能力显著提高。支持1M上下文长度，按照上下文长度进行阶梯计费。"
       },
       {
-        "name": "通义千问max",
+        "name": "通义千问 MAX",
         "model": "qwen-max",
         "type": ["文本生成"],
         "tag": ["语言模型"],
@@ -439,26 +439,33 @@
         "description": "通义千问2.5系列千亿级别超大规模语言模型，支持中文英文等不同语言输入。随着模型的升级，qwen-max将滚动更新升级。如果希望使用固定版本，请使用历史快照版本。"
       },
       {
-        "name": "通义千问turbo",
+        "name": "通义千问 TURBO",
         "model": "qwen-turbo",
         "type": ["文本生成"],
         "tag": ["语言模型"],
         "vendor": "通义",
         "description": "通义千问超大规模语言模型，支持中文英文等不同语言输入。主干模型、latest和快照04-28已升级Qwen3系列，实现思考模式和非思考模式的有效融合，可在对话中切换模式。"
       },{
-        "name": "通义千问 vl max",
+        "name": "通义千问 VL MAX",
         "model": "qwen-vl-max",
         "type": ["视频理解"],
         "tag": ["视觉语言模型"],
         "vendor": "通义",
         "description": "通义千问VL-Max（qwen-vl-max），即通义千问超大规模视觉语言模型。相比增强版，再次提升视觉推理能力和指令遵循能力，提供更高的视觉感知和认知水平。在更多复杂任务上提供最佳的性能。"
       },{
-        "name": "通义千问 vl plus",
+        "name": "通义千问 VL PLUS",
         "model": "qwen-vl-plus",
         "type": ["视频理解"],
         "tag": ["视觉语言模型"],
         "vendor": "通义",
         "description": "通义千问VL-Plus（qwen-vl-plus），即通义千问大规模视觉语言模型增强版。大幅提升细节识别能力和文字识别能力，支持超百万像素分辨率和任意长宽比规格的图像。在广泛的视觉任务上提供卓越的性能。"
+      },{
+        "name": "通义千问 VL OCR",
+        "model": "qwen-vl-ocr",
+        "type": ["视频理解"],
+        "tag": ["视觉语言模型"],
+        "vendor": "通义",
+        "description": "通义千问VL-OCR（qwen-vl-ocr），即基于Qwen-VL训练的OCR识别大模型。通过统一模型的方式聚合多种图文识别、解析、处理类任务，提供强大的图文识别能力。"
       }
     ]
   },

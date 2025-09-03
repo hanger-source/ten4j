@@ -21,7 +21,7 @@ import source.hanger.core.tenenv.TenEnv;
 @Slf4j
 public class ParaformerASRStreamAdapter extends BaseASRStreamAdapter<RecognitionResult> {
 
-    private AudioFileWriter audioFileWriter;
+    private final AudioFileWriter audioFileWriter = new AudioFileWriter("output", "output");
     private final Recognition recognition  = new Recognition();
 
     public ParaformerASRStreamAdapter(
@@ -59,7 +59,13 @@ public class ParaformerASRStreamAdapter extends BaseASRStreamAdapter<Recognition
             return Flowable.error(e);
         }
     }
-    
+
+    @Override
+    public void onRequestAudioInput(TenEnv env, ByteBuffer rawAudioInput) {
+        // 用于排查音频是否正常 audioFileWriter.writeAudioFrame(rawAudioInput);
+        super.onRequestAudioInput(env, rawAudioInput);
+    }
+
     @Override
     protected Flowable<PipelinePacket<OutputBlock>> transformSingleRecognitionResult(
         RecognitionResult result,
