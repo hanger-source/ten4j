@@ -48,6 +48,34 @@ public class ImageSynthesisTool implements LLMTool {
         tenEnv.sendData(dataMessage);
     }
 
+    //public static void main(String[] args) {
+    //    BailianPollingTaskRunner taskRunner = new BailianPollingTaskRunner("ImageSynthesisTool");
+    //    CompletableFuture<Object> future = new CompletableFuture<>();
+    //    taskRunner.submit(new BailianPollingTask<>() {
+    //        @Override
+    //        public PollingResult<Object> execute() throws Throwable {
+    //            log.info("开始轮询 模拟持续轮训任务 测试超时");
+    //            return PollingResult.needsRepoll();
+    //        }
+    //
+    //        @Override
+    //        public void onComplete(Object result) {
+    //            future.complete(result);
+    //        }
+    //
+    //        @Override
+    //        public void onFailure(Throwable throwable) {
+    //            future.completeExceptionally(throwable);
+    //        }
+    //
+    //        @Override
+    //        public void onTimeout() {
+    //            log.info("轮询超时");
+    //        }
+    //    }, "10", ofSeconds(10L), ofMillis(1000));
+    //    future.join();
+    //}
+
     @Override
     public String getToolName() {
         return "qwen_image_generate_tool";

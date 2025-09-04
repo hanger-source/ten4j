@@ -44,7 +44,13 @@ public class BailianPollingTaskRunner {
     private final ManyToOneConcurrentArrayQueue<Runnable> commandQueue;
 
     // 任务ID -> 定时器ID，用于快速查找和取消 (多线程访问)
-    private final ConcurrentHashMap<String, Long> taskIdToTimerId;
+    private final ConcurrentHashMap<String, Long> taskIdToTotalTimeoutTimerId;
+
+    // 新增：任务ID -> 轮询间隔定时器ID，用于快速查找和取消 (多线程访问)
+    private final ConcurrentHashMap<String, Long> taskIdToPollingIntervalTimerId;
+
+    // 新增：已取消或已超时的任务ID集合 (多线程访问)
+    private final ConcurrentHashMap<String, Boolean> cancelledTasks;
 
     // 定时器ID -> 任务，用于在计时器到期时获取任务 (单线程访问，仅PollingAgent线程)
     private final Long2ObjectHashMap<DelayedTaskRequeue> activeTimeouts;
@@ -65,8 +71,10 @@ public class BailianPollingTaskRunner {
 
         this.pollingAgent = new PollingAgent(name);
         this.commandQueue = new ManyToOneConcurrentArrayQueue<>(DEFAULT_QUEUE_CAPACITY); // 初始化命令队列
-        this.taskIdToTimerId = new ConcurrentHashMap<>(); // 初始化任务ID到定时器ID的映射
+        this.taskIdToTotalTimeoutTimerId = new ConcurrentHashMap<>(); // 初始化任务ID到总超时定时器ID的映射
+        this.taskIdToPollingIntervalTimerId = new ConcurrentHashMap<>(); // 初始化任务ID到轮询间隔定时器ID的映射
         this.activeTimeouts = new Long2ObjectHashMap<>(); // 初始化活动超时任务的映射
+        this.cancelledTasks = new ConcurrentHashMap<>(); // 初始化已取消任务的映射
 
         // ===== 正确初始化 DeadlineTimerWheel：统一为“毫秒” =====
         final SystemEpochClock clock = SystemEpochClock.INSTANCE; // 毫秒
@@ -115,7 +123,7 @@ public class BailianPollingTaskRunner {
                 if (running.get() && !shuttingDown.get()) { // 确保执行器仍然活跃
                     long timerId = timerWheel.scheduleTimer(deadlineMs);
                     activeTimeouts.put(timerId, new DelayedTaskRequeue(taskId, task, new TaskWrapper<>(task, taskId, pollingInterval), TimeoutType.TOTAL_TIMEOUT)); // 存储任务到activeTimeouts，使用新的记录
-                    taskIdToTimerId.put(taskId, timerId); // 存储 taskId 到 timerId 的映射
+                    taskIdToTotalTimeoutTimerId.put(taskId, timerId); // 存储 taskId 到 timerId 的映射
                     log.debug("[{}] Scheduled timeout for taskId: {} with timerId: {}", pollingAgent.roleName(), taskId, timerId);
                 } else {
                     log.warn("[{}] Runner not active, not scheduling timeout for taskId: {}", pollingAgent.roleName(), taskId);
@@ -193,12 +201,12 @@ public class BailianPollingTaskRunner {
             callbackExecutor.submit(() -> {
                 if (pollingResult.completed) {
                     // 任务完成即取消超时
-                    cancelTimeout(taskId); // 提交取消命令
+                    cancelTimeout(taskId, TimeoutType.TOTAL_TIMEOUT); // 提交取消命令
                     @SuppressWarnings("unchecked")
                     BailianPollingTask<Object> cast = (BailianPollingTask<Object>) r;
                     cast.onComplete(pollingResult.result);
                 } else if (pollingResult.error != null) {
-                    cancelTimeout(taskId); // 提交取消命令
+                    cancelTimeout(taskId, TimeoutType.TOTAL_TIMEOUT); // 提交取消命令
                     r.onFailure(pollingResult.error);
                 } else if (pollingResult.needsRepoll) {
                     // 关闭阶段不再重试
@@ -270,19 +278,45 @@ public class BailianPollingTaskRunner {
         log.info("[{}] shutdown complete.", pollingAgent.roleName());
     }
 
-    private void cancelTimeout(String taskId) {
+    private void cancelTimeout(String taskId, TimeoutType timeoutType) {
         // 将取消计时器的操作提交到命令队列
         commandQueue.offer(() -> {
-            Long timerId = taskIdToTimerId.remove(taskId);
+            Long timerId = null;
+            if (timeoutType == TimeoutType.TOTAL_TIMEOUT) {
+                timerId = taskIdToTotalTimeoutTimerId.remove(taskId);
+            } else if (timeoutType == TimeoutType.POLLING_INTERVAL) {
+                timerId = taskIdToPollingIntervalTimerId.remove(taskId);
+            }
+
             if (timerId != null) {
                 timerWheel.cancelTimer(timerId); // 取消DeadlineTimerWheel中的计时器
                 activeTimeouts.remove(timerId); // 从activeTimeouts中移除
-                log.debug("[{}] Cancelled timeout for taskId: {} with timerId: {}", pollingAgent.roleName(), taskId, timerId);
+                log.debug("[{}] Cancelled {} timeout for taskId: {} with timerId: {}", pollingAgent.roleName(),
+                    timeoutType, taskId, timerId);
             } else {
-                log.debug("[{}] No active timeout found for taskId: {}", pollingAgent.roleName(), taskId);
+                log.debug("[{}] No active {} timeout found for taskId: {}", pollingAgent.roleName(), timeoutType,
+                    taskId);
             }
+
+            // 检查是否所有相关计时器都已终止，如果是，则从 cancelledTasks 中移除 taskId
         });
         wakeup(); // 唤醒 polling 线程以处理取消命令
+    }
+
+    private void cleanupCancelledTask(String taskId) {
+        commandQueue.offer(() -> {
+            // 只有当任务的所有相关计时器都已终止时，才从 cancelledTasks 中移除 taskId
+            boolean hasActiveTotalTimeout = taskIdToTotalTimeoutTimerId.containsKey(taskId);
+            boolean hasActivePollingInterval = taskIdToPollingIntervalTimerId.containsKey(taskId);
+
+            if (!hasActiveTotalTimeout && !hasActivePollingInterval) {
+                cancelledTasks.remove(taskId);
+                log.debug("[{}] Removed taskId: {} from cancelledTasks as all timers are terminated.", pollingAgent.roleName(), taskId);
+            } else {
+                log.debug("[{}] taskId: {} still has active timers (Total: {}, Polling: {}), keeping in cancelledTasks for now.", pollingAgent.roleName(), taskId, hasActiveTotalTimeout, hasActivePollingInterval);
+            }
+        });
+        wakeup(); // 唤醒 polling 线程以处理清理命令
     }
 
     private void drainCommands() {
@@ -386,9 +420,20 @@ public class BailianPollingTaskRunner {
                 DelayedTaskRequeue delayedRequeue = activeTimeouts.remove(timerId);
                 if (delayedRequeue != null) {
                     // 从 taskIdToTimerId 映射中也移除，因为计时器已到期
-                    taskIdToTimerId.remove(delayedRequeue.taskId());
+                    // 针对不同的超时类型，从对应的映射中移除
+                    if (delayedRequeue.timeoutType() == TimeoutType.TOTAL_TIMEOUT) {
+                        taskIdToTotalTimeoutTimerId.remove(delayedRequeue.taskId());
+                    } else if (delayedRequeue.timeoutType() == TimeoutType.POLLING_INTERVAL) {
+                        taskIdToPollingIntervalTimerId.remove(delayedRequeue.taskId());
+                    }
 
                     if (delayedRequeue.timeoutType() == TimeoutType.POLLING_INTERVAL) {
+                        // 在重新入队之前，再次检查任务是否已被取消（例如，可能已触发 TOTAL_TIMEOUT）
+                        if (cancelledTasks.containsKey(delayedRequeue.taskId())) {
+                            log.debug("[{}] Task {} is cancelled or timed out, skipping re-queueing after polling interval. Timer ID: {}", roleName(), delayedRequeue.taskId(), timerId);
+                            cleanupCancelledTask(delayedRequeue.taskId()); // 调度清理 cancelledTasks 的命令
+                            return true; // 消费计时器，但不重新入队
+                        }
                         log.debug("[{}] Re-queueing task {} after polling interval. Timer ID: {}", roleName(), delayedRequeue.taskId(), timerId);
                         // 将原始任务重新入队 taskQueue
                         taskQueue.offer(delayedRequeue.originalTaskWrapper());
@@ -397,6 +442,9 @@ public class BailianPollingTaskRunner {
                         log.warn("[{}] Task {} total timeout, calling onTimeout. Timer ID: {}", roleName(), delayedRequeue.taskId(), timerId);
                         // 总任务超时，触发 onTimeout 回调
                         callbackExecutor.submit(() -> delayedRequeue.task().onTimeout());
+                        cancelledTasks.put(delayedRequeue.taskId(), true); // 将任务标记为已取消
+                        cancelTimeout(delayedRequeue.taskId(), TimeoutType.TOTAL_TIMEOUT); // 调度取消总超时计时器的命令
+                        cleanupCancelledTask(delayedRequeue.taskId()); // 调度清理 cancelledTasks 的命令
                     }
                     return true; // 消费计时器
                 }
@@ -408,8 +456,13 @@ public class BailianPollingTaskRunner {
             // 3. 处理任务队列中的轮询任务
             TaskWrapper<?> taskWrapper = taskQueue.poll();
             if (taskWrapper != null) {
-                BailianPollingTask<?> task = taskWrapper.task();
                 String taskId = taskWrapper.taskId();
+                if (cancelledTasks.containsKey(taskId)) {
+                    log.debug("[{}] Task {} is cancelled or timed out, skipping processing.", roleName(), taskId);
+                    // 仍然需要消费掉这个任务，但是不处理其逻辑
+                    return ++workCount;
+                }
+                BailianPollingTask<?> task = taskWrapper.task();
 
                 log.info("[{}] processing task: {}", roleName(), taskId);
                 PollingResult<?> pollingResult;
@@ -418,7 +471,8 @@ public class BailianPollingTaskRunner {
                 } catch (Throwable e) {
                     // 如果任务执行抛出异常，视为任务失败
                     log.error("[{}] Task {} execution failed with exception: {}", roleName(), taskId, e.getMessage(), e);
-                    cancelTimeout(taskId); // 任务失败，取消超时
+                    cancelTimeout(taskId, TimeoutType.TOTAL_TIMEOUT); // 任务失败，取消总超时
+                    cancelTimeout(taskId, TimeoutType.POLLING_INTERVAL); // 任务失败，取消轮询间隔超时
                     callbackExecutor.submit(() -> task.onFailure(e)); // 在虚拟线程中调用 onFailure 回调
                     workCount++;
                     return workCount; // 处理下一个任务
@@ -426,8 +480,12 @@ public class BailianPollingTaskRunner {
 
                 if (pollingResult.completed || pollingResult.error != null) {
                     // 任务完成或失败，立即取消计时器并清理相关映射
-                    log.info("[{}] Task {} completed or failed, cancelling timeout and cleaning up.", roleName(), taskId);
-                    cancelTimeout(taskId); // 确保取消操作立即发生
+                    log.info("[{}] Task {} completed or failed, cancelling timeouts and cleaning up.", roleName(),
+                        taskId);
+                    cancelTimeout(taskId, TimeoutType.TOTAL_TIMEOUT); // 确保取消总超时操作立即发生
+                    cancelTimeout(taskId, TimeoutType.POLLING_INTERVAL); // 确保取消轮询间隔超时操作立即发生
+                    cancelledTasks.put(taskId, true); // 任务完成或失败，立即标记为已取消
+                    cleanupCancelledTask(taskId); // 调度清理 cancelledTasks 的命令
                 }
 
                 // 无论是否重新轮询，都将回调提交到回调执行器
@@ -445,6 +503,11 @@ public class BailianPollingTaskRunner {
                 });
 
                 if (pollingResult.needsRepoll) {
+                    // 如果任务已取消或已超时，不再重新轮询
+                    if (cancelledTasks.containsKey(taskId)) {
+                        log.debug("[{}] Task {} is cancelled or timed out, skipping re-polling.", roleName(), taskId);
+                        return ++workCount;
+                    }
                     // 如果任务未完成且需要继续轮询
                     Duration currentPollingInterval = taskWrapper.pollingInterval();
                     if (currentPollingInterval != null && !currentPollingInterval.isNegative() && !currentPollingInterval.isZero()) {
@@ -452,19 +515,25 @@ public class BailianPollingTaskRunner {
                         final long reEnqueueDeadlineMs = nowMs + currentPollingInterval.toMillis();
                         commandQueue.offer(() -> {
                             if (running.get() && !shuttingDown.get()) {
-                                // 在重新调度之前，先检查是否已存在一个计时器，并取消它以避免重复
-                                Long existingTimerId = taskIdToTimerId.get(taskId);
-                                if (existingTimerId != null) {
-                                    timerWheel.cancelTimer(existingTimerId);
-                                    activeTimeouts.remove(existingTimerId);
-                                    log.debug("[{}] Existing timer {} cancelled for taskId: {} before re-scheduling.", roleName(), existingTimerId, taskId);
+                                // 在重新调度 POLLING_INTERVAL 计时器之前，取消之前可能存在的 POLLING_INTERVAL 计时器
+                                Long existingPollingIntervalTimerId = taskIdToPollingIntervalTimerId.get(taskId);
+                                if (existingPollingIntervalTimerId != null) {
+                                    timerWheel.cancelTimer(existingPollingIntervalTimerId);
+                                    activeTimeouts.remove(existingPollingIntervalTimerId);
+                                    log.debug(
+                                        "[{}] Existing POLLING_INTERVAL timer {} cancelled for taskId: {} before "
+                                            + "re-scheduling.",
+                                        roleName(), existingPollingIntervalTimerId, taskId);
                                 }
-                                long timerId = timerWheel.scheduleTimer(reEnqueueDeadlineMs);
+                                long newPollingIntervalTimerId = timerWheel.scheduleTimer(reEnqueueDeadlineMs);
                                 // 存储原始的 TaskWrapper，以便在计时器到期时重新入队
-                                activeTimeouts.put(timerId, new DelayedTaskRequeue(taskId, task, taskWrapper, TimeoutType.POLLING_INTERVAL));
-                                // 更新 taskIdToTimerId 映射为新的延迟重新入队计时器 ID
-                                taskIdToTimerId.put(taskId, timerId);
-                                log.debug("[{}] Scheduled delayed re-queue for taskId: {} with timerId: {} (interval {}ms)", roleName(), taskId, timerId, currentPollingInterval.toMillis());
+                                activeTimeouts.put(newPollingIntervalTimerId,
+                                    new DelayedTaskRequeue(taskId, task, taskWrapper, TimeoutType.POLLING_INTERVAL));
+                                // 更新 taskIdToPollingIntervalTimerId 映射为新的延迟重新入队计时器 ID
+                                taskIdToPollingIntervalTimerId.put(taskId, newPollingIntervalTimerId);
+                                log.debug(
+                                    "[{}] Scheduled delayed re-queue for taskId: {} with timerId: {} (interval {}ms)",
+                                    roleName(), taskId, newPollingIntervalTimerId, currentPollingInterval.toMillis());
                             } else {
                                 log.warn("[{}] Runner not active, not scheduling delayed re-queue for taskId: {}.", roleName(), taskId);
                             }
