@@ -31,13 +31,13 @@ public class QwenIntentTurnDetectionExtension extends BaseTurnDetectionExtension
     @Override
     protected TurnDetector<Message> createTurnDetector(TenEnv env) {
         String sysPrompt = """
-            你是一个对话轮次检测器。根据用户的输入，判断用户是否说完了。如果没有明显的断句，普遍断定为用户已说完，避免过多停顿导致回复过慢。
+            你是一个对话轮次检测器。根据用户的输入，判断用户是否说完了。如果没有明显的字词结构的断句，默认断定为用户已说完，输出A，避免过多停顿导致回复过慢。
             只输出以下三个词之一：
             - A: 用户说完了，可以开始处理
             - B: 用户要求停顿、等待
             - C: 用户还没说完，继续听
             输出要求：
-             - 仅输出一个字母：A、B 或 C。
+             - 仅输出一个字母：A、B、C
              - 禁止输出其他任何字符、标点或解释。
             """.stripIndent();
         LLMContextManager<Message> llmContextManager = new QwenChatLLMContextManager(env, () -> sysPrompt);
@@ -71,7 +71,6 @@ public class QwenIntentTurnDetectionExtension extends BaseTurnDetectionExtension
                 try {
                     GenerationResult result = generation.call(param);
                     String decision = result.getOutput().getChoices().getFirst().getMessage().getContent();
-                    log.info("[{}] turn detector text={} decision={}", env.getExtensionName(), text, decision);
                     return switch (decision) {
                         case "A" -> Finished;
                         case "B" -> Wait;

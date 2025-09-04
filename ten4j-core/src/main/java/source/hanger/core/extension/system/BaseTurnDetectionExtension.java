@@ -149,7 +149,8 @@ public abstract class BaseTurnDetectionExtension<MESSAGE> extends BaseExtension 
 
         this.turnDetector.cancelEval();
 
-        TurnDetectorDecision decision = this.turnDetector.eval(this.cachedText);
+        //TurnDetectorDecision decision = this.turnDetector.eval(this.cachedText, env);
+        TurnDetectorDecision decision = Finished;
         if (decision == Finished) {
             // TODO: Handle force chat task cancellation if implemented
             processNewTurn(env, Finished);
@@ -157,7 +158,6 @@ public abstract class BaseTurnDetectionExtension<MESSAGE> extends BaseExtension 
             // TODO: Handle force chat task cancellation if implemented
             processNewTurn(env, Wait);
         } else {
-            log.info("[{}] eval decision: {}", env.getExtensionName(), decision);
             // TODO: Recreate force chat task if implemented
         }
     }
