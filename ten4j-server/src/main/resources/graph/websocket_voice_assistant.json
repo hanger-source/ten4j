@@ -396,7 +396,8 @@
           "name": "联网搜索",
           "key": "enable_search",
           "type": "boolean",
-          "defaultValue": false
+          "defaultValue": false,
+          "supportModels": ["qwen-flash","qwen-turbo", "qwen-max", "qwen-plus"]
       }]
     },{
       "type": "视频理解",
