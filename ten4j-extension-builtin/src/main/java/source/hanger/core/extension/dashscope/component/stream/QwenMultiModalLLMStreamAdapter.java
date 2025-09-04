@@ -69,7 +69,7 @@ public class QwenMultiModalLLMStreamAdapter
     }
 
     @Override
-    protected String extractTextFragment(MultiModalConversationResult result) {
+    protected String extractTextFragment(MultiModalConversationResult result, StringBuilder fullTextBuffer, TenEnv env) {
         return ofNullable(result.getOutput())
             .map(output -> output.getChoices().stream().findFirst())
             .filter(Optional::isPresent)

@@ -35,6 +35,7 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RAW_RESULT, MESSAGE, TOOL_
 
     protected final String TEXT_BUFFER_STATE = "textBuffer";
     protected final String FULL_TEXT_BUFFER_STATE = "fullTextBuffer";
+    protected final String HAS_STREAMING_ENDING_STATE = "hasStreamingEnding";
 
     /**
      * 构造函数。
@@ -86,6 +87,7 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RAW_RESULT, MESSAGE, TOOL_
         Map<String, Object> streamContexts = new HashMap<>();
         streamContexts.put(TEXT_BUFFER_STATE, new StringBuilder());
         streamContexts.put(FULL_TEXT_BUFFER_STATE, new StringBuilder());
+        streamContexts.put(HAS_STREAMING_ENDING_STATE, false);
         return streamContexts;
     }
 
@@ -108,7 +110,10 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RAW_RESULT, MESSAGE, TOOL_
             originalMessage.getProperty(DATA_OUT_PROPERTY_TEXT));
         StringBuilder textBuffer = (StringBuilder)streamContexts.get(TEXT_BUFFER_STATE);
         StringBuilder fullTextBuffer = (StringBuilder)streamContexts.get(FULL_TEXT_BUFFER_STATE);
-
+        Boolean hasStreamEnding = (Boolean)streamContexts.get(HAS_STREAMING_ENDING_STATE);
+        if (hasStreamEnding) {
+            return Flowable.empty();
+        }
         List<PipelinePacket<OutputBlock>> packetsToEmit = new java.util.ArrayList<>();
 
         // 提前获取 finishReason
@@ -117,7 +122,10 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RAW_RESULT, MESSAGE, TOOL_
             "tool_calls".equalsIgnoreCase(finishReason) ||
             "max_tokens".equalsIgnoreCase(finishReason);
         boolean endOfSegment = isEndOfTextSegment(result); // 用于判断是否是当前LLM响应的末尾片段
-
+        if (isStreamEnding) {
+            // 避免全量输出时重复处理
+            streamContexts.put(HAS_STREAMING_ENDING_STATE, true);
+        }
         // 1. 处理文本片段并聚合为句子或逻辑块
         processTextStreamResult(result, originalMessage, textBuffer, fullTextBuffer, env, isStreamEnding, endOfSegment,
             packetsToEmit);
@@ -161,7 +169,7 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RAW_RESULT, MESSAGE, TOOL_
         boolean isStreamEnding,
         boolean endOfSegment,
         List<PipelinePacket<OutputBlock>> packetsToEmit) {
-        String textFragment = extractTextFragment(result);
+        String textFragment = extractTextFragment(result, fullTextBuffer, env);
         if (textFragment != null && !textFragment.isEmpty()) {
             fullTextBuffer.append(textFragment);
             // 使用 SentenceProcessor 解析句子，并更新 textBuffer 为剩余片段
@@ -245,10 +253,13 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RAW_RESULT, MESSAGE, TOOL_
      * 抽象方法：从原始 LLM 响应中提取文本片段。
      * 由具体实现类提供。
      *
-     * @param result 原始 LLM 响应。
+     * @param result         原始 LLM 响应。
+     * @param fullTextBuffer
+     * @param env
      * @return 提取的文本片段，如果无文本则返回 null 或空字符串。
      */
-    protected abstract String extractTextFragment(GENERATION_RAW_RESULT result);
+    protected abstract String extractTextFragment(GENERATION_RAW_RESULT result, StringBuilder fullTextBuffer,
+        TenEnv env);
 
     /**
      * 抽象方法：判断当前原始 LLM 响应是否表示一个文本段的结束。

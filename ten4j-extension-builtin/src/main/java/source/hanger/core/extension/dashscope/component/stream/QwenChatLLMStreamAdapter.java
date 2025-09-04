@@ -105,14 +105,22 @@ public class QwenChatLLMStreamAdapter extends BaseLLMStreamAdapter<GenerationRes
     }
 
     @Override
-    protected String extractTextFragment(GenerationResult result) {
-        return Optional.ofNullable(result.getOutput())
+    protected String extractTextFragment(GenerationResult result, StringBuilder fullTextBuffer, TenEnv env) {
+        String text = Optional.ofNullable(result.getOutput())
             .map(output -> output.getChoices().stream().findFirst())
             .filter(Optional::isPresent)
             .map(Optional::get)
             .map(Choice::getMessage)
             .map(Message::getContent)
             .orElse(null);
+
+        String model = env.getPropertyString("model").orElseThrow(() -> new RuntimeException("model 为空"));
+        boolean isTranslateModel = StringUtils.containsIgnoreCase(model, "mt");
+        if (isTranslateModel) {
+            // Qwen-MT模型暂时不支持增量式流式输出。不支持增量，兼容为增量输出
+            return StringUtils.substringAfter(text, fullTextBuffer.toString());
+        }
+        return text;
     }
 
     @Override
