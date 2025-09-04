@@ -54,7 +54,7 @@ public class CosyVoiceTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthe
                     .voice(voiceName)
                     .format(format)
                     .build(), null);
-                log.debug("[{}] [TTS_PERF_DEBUG] SpeechSynthesizer 实例参数更新完毕. (Text: {})",
+                log.debug("[{}] SpeechSynthesizer 实例参数更新完毕. (Text: {})",
                     env.getExtensionName(), text);
 
                 return s;
@@ -64,7 +64,7 @@ public class CosyVoiceTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthe
                     .subscribeOn(Schedulers.io()) // 确保 TTS SDK 调用在 IO 线程进行
                     .doOnError(throwable -> {
                         s.getDuplexApi().close(1000, "bye");
-                        log.error("[{}] [TTS_PERF_DEBUG] 调用 DashScope Cosy Voice TTS API 错误: {}. (Text: {})",
+                        log.error("[{}] 调用 DashScope Cosy Voice TTS API 错误: {}. (Text: {})",
                             env.getExtensionName(),
                             throwable.getMessage(), text, throwable);
                     });
@@ -74,11 +74,11 @@ public class CosyVoiceTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthe
                     s.getDuplexApi().close(1000, "bye");
                     // https://help.aliyun.com/zh/model-studio/sambert-in-high-concurrency-scenarios#6d104fd2e1jrm
                     // 异常 4、服务端报错 Invalid action('run-task')! Please follow the protocol!
-                    log.info("[{}] [TTS_PERF_DEBUG] 检测到中断，关闭连接. (Text: {})",
+                    log.info("[{}] 检测到中断，关闭连接. (Text: {})",
                         env.getExtensionName(), text);
                 }
                 pool.returnObject(s);
-                log.info("[{}] [TTS_PERF_DEBUG] '{}' 归还 SpeechSynthesizer 实例到对象池. (Text: {})",
+                log.info("[{}] '{}' 归还 SpeechSynthesizer 实例到对象池. (Text: {})",
                     env.getExtensionName(), text, text);
             }
         );
