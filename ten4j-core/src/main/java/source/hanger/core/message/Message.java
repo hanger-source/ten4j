@@ -17,7 +17,7 @@ import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 import source.hanger.core.message.command.CloseAppCommand;
-import source.hanger.core.message.command.Command;
+import source.hanger.core.message.command.GenericCommand;
 import source.hanger.core.message.command.StartGraphCommand;
 import source.hanger.core.message.command.StopGraphCommand;
 import source.hanger.core.message.command.TimeoutCommand;
@@ -31,7 +31,7 @@ import source.hanger.core.util.MessageUtils;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type", visible = true)
 @JsonSubTypes({
-    @JsonSubTypes.Type(value = Command.class, name = "CMD"), // 通用命令类型
+    @JsonSubTypes.Type(value = GenericCommand.class, name = "CMD"), // 通用命令类型
     @JsonSubTypes.Type(value = CommandResult.class, name = "CMD_RESULT"), // 命令结果
     @JsonSubTypes.Type(value = DataMessage.class, name = "DATA"), // 数据消息
     @JsonSubTypes.Type(value = VideoFrameMessage.class, name = "VIDEO_FRAME"), // 视频帧

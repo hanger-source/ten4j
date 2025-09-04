@@ -1,13 +1,17 @@
 package source.hanger.core.message.command;
 
-import source.hanger.core.message.MessageType;
-import source.hanger.core.message.Location;
-import source.hanger.core.util.MessageUtils;
 import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import source.hanger.core.message.Location;
+import source.hanger.core.message.MessageType;
+import source.hanger.core.util.MessageUtils;
 
 public class GenericCommand extends Command {
 
-    public GenericCommand(String name) {
+    @JsonCreator
+    public GenericCommand(@JsonProperty("name") String name) {
         super(MessageUtils.generateUniqueId(), MessageType.CMD, null, null, name);
     }
 
