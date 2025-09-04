@@ -136,7 +136,7 @@ public class ImageSynthesisTool implements LLMTool {
                 .model("wan2.2-t2i-flash")
                 .prompt(prompt)
                 .n(n)
-                .size(size)
+            .size(size.replace("x", "*"))
                 .build();
 
         ImageSynthesis imageSynthesis = new ImageSynthesis();
@@ -161,15 +161,22 @@ public class ImageSynthesisTool implements LLMTool {
                     log.info("[{}] 开始轮询图片生成结果，taskId: {}", tenEnv.getExtensionName(), taskId);
                     ImageSynthesisResult fetchedResult = imageSynthesis.fetch(taskId, apiKey);
                     if (fetchedResult.getOutput() != null
+                        && fetchedResult.getOutput().getTaskStatus().equals("SUCCEEDED")
                         && fetchedResult.getOutput().getResults() != null
                         && !fetchedResult.getOutput().getResults().isEmpty()) {
                         // 任务完成，返回结果
                         return BailianPollingTaskRunner.PollingResult.success(
                             fetchedResult.getOutput().getResults().getFirst().get("url"));
-                    } else if (fetchedResult.getOutput() != null && !"SUCCEEDED".equals(
-                        fetchedResult.getOutput().getTaskStatus())) {
-                        // 任务未完成，需要继续轮询
-                        return BailianPollingTaskRunner.PollingResult.needsRepoll();
+                    } else if (fetchedResult.getOutput() != null) {
+                        if ("RUNNING".equals(
+                            fetchedResult.getOutput().getTaskStatus())) {
+                            // 任务未完成，需要继续轮询
+                            return BailianPollingTaskRunner.PollingResult.needsRepoll();
+                        } else {
+                            return BailianPollingTaskRunner.PollingResult.error(new IllegalStateException(
+                                "%s: %s".formatted(fetchedResult.getOutput().getCode(),
+                                    fetchedResult.getOutput().getMessage())));
+                        }
                     } else {
                         // 意外情况，视为失败
                         throw new RuntimeException("Unexpected null fetchedResult or output for taskId: %s".formatted(
