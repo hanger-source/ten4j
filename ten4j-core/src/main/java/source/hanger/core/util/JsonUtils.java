@@ -1,17 +1,16 @@
 package source.hanger.core.util;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
-
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.Collections;
 
 /**
  * JsonUtils是一个辅助工具类，用于处理JSON相关的操作。
@@ -40,6 +39,15 @@ public class JsonUtils {
         // 这里我们假设点路径不包含这些特殊字符，或者用户会确保其有效性。
         // 简单地将点替换为斜杠
         return "/" + dotPath.replace(".", "/");
+    }
+
+    public static String writeValueAsString(Object obj) {
+        try {
+            return OBJECT_MAPPER.writeValueAsString(obj);
+        } catch (Exception e) {
+            log.error("Error writing value as string: {}", e.getMessage(), e);
+            return null;
+        }
     }
 
     /**

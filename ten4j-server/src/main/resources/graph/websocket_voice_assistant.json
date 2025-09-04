@@ -542,9 +542,11 @@
       {
         "type": "extension",
         "name": "interrupt_detector",
-        "addon": "source.hanger.core.extension.system.InterruptDetectorExtension",
+        "addon": "source.hanger.core.extension.dashscope.extension.QwenIntentTurnDetectionExtension",
         "extension_group": "default",
         "property": {
+          "api_key": "{{env('bailian.dashscope.api.key')}}",
+          "model": "qwen-turbo"
         }
       },{
         "type": "extension",
@@ -710,6 +712,16 @@
       },
       {
         "extension": "tts",
+        "cmd": [
+          {
+            "name": "flush",
+            "dest": [
+              {
+                "extension": "client_connection"
+              }
+            ]
+          }
+        ],
         "audio_frame": [
           {
             "name": "pcm_frame",

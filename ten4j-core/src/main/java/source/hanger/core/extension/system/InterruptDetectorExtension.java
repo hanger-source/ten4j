@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Map;
 
 import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.base.BaseExtension;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
@@ -13,14 +14,12 @@ import source.hanger.core.tenenv.TenEnv;
 import source.hanger.core.util.MessageUtils;
 
 import static source.hanger.core.common.ExtensionConstants.ASR_DATA_OUT_NAME;
+import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_IS_FINAL;
+import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_TEXT;
 import static source.hanger.core.common.ExtensionConstants.TEXT_DATA_OUT_NAME;
 
 @Slf4j
 public class InterruptDetectorExtension extends BaseExtension {
-
-    private static final String CMD_NAME_FLUSH = "flush"; // Corresponds to Python's CMD_IN_FLUSH
-    private static final String TEXT_DATA_TEXT_FIELD = "text"; // Corresponds to Python's TEXT_DATA_TEXT_FIELD
-    private static final String TEXT_DATA_FINAL_FIELD = "is_final"; // Corresponds to Python's TEXT_DATA_FINAL_FIELD
 
     @Override
     protected void onExtensionConfigure(TenEnv env, Map<String, Object> properties) {
@@ -56,7 +55,7 @@ public class InterruptDetectorExtension extends BaseExtension {
      */
     private void sendFlushCmd(TenEnv env, String originalCommandId, String parentCommandId) {
         // Use GenericCommand.create for flush command
-        GenericCommand flushCmd = GenericCommand.create(CMD_NAME_FLUSH, originalCommandId);
+        GenericCommand flushCmd = GenericCommand.create(ExtensionConstants.CMD_OUT_FLUSH, originalCommandId);
         env.sendMessage(flushCmd);
         log.info("[{}] Sent flush command to downstream. cmdId {} OriginalCmdId: {}", env.getExtensionName(), flushCmd.getId(),
             originalCommandId);
@@ -102,8 +101,8 @@ public class InterruptDetectorExtension extends BaseExtension {
 
         if (TEXT_DATA_OUT_NAME.equals(data.getName())
             || ASR_DATA_OUT_NAME.equals(data.getName())) { // Check for text_data
-            String text = (String)data.getProperty(TEXT_DATA_TEXT_FIELD);
-            Boolean isFinal = (Boolean)data.getProperty(TEXT_DATA_FINAL_FIELD);
+            String text = (String)data.getProperty(DATA_OUT_PROPERTY_TEXT);
+            Boolean isFinal = (Boolean)data.getProperty(DATA_OUT_PROPERTY_IS_FINAL);
 
             if (text == null) {
                 text = "";
@@ -112,7 +111,8 @@ public class InterruptDetectorExtension extends BaseExtension {
                 isFinal = false;
             }
 
-            log.debug("[{}] {}: {} {}: {}", env.getExtensionName(), TEXT_DATA_TEXT_FIELD, text, TEXT_DATA_FINAL_FIELD,
+            log.debug("[{}] {}: {} {}: {}", env.getExtensionName(), DATA_OUT_PROPERTY_TEXT, text,
+                DATA_OUT_PROPERTY_IS_FINAL,
                 isFinal);
 
             if (isFinal || text.length() >= 2) {
@@ -130,6 +130,6 @@ public class InterruptDetectorExtension extends BaseExtension {
         // Forward the original data message to downstream
         env.sendMessage(data);
         log.info("[{}] Forwarded data message: {} with text: {} and final: {}", env.getExtensionName(),
-            data.getName(), data.getProperty(TEXT_DATA_TEXT_FIELD), data.getProperty(TEXT_DATA_FINAL_FIELD));
+            data.getName(), data.getProperty(DATA_OUT_PROPERTY_TEXT), data.getProperty(DATA_OUT_PROPERTY_IS_FINAL));
     }
 }
