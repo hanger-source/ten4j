@@ -281,7 +281,7 @@ public class PathTable {
                 PathOut pathOut = pathOutOpt.get();
                 if (pathOut.getResultFuture() != null && !pathOut.getResultFuture().isDone()) {
                     pathOut.getResultFuture().completeExceptionally(new GraphStoppedException(
-                            "Graph " + graphId + " stopped. CommandResult cannot be returned."));
+                        "Graph %s stopped. CommandResult cannot be returned.".formatted(graphId)));
                 }
                 removeOutPath(commandId);
                 log.debug("PathTable: 清理与停止图相关的PathOut: commandId={}", commandId);
