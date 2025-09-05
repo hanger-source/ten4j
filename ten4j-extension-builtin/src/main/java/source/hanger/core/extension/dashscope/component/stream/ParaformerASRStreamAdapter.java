@@ -48,14 +48,17 @@ public class ParaformerASRStreamAdapter extends BaseASRStreamAdapter<Recognition
             // Use streamCall directly
             Flowable<RecognitionResult> resultFlowable = recognition.streamCall(param, audioInput);
 
-            log.info("[{}] ParaformerASRClient recognition started successfully.", env.getExtensionName());
+            log.info("[{}] ParaformerASRClient recognition started successfully. channelId={}",
+                env.getExtensionName(), streamPipelineChannel.uuid());
             return resultFlowable;
 
         } catch (NoApiKeyException e) {
-            log.error("[{}] No API Key provided for Paraformer ASR: {}", env.getExtensionName(), e.getMessage());
+            log.error("[{}] No API Key provided for Paraformer ASR. channelId={}",
+                env.getExtensionName(), streamPipelineChannel.uuid(), e);
             return Flowable.error(e);
         } catch (Exception e) {
-            log.error("[{}] Failed to start Paraformer ASR recognition: {}", env.getExtensionName(), e.getMessage(), e);
+            log.error("[{}] Failed to start Paraformer ASR recognition channelId={}",
+                env.getExtensionName(), streamPipelineChannel.uuid(), e);
             return Flowable.error(e);
         }
     }
