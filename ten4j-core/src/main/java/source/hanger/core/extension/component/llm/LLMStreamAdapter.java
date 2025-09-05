@@ -14,6 +14,8 @@ import source.hanger.core.tenenv.TenEnv;
  */
 public interface LLMStreamAdapter<MESSAGE_TYPE, TOOL_FUNCTION_TYPE> {
 
+    default void onStart(TenEnv env) {
+    }
     /**
      * 发起 LLM 请求并处理其流式响应。
      * 此方法将负责订阅 LLM 的原始输出流，进行解析、聚合，并将处理后的逻辑块推送到主管道。

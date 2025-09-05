@@ -11,6 +11,7 @@ import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationR
 import com.alibaba.dashscope.common.MultiModalMessage;
 import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.exception.UploadFileException;
+import com.alibaba.dashscope.protocol.Protocol;
 import com.alibaba.dashscope.tools.ToolCallFunction;
 import com.alibaba.dashscope.tools.ToolFunction;
 
@@ -21,6 +22,7 @@ import source.hanger.core.extension.component.flush.InterruptionStateProvider;
 import source.hanger.core.extension.component.llm.BaseLLMStreamAdapter;
 import source.hanger.core.extension.component.llm.ToolCallOutputFragment;
 import source.hanger.core.extension.component.stream.StreamPipelineChannel;
+import source.hanger.core.extension.dashscope.common.DashScopeConstants;
 import source.hanger.core.tenenv.TenEnv;
 
 import static java.util.Optional.ofNullable;
@@ -33,13 +35,18 @@ import static java.util.Optional.ofNullable;
 public class QwenMultiModalLLMStreamAdapter
     extends BaseLLMStreamAdapter<MultiModalConversationResult, MultiModalMessage, ToolFunction> {
 
-    private final MultiModalConversation conversation;
+    private MultiModalConversation conversation;
 
     public QwenMultiModalLLMStreamAdapter(
         InterruptionStateProvider interruptionStateProvider,
         StreamPipelineChannel<OutputBlock> streamPipelineChannel) {
         super(interruptionStateProvider, streamPipelineChannel);
-        this.conversation = new MultiModalConversation();
+    }
+
+    @Override
+    public void onStart(TenEnv env) {
+        String baseUrl = env.getPropertyString("base_url").orElse(DashScopeConstants.BASE_URL);
+        this.conversation = new MultiModalConversation(Protocol.HTTP.getValue(), baseUrl);
     }
 
     @Override

@@ -88,6 +88,7 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
     @Override
     public void onStart(TenEnv env) {
         super.onStart(env);
+        llmStreamAdapter.onStart(env);
         log.info("[{}] BaseLLMExtension 启动，初始化管道。", env.getExtensionName());
         streamPipelineChannel.initPipeline(env);
     }

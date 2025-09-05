@@ -415,7 +415,7 @@
       },
       {
         "name": "通义千问3",
-        "model": "qwen3-30b-a3b-instruct-2507",
+        "model": "qwen3-235b-a22b-instruct-2507",
         "type": ["文本生成", "推理模型"],
         "tag": ["语言模型"],
         "vendor": "通义",
@@ -513,6 +513,7 @@
         "extension_group": "llm_group",
         "property": {
           "api_key": "{{env('bailian.dashscope.api.key')}}",
+          "base_url": "{{env('bailian.dashscope.api.base_url')}}",
           "prompt": "{{prompt}}",
           "greeting": "{{greeting}}",
           "model": "{{text_model or 'qwen-max'}}",

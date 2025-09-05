@@ -12,6 +12,7 @@ import com.alibaba.dashscope.aigc.generation.TranslationOptions;
 import com.alibaba.dashscope.common.Message;
 import com.alibaba.dashscope.exception.InputRequiredException;
 import com.alibaba.dashscope.exception.NoApiKeyException;
+import com.alibaba.dashscope.protocol.Protocol;
 import com.alibaba.dashscope.tools.ToolCallFunction;
 import com.alibaba.dashscope.tools.ToolFunction;
 
@@ -27,9 +28,10 @@ import source.hanger.core.extension.component.flush.InterruptionStateProvider;
 import source.hanger.core.extension.component.llm.BaseLLMStreamAdapter;
 import source.hanger.core.extension.component.llm.ToolCallOutputFragment;
 import source.hanger.core.extension.component.stream.StreamPipelineChannel;
+import source.hanger.core.extension.dashscope.common.DashScopeConstants;
 import source.hanger.core.tenenv.TenEnv;
 
-import static org.apache.commons.collections4.CollectionUtils.*;
+import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 
 /**
  * DashScope LLM 流服务实现类。
@@ -38,19 +40,24 @@ import static org.apache.commons.collections4.CollectionUtils.*;
 @Slf4j
 public class QwenChatLLMStreamAdapter extends BaseLLMStreamAdapter<GenerationResult, Message, ToolFunction> {
 
-    private final Generation generation;
     private final FlushOperationCoordinator flushOperationCoordinator;
+    private Generation generation;
 
     public QwenChatLLMStreamAdapter(
         InterruptionStateProvider interruptionStateProvider,
         StreamPipelineChannel<OutputBlock> streamPipelineChannel) {
         super(interruptionStateProvider, streamPipelineChannel);
-        this.generation = new Generation();
         flushOperationCoordinator = new DefaultFlushOperationCoordinator(interruptionStateProvider,
             streamPipelineChannel, tenEnv -> {
                 String delegateLlm = tenEnv.getPropertyString("chat_delegate_to").orElse("");
                 log.info("[{}] delegate to {}", tenEnv.getExtensionName(), delegateLlm);
             });
+    }
+
+    @Override
+    public void onStart(TenEnv env) {
+        String baseUrl = env.getPropertyString("base_url").orElse(DashScopeConstants.BASE_URL);
+        this.generation = new Generation(Protocol.HTTP.getValue(), baseUrl);
     }
 
     @Override
@@ -83,7 +90,14 @@ public class QwenChatLLMStreamAdapter extends BaseLLMStreamAdapter<GenerationRes
 
         try {
             // 使用注入的 DashScope Generation 客户端进行调用
-            return generation.streamCall(param);
+            return generation.streamCall(param)
+                .doOnNext(result -> {
+                    log.info("[{}] DashScope Generation 返回结果: {}", env.getExtensionName(), result);
+                }).doOnComplete(() -> {
+                    log.info("[{}] DashScope Generation 返回结果完成", env.getExtensionName());
+                }).doOnError(e -> {
+                    log.error("[{}] DashScope Generation 执行过程异常: {}", env.getExtensionName(), e.getMessage());
+                });
         } catch (NoApiKeyException | InputRequiredException e) {
             log.error("[{}] Error calling DashScope stream: {}", env.getExtensionName(), e.getMessage());
             return Flowable.error(e);
