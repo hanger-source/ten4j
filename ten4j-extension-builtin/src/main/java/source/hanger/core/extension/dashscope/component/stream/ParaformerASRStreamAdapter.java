@@ -42,6 +42,12 @@ public class ParaformerASRStreamAdapter extends BaseASRStreamAdapter<Recognition
                 .model(model)
                 .format("pcm")
                 .sampleRate(16000)
+                //设置VAD（Voice Activity Detection，语音活动检测）断句的静音时长阈值（单位为ms）。
+                //当一段语音后的静音时长超过该阈值时，系统会判定该句子已结束。
+                //参数范围为200ms至6000ms，默认值为800ms。
+                .parameter("max_sentence_silence", 300)
+                // 开关打开时（true）可以防止VAD断句切割过长。默认关闭。
+                .parameter("multi_threshold_mode_enabled", true)
                 .parameter("language_hints", new String[] {"zh", "en"})
                 .build();
 

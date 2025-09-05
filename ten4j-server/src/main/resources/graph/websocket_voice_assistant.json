@@ -544,7 +544,7 @@
       {
         "type": "extension",
         "name": "interrupt_detector",
-        "addon": "source.hanger.core.extension.dashscope.extension.QwenIntentTurnDetectionExtension",
+        "addon": "source.hanger.core.extension.system.InterruptDetectorExtension",
         "extension_group": "default",
         "property": {
           "api_key": "{{env('bailian.dashscope.api.key')}}",

@@ -90,7 +90,7 @@ public abstract class BaseAsrExtension extends BaseExtension {
         return (item, _, env) -> {
             if (item instanceof ASRTranscriptionOutputBlock asrTextBlock) {
                 // ASR 文本块
-                log.info("[{}] ASRStream输出 (Text): {}", env.getExtensionName(), asrTextBlock.getText());
+                log.info("[{}] ASRStream输出 text={} is_final={}", env.getExtensionName(), asrTextBlock.getText(), asrTextBlock.isFinal());
                 sendAsrTranscriptionOutput(env, asrTextBlock);
             }
         };
