@@ -24,7 +24,7 @@ public class ImageUtils {
             int expectedRgb = width * height * 3;
             int expectedRgba = width * height * 4;
 
-            log.info(
+            log.debug(
                 "[ImageUtils] Detecting image format: actualLen={}, width={}, height={}, expectedRGB={}, "
                     + "expectedRGBA={}, pixelFormat={}",
                 actualLen, width, height, expectedRgb, expectedRgba, pixelFormat);

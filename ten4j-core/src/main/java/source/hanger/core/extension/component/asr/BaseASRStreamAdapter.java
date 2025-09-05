@@ -118,7 +118,8 @@ public abstract class BaseASRStreamAdapter<RECOGNITION_RESULT> implements ASRStr
     public void onReconnect(TenEnv env) {
         // 为了避免和内部重试机制冲突，我们可以让它在特定条件下触发。
         reconnecting = true;
-        log.info("[{}] Starting external reconnection process.", env.getExtensionName());
+        log.info("[{}] Starting external reconnection process. channelId={}", env.getExtensionName(),
+            streamPipelineChannel.uuid());
         disposables.add(Flowable.timer(INITIAL_DELAY_MS, MILLISECONDS, Schedulers.io())
             .doOnComplete(() -> {
                 env.postTask(() -> {
