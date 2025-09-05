@@ -41,7 +41,7 @@ public class HttpCommandResultOutboundHandler extends MessageToMessageEncoder<Co
                     "command_id", msg.getOriginalCommandId(), // 修复: getCommandId() 改为 getOriginalCommandId()
                     "result", msg.isSuccess() ? msg.getDetail() : Map.of(), // 修复: getResult() 改为 getDetail(), 并根据
                                                                             // isSuccess() 判断
-                    "is_final", msg.isFinal(),
+                    "is_final", msg.getIsFinal(),
                     "message", msg.isSuccess() ? "Success" : msg.getDetail()); // 修复: getError() 改为 getDetail(), 并根据
                                                                                // isSuccess() 判断
 

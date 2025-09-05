@@ -9,7 +9,6 @@ import io.reactivex.Flowable;
 import io.reactivex.schedulers.Schedulers;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.pool2.impl.GenericObjectPool;
-import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.common.PipelinePacket;
 import source.hanger.core.extension.component.flush.InterruptionStateProvider;
@@ -19,6 +18,8 @@ import source.hanger.core.extension.component.tts.TTSAudioOutputBlock;
 import source.hanger.core.extension.dashscope.component.poolobject.CosyVoiceObjectPool;
 import source.hanger.core.message.Message;
 import source.hanger.core.tenenv.TenEnv;
+
+import static source.hanger.core.common.ExtensionConstants.*;
 
 /**
  * Cosy Voice TTS 流适配器，负责与 DashScope Cosy Voice TTS 服务进行交互并处理流式响应。
@@ -87,11 +88,9 @@ public class CosyVoiceTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthe
     @Override
     protected Flowable<PipelinePacket<OutputBlock>> transformSingleTTSResult(SpeechSynthesisResult result, Message originalMessage, TenEnv env) {
         if (result.getAudioFrame() != null && result.getAudioFrame().capacity() > 0) {
-            byte[] audioData = new byte[result.getAudioFrame().capacity()];
-            result.getAudioFrame().get(audioData); // 将 ByteBuffer 转换为 byte[]
-            TTSAudioOutputBlock block = new TTSAudioOutputBlock(audioData, originalMessage.getId(), 24000, 2, 1); // 假设采样率等信息
+            TTSAudioOutputBlock block = new TTSAudioOutputBlock(result.getAudioFrame(), originalMessage.getId(), 24000, 2, 1); // 假设采样率等信息
             log.info("[{}] TTS原始流处理开始. text={} originalId: {}", env.getExtensionName(),
-                originalMessage.getProperty(ExtensionConstants.DATA_OUT_PROPERTY_TEXT),
+                originalMessage.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse(""),
                 originalMessage.getId()); // 修改这里
             return Flowable.just(new PipelinePacket<>(block, originalMessage));
         } else {

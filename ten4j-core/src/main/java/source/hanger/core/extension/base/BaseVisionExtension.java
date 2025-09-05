@@ -140,7 +140,7 @@ public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLL
 
         @Override
         public LLMToolResult runTool(TenEnv env, Command command, Map<String, Object> args) {
-            String prompt = (String)command.getProperty(DATA_OUT_PROPERTY_TEXT);
+            String prompt = command.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse("");
             onUserTextInput(env, prompt, command);
             return LLMToolResult.noop("已分析摄像头实时画面");
         }

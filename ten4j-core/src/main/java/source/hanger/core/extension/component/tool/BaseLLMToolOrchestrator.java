@@ -84,12 +84,12 @@ public abstract class BaseLLMToolOrchestrator<MESSAGE, LLM_TOOL_FUNCTION> implem
         }
 
         // 构建 CMD_TOOL_CALL 命令
-        Command toolCallCommand = GenericCommand.create(CMD_TOOL_CALL);
-        toolCallCommand.setProperty(CMD_TOOL_CALL_PROPERTY_NAME, toolCallOutputBlock.getToolName());
-        toolCallCommand.setProperty(CMD_TOOL_CALL_PROPERTY_ARGUMENTS, toolCallOutputBlock.getArgumentsJson());
-        toolCallCommand.setProperty(CMD_TOOL_CALL_PROPERTY_TOOL_CALL_ID, toolCallOutputBlock.getId());
-        toolCallCommand.setProperty(DATA_OUT_PROPERTY_TEXT, originalMessage.getProperty(DATA_OUT_PROPERTY_TEXT));
-        toolCallCommand.setParentCommandId(originalMessage.getId()); // 关联原始消息
+        Command toolCallCommand = GenericCommand.createBuilder(CMD_TOOL_CALL, originalMessage.getId())
+            .property(CMD_TOOL_CALL_PROPERTY_NAME, toolCallOutputBlock.getToolName())
+            .property(CMD_TOOL_CALL_PROPERTY_ARGUMENTS, toolCallOutputBlock.getArgumentsJson())
+            .property(CMD_TOOL_CALL_PROPERTY_TOOL_CALL_ID, toolCallOutputBlock.getId())
+            .property(DATA_OUT_PROPERTY_TEXT, originalMessage.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse(""))
+            .build();
 
         llmContextManager.onAssistantMsg(createToolCallAssistantMessage(toolCallOutputBlock));
 
@@ -147,13 +147,13 @@ public abstract class BaseLLMToolOrchestrator<MESSAGE, LLM_TOOL_FUNCTION> implem
             } else if (cmdResults != null && !cmdResults.isEmpty()) {
                 // 找到最后一个 isCompleted=true 的 CommandResult，或者最后一个结果
                 CommandResult finalCmdResult = cmdResults.stream()
-                    .filter(CommandResult::isCompleted) // 优先找 isCompleted=true 的结果
+                    .filter(CommandResult::getIsCompleted) // 优先找 isCompleted=true 的结果
                     .findFirst() // 如果有多个，取第一个
                     .orElse(cmdResults.getLast()); // 如果没有 isCompleted=true，则取列表的最后一个
 
                 if (finalCmdResult.isSuccess()) {
                     String toolResultJson =
-                        finalCmdResult.getProperty(CMD_PROPERTY_RESULT, String.class);
+                        finalCmdResult.getPropertyString(CMD_PROPERTY_RESULT).orElse("");
                     log.info("[{}] 工具调用命令执行成功: toolName={}, result={}",
                         env.getExtensionName(), callOutputBlock.getToolName(), toolResultJson);
 

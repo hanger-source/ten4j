@@ -1,11 +1,10 @@
 package source.hanger.core.message;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Data;
+import io.netty.buffer.ByteBuf;
 import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
-import lombok.experimental.Accessors;
-
+import lombok.Getter;
+import lombok.experimental.SuperBuilder;
+import lombok.extern.slf4j.Slf4j;
 /**
  * 数据消息，对齐C/Python中的TEN_MSG_TYPE_DATA。
  *
@@ -22,9 +21,9 @@ import lombok.experimental.Accessors;
  * 不再需要自定义的 Jackson `JsonSerializer` 和 `JsonDeserializer`。
  */
 @EqualsAndHashCode(callSuper = true)
-@Data
-@NoArgsConstructor
-@Accessors(chain = true)
+@Slf4j
+@SuperBuilder(toBuilder = true)
+@Getter
 public class DataMessage extends Message {
 
     /**
@@ -32,13 +31,22 @@ public class DataMessage extends Message {
      * 对应C端 `ten_data_t` 结构体中的 `data` 字段。
      * C类型: `ten_value_t` (内部为 `buf`，即字节缓冲区)
      */
-    @JsonProperty("data")
-    private byte[] data;
+    private ByteBuf data;
 
     public static DataMessage create(String name) {
-        return (DataMessage)new DataMessage()
-            .setType(MessageType.DATA)
-            .setName(name)
-            .setTimestamp(System.currentTimeMillis());
+        return defaultMessage(DataMessage.builder())
+            .name(name)
+            .build();
+    }
+
+    public static DataMessageBuilder<?,?> createBuilder(String name) {
+        return defaultMessage(DataMessage.builder())
+            .name(name);
+
+    }
+
+    @Override
+    public MessageType getType() {
+        return MessageType.DATA;
     }
 }

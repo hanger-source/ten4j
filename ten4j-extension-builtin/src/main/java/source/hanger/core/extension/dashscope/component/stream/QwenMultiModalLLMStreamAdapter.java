@@ -17,6 +17,7 @@ import com.alibaba.dashscope.tools.ToolFunction;
 
 import io.reactivex.Flowable;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
 import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.flush.InterruptionStateProvider;
 import source.hanger.core.extension.component.llm.BaseLLMStreamAdapter;
@@ -60,7 +61,7 @@ public class QwenMultiModalLLMStreamAdapter
             .incrementalOutput(true)
             .messages(messages);
 
-        if (tools != null && !tools.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(tools)) {
             paramBuilder.tools(tools);
         }
 

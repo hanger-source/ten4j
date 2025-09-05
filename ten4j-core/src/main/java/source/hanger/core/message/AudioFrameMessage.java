@@ -1,16 +1,11 @@
 package source.hanger.core.message;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Data;
+import io.netty.buffer.ByteBuf;
 import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
-import lombok.SneakyThrows;
-import lombok.experimental.Accessors;
+import lombok.Getter;
+import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -39,10 +34,9 @@ import lombok.extern.slf4j.Slf4j;
  * 不再需要自定义的 Jackson `JsonSerializer` 和 `JsonDeserializer`。
  */
 @EqualsAndHashCode(callSuper = true)
-@Data
-@NoArgsConstructor
-@Accessors(chain = true)
 @Slf4j
+@SuperBuilder(toBuilder = true)
+@Getter
 public class AudioFrameMessage extends Message {
 
     /**
@@ -50,151 +44,70 @@ public class AudioFrameMessage extends Message {
      * 对应C端 `ten_audio_frame_t` 结构体中的 `timestamp` 字段。
      * 注意：这与 `Message` 基类中的 `timestamp` (消息发送时间) 不同，此为帧本身的媒体时间戳。
      */
-    @JsonProperty("timestamp")
-    private long frameTimestamp; // 重命名以避免与基类timestamp混淆，且更符合其含义
+    //@JsonProperty("timestamp")
+    private Long frameTimestamp; // 重命名以避免与基类timestamp混淆，且更符合其含义
 
     /**
      * 音频采样率（Hz）。
      */
-    @JsonProperty("sample_rate")
-    private int sampleRate;
+    //@JsonProperty("sample_rate")
+    private Integer sampleRate;
 
     /**
      * 每采样字节数。
      */
-    @JsonProperty("bytes_per_sample")
-    private int bytesPerSample;
+    //@JsonProperty("bytes_per_sample")
+    private Integer bytesPerSample;
 
     /**
      * 每声道采样数。
      */
-    @JsonProperty("samples_per_channel")
-    private int samplesPerChannel;
+    //@JsonProperty("samples_per_channel")
+    private Integer samplesPerChannel;
 
     /**
      * 声道数。
      */
-    @JsonProperty("number_of_channel")
-    private int numberOfChannel;
+    //@JsonProperty("number_of_channel")
+    private Integer numberOfChannel;
 
     /**
      * 声道布局ID (FFmpeg)。
      */
-    @JsonProperty("channel_layout")
-    private long channelLayout;
+    //@JsonProperty("channel_layout")
+    private Long channelLayout;
 
     /**
      * 音频数据格式。
+     * export enum AudioFrameDataFmt {
+     *   INTERLEAVE = 1,
+     *   NON_INTERLEAVE = 2,
+     * }
      */
-    @JsonProperty("data_fmt")
-    private int dataFormat;
+    //@JsonProperty("data_fmt")
+    private Integer dataFormat;
 
     /**
      * 实际的音频帧数据（字节缓冲区）。
      */
-    @JsonProperty("buf")
-    private byte[] buf;
+    //@JsonProperty("buf")
+    private ByteBuf buf;
 
     /**
      * 音频数据行大小。
      */
-    @JsonProperty("line_size")
-    private int lineSize;
+    //@JsonProperty("line_size")
+    private Integer lineSize;
 
     /**
      * 是否为文件结束（EOF）标记。
      */
-    @JsonProperty("is_eof")
-    private boolean isEof;
+    //@JsonProperty("is_eof")
+    private Boolean isEof;
 
-    /**
-     * 全参构造函数，用于创建音频帧消息。
-     */
-    public AudioFrameMessage(String id, Location srcLoc, MessageType type, List<Location> destLocs,
-        Map<String, Object> properties, long timestamp,
-        long frameTimestamp, int sampleRate, int bytesPerSample, int samplesPerChannel, int numberOfChannel,
-        long channelLayout, int dataFormat, byte[] buf, int lineSize, boolean isEof) {
-        super(id, type, srcLoc, destLocs, null, properties, timestamp); // 传入 null 作为 name
-        this.frameTimestamp = frameTimestamp;
-        this.sampleRate = sampleRate;
-        this.bytesPerSample = bytesPerSample;
-        this.samplesPerChannel = samplesPerChannel;
-        this.numberOfChannel = numberOfChannel;
-        this.channelLayout = channelLayout;
-        this.dataFormat = dataFormat;
-        this.buf = buf;
-        this.lineSize = lineSize;
-        this.isEof = isEof;
-    }
-
-    /**
-     * 简化构造函数，用于内部创建。
-     */
-    public AudioFrameMessage(String id, Location srcLoc, List<Location> destLocs, long frameTimestamp, int sampleRate,
-        int bytesPerSample, int samplesPerChannel, int numberOfChannel,
-        long channelLayout, int dataFormat, byte[] buf, int lineSize, boolean isEof) {
-        super(id, MessageType.AUDIO_FRAME, srcLoc, destLocs, null, Collections.emptyMap(),
-            System.currentTimeMillis()); // 传入
-        // null
-        // 作为
-        // name
-        this.frameTimestamp = frameTimestamp;
-        this.sampleRate = sampleRate;
-        this.bytesPerSample = bytesPerSample;
-        this.samplesPerChannel = samplesPerChannel;
-        this.numberOfChannel = numberOfChannel;
-        this.channelLayout = channelLayout;
-        this.dataFormat = dataFormat;
-        this.buf = buf;
-        this.lineSize = lineSize;
-        this.isEof = isEof;
-    }
-
-    /**
-     * 创建静音音频帧。
-     *
-     * @param id             消息ID
-     * @param srcLoc         源位置
-     * @param timestamp      消息时间戳
-     * @param durationMs     持续时长（毫秒）
-     * @param sampleRate     采样率
-     * @param channels       声道数
-     * @param bytesPerSample 每采样字节数
-     * @return 静音音频帧实例
-     */
-    public static AudioFrameMessage silence(String id, Location srcLoc, long timestamp, int durationMs, int sampleRate,
-        int channels, int bytesPerSample) {
-        int samplesPerChannel = (durationMs * sampleRate) / 1000;
-        int totalSamples = samplesPerChannel * channels;
-        byte[] silenceData = new byte[totalSamples * bytesPerSample];
-        // 默认为0，表示静音
-
-        return new AudioFrameMessage(id, srcLoc, MessageType.AUDIO_FRAME, Collections.emptyList(),
-            Map.of(), timestamp, // properties, timestamp
-            0L, sampleRate, bytesPerSample, samplesPerChannel, channels,
-            0L, 0, // channelLayout, dataFormat 默认值
-            silenceData, 0, false); // buf, lineSize, isEof 默认值
-    }
-
-    /**
-     * 创建EOF标记音频帧。
-     *
-     * @param id        消息ID
-     * @param srcLoc    源位置
-     * @param timestamp 消息时间戳
-     * @return EOF音频帧实例
-     */
-    public static AudioFrameMessage eof(String id, Location srcLoc, long timestamp) {
-        return new AudioFrameMessage(id, srcLoc, MessageType.AUDIO_FRAME, Collections.emptyList(),
-            Map.of(), timestamp, // properties, timestamp
-            0L, 0, 0, 0, 0, // frameTimestamp, sampleRate, bytesPerSample, samplesPerChannel,
-            // numberOfChannel
-            0L, 0, // channelLayout, dataFormat
-            new byte[0], 0, true); // buf, lineSize, isEof
-    }
-
-    public static AudioFrameMessage create(String name) {
-        return (AudioFrameMessage)new AudioFrameMessage().setName(name);
+    public static AudioFrameMessageBuilder<?, ?> createBuilder(String name) {
+        return Message.defaultMessage(AudioFrameMessage.builder())
+            .name(name);
     }
 
     /**
@@ -202,12 +115,14 @@ public class AudioFrameMessage extends Message {
      * 注意：此方法依赖于 `bytesPerSample` 和 `numberOfChannel`，如果这两个字段未正确设置，结果可能不准确。
      */
     public int calculateSamplesPerChannel() {
-        if (buf == null || buf.length == 0 || numberOfChannel <= 0 || bytesPerSample <= 0) {
-            return 0;
-        }
-        int totalBytes = buf.length;
-        int totalSamples = totalBytes / bytesPerSample; // 总采样点数
-        return totalSamples / numberOfChannel; // 每声道采样数
+        //if (buf == null || buf.length == 0 || numberOfChannel <= 0 || bytesPerSample <= 0) {
+        //    return 0;
+        //}
+        //int totalBytes = buf.length;
+        //int totalSamples = totalBytes / bytesPerSample; // 总采样点数
+        //return totalSamples / numberOfChannel; // 每声道采样数
+        // TODO
+        return 0;
     }
 
     /**
@@ -233,43 +148,8 @@ public class AudioFrameMessage extends Message {
         return sampleRate * numberOfChannel * bytesPerSample;
     }
 
-    /**
-     * 检查是否有音频数据。
-     */
-    @JsonProperty
-    public boolean hasData() {
-        return buf != null && buf.length > 0;
-    }
-
-    /**
-     * 检查是否为空音频帧。
-     */
-    @JsonProperty
-    public boolean isEmpty() {
-        return !hasData();
-    }
-
-    public boolean checkIntegrity() { // 移除 @Override
-        // 假设Message基类有一个checkIntegrity方法，或者在这里实现完整逻辑
-        return getId() != null && !getId().isEmpty() &&
-            validateAudioParameters();
-    }
-
-    /**
-     * 验证音频参数。
-     */
-    private boolean validateAudioParameters() {
-        return buf != null && sampleRate > 0 && numberOfChannel > 0 && bytesPerSample > 0;
-    }
-
-    @SneakyThrows
     @Override
-    public AudioFrameMessage clone() {
-        AudioFrameMessage audioFrameMessage = (AudioFrameMessage)super.clone();
-        // 实现深拷贝
-        return new AudioFrameMessage(getId(), getSrcLoc(), getDestLocs(),
-            frameTimestamp, sampleRate, bytesPerSample,
-            samplesPerChannel, numberOfChannel, channelLayout,
-            dataFormat, buf != null ? buf.clone() : null, lineSize, isEof);
+    public MessageType getType() {
+        return MessageType.AUDIO_FRAME;
     }
 }

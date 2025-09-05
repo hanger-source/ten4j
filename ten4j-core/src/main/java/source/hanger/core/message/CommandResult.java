@@ -1,18 +1,15 @@
 package source.hanger.core.message;
 
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
-import lombok.experimental.Accessors;
+import lombok.Getter;
+import lombok.experimental.SuperBuilder;
+import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.common.StatusCode;
 import source.hanger.core.message.command.Command;
-import source.hanger.core.util.MessageUtils;
 
 /**
  * {@code CommandResult} 类代表了 {@code Command} 命令的执行结果。
@@ -45,22 +42,21 @@ import source.hanger.core.util.MessageUtils;
  * 从而使调用者能够更好地理解命令的进度和最终状态，并进行相应的处理和资源管理。
  */
 @EqualsAndHashCode(callSuper = true)
-@Data
-@NoArgsConstructor
-@Accessors(chain = true)
+@Slf4j
+@SuperBuilder(toBuilder = true)
+@Getter
 public class CommandResult extends Message implements Cloneable { // 实现 Cloneable
 
-    // Getters for specific properties
-    @JsonProperty("original_cmd_id")
+    //@JsonProperty("original_cmd_id")
     private String originalCommandId;
 
-    @JsonProperty("original_cmd_type")
-    private MessageType originalCmdType; // 修改为 MessageType 类型
+    //@JsonProperty("original_cmd_type")
+    private MessageType originalCmdType;
 
-    @JsonProperty("original_cmd_name")
+    //@JsonProperty("original_cmd_name")
     private String originalCmdName;
 
-    @JsonProperty("status_code")
+    //@JsonProperty("status_code")
     private StatusCode statusCode; // 修改为 StatusCode 枚举类型
 
     /**
@@ -77,7 +73,7 @@ public class CommandResult extends Message implements Cloneable { // 实现 Clon
      * </ul>
      */
     @JsonProperty("is_final")
-    private boolean isFinal;
+    private Boolean isFinal;
 
     /**
      * 标记整个命令的生命周期是否已完全结束。
@@ -97,51 +93,7 @@ public class CommandResult extends Message implements Cloneable { // 实现 Clon
      * 但在更复杂的异步或分布式场景中，它们可能在时间上分离。
      */
     @JsonProperty("is_completed")
-    private boolean isCompleted;
-
-    // 兼容 Lombok @NoArgsConstructor 的全参构造函数（为了Jackson）
-    // 实际内部创建时使用自定义构造函数
-    public CommandResult(String id, Location srcLoc, MessageType type, List<Location> destLocs,
-            Map<String, Object> properties, long timestamp,
-            String originalCommandId, MessageType originalCmdType, String originalCmdName, StatusCode statusCode, // 修改类型
-            boolean isFinal, boolean isCompleted) {
-        super(id, type, srcLoc, destLocs, null, properties, timestamp); // 传入 null 作为 name
-        this.originalCommandId = originalCommandId;
-        this.originalCmdType = originalCmdType;
-        this.originalCmdName = originalCmdName;
-        this.statusCode = statusCode;
-        this.isFinal = isFinal;
-        this.isCompleted = isCompleted;
-    }
-
-    // 用于内部创建的简化构造函数，匹配新的 Message 基类构造
-    // 此构造函数将不再对外直接暴露，而是通过静态工厂方法调用
-    private CommandResult(String originalCommandId, MessageType originalCmdType, String originalCmdName,
-            StatusCode statusCode, String detailOrError, boolean isFinal, boolean isCompleted) {
-        super(MessageUtils.generateUniqueId(), MessageType.CMD_RESULT, new Location(), Collections.emptyList()); // 自动生成
-        // id，默认
-        // srcLoc
-        // 和
-        // destLocs
-        this.originalCommandId = originalCommandId;
-        this.originalCmdType = originalCmdType;
-        this.originalCmdName = originalCmdName;
-        this.statusCode = statusCode;
-        this.isFinal = isFinal;
-        this.isCompleted = isCompleted;
-
-        // 根据状态码，将 detailOrError 放入不同的 properties 键中
-        if (detailOrError != null) {
-            if (statusCode == StatusCode.OK) {
-                getProperties().put("detail", detailOrError);
-            } else if (statusCode == StatusCode.ERROR) {
-                getProperties().put("error_message", detailOrError); // 错误消息放入 error_message 键
-            } else {
-                // 对于其他状态码，默认放入 detail，或者根据需要处理
-                getProperties().put("detail", detailOrError);
-            }
-        }
-    }
+    private Boolean isCompleted;
 
     /**
      * 从一个原始命令创建 CommandResult 的基础工厂方法。
@@ -154,20 +106,42 @@ public class CommandResult extends Message implements Cloneable { // 实现 Clon
      */
     private static CommandResult fromCommand(Command originalCommand, StatusCode statusCode, String detailOrError) {
         Objects.requireNonNull(originalCommand, "Original command cannot be null.");
-        return new CommandResult(
-                originalCommand.getId(),
-                originalCommand.getType(), // 原始命令的类型
-                originalCommand.getName(), // 原始命令的名称
-                statusCode,
-                detailOrError,
-                true, // 假设结果是最终的
-                true); // 假设结果是完成的
+        CommandResultBuilder<?, ?> builder = Message.defaultMessage(CommandResult.builder())
+            .originalCommandId(originalCommand.getId())
+            .originalCmdType(originalCommand.getType())
+            .originalCmdName(originalCommand.getName())
+            .name("%s_result".formatted(originalCommand.getName()))
+            .statusCode(statusCode)
+            .isFinal(true)
+            .isCompleted(true)
+            .property("detail", detailOrError);
+
+        // 根据状态码，将 detailOrError 放入不同的 properties 键中
+        if (detailOrError != null) {
+            if (statusCode == StatusCode.OK) {
+                builder.property("detail", detailOrError);
+            } else if (statusCode == StatusCode.ERROR) {
+                builder.property("error_message", detailOrError);// 错误消息放入 error_message 键
+            } else {
+                // 对于其他状态码，默认放入 detail，或者根据需要处理
+                builder.property("detail", detailOrError);
+            }
+        }
+        return builder.build();
     }
 
     public static CommandResult success(String originalCommandId, MessageType originalCmdType, String originalCmdName,
             String detail) {
-        return new CommandResult(originalCommandId, originalCmdType, originalCmdName, StatusCode.OK, detail, true, true); // 使用
-        // StatusCode.OK
+        return Message.defaultMessage(CommandResult.builder())
+            .originalCommandId(originalCommandId)
+            .originalCmdType(originalCmdType)
+            .originalCmdName(originalCmdName)
+            .name("%s_result".formatted(originalCmdName))
+            .statusCode(StatusCode.OK)
+            .isFinal(true)
+            .isCompleted(true)
+            .property("detail", detail)
+            .build();
     }
 
     // 重载的 success 方法，从 Command 对象构建
@@ -176,30 +150,33 @@ public class CommandResult extends Message implements Cloneable { // 实现 Clon
     }
 
     // 新增：支持 properties 的 success 方法
-    public static CommandResult success(String originalCommandId, MessageType originalCmdType, String originalCmdName,
+    public static CommandResult success(Command originalCommand,
             String detail, Map<String, Object> properties) {
-        CommandResult result = new CommandResult(originalCommandId, originalCmdType, originalCmdName, StatusCode.OK,
-                detail, true, true);
-        if (properties != null) {
-            result.getProperties().putAll(properties);
-        }
-        return result;
-    }
-
-    // 新增：支持 properties 的 success 方法，从 Command 对象构建
-    public static CommandResult success(Command originalCommand, String detail, Map<String, Object> properties) {
-        CommandResult result = fromCommand(originalCommand, StatusCode.OK, detail);
-        if (properties != null) {
-            result.getProperties().putAll(properties);
-        }
-        return result;
+        return Message.defaultMessage(CommandResult.builder())
+            .originalCommandId(originalCommand.getId())
+            .originalCmdType(originalCommand.getType())
+            .originalCmdName(originalCommand.getName())
+            .name("%s_result".formatted(originalCommand.getName()))
+            .statusCode(StatusCode.OK)
+            .isFinal(true)
+            .isCompleted(true)
+            .properties(properties)
+            .property("detail", detail)
+            .build();
     }
 
     public static CommandResult fail(String originalCommandId, MessageType originalCmdType, String originalCmdName,
             String errorMessage) {
-        return new CommandResult(originalCommandId, originalCmdType, originalCmdName, StatusCode.ERROR,
-                errorMessage, true, true); // 使用
-        // StatusCode.ERROR
+        return Message.defaultMessage(CommandResult.builder())
+            .originalCommandId(originalCommandId)
+            .originalCmdType(originalCmdType)
+            .originalCmdName(originalCmdName)
+            .name("%s_result".formatted(originalCmdName))
+            .statusCode(StatusCode.ERROR)
+            .isFinal(true)
+            .isCompleted(true)
+            .property("error_message", errorMessage)
+            .build();
     }
 
     // 重载的 fail 方法，从 Command 对象构建
@@ -226,6 +203,11 @@ public class CommandResult extends Message implements Cloneable { // 实现 Clon
             return getProperties().get("payload");
         }
         return null;
+    }
+
+    @Override
+    public MessageType getType() {
+        return MessageType.CMD_RESULT;
     }
 
     // 重写 clone 方法以支持深拷贝或浅拷贝（取决于需求），这里提供浅拷贝示例

@@ -84,7 +84,7 @@ public abstract class BaseTurnDetectionExtension<MESSAGE> extends BaseExtension 
             log.info("[{}] 收到来自 {} CMD_FLUSH 命令，执行刷新操作并重置历史。", env.getExtensionName(),
                 command.getSrcLoc().getExtensionName());
             flushOperationCoordinator.triggerFlush(env);
-            env.sendCmd(GenericCommand.create(CMD_OUT_FLUSH, command.getId(), command.getType()));
+            env.sendCmd(GenericCommand.create(CMD_OUT_FLUSH, command.getId()));
         }
     }
 
@@ -105,7 +105,7 @@ public abstract class BaseTurnDetectionExtension<MESSAGE> extends BaseExtension 
         }
 
         String inputText = data.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse("");
-        Boolean isFinal = data.getPropertyBool(DATA_OUT_PROPERTY_IS_FINAL).orElse(false);
+        Boolean isFinal = data.getPropertyBoolean(DATA_OUT_PROPERTY_IS_FINAL).orElse(false);
 
         log.info("[{}] on_data text: {} is_final: {}", env.getExtensionName(), inputText, isFinal);
 
@@ -179,9 +179,10 @@ public abstract class BaseTurnDetectionExtension<MESSAGE> extends BaseExtension 
 
         log.debug("[{}] end_of_turn, send new turn {}", env.getExtensionName(), text);
 
-        DataMessage outData = DataMessage.create(TEXT_DATA_OUT_NAME);
-        outData.setProperty(DATA_OUT_PROPERTY_TEXT, text);
-        outData.setProperty(DATA_OUT_PROPERTY_IS_FINAL, true);
+        DataMessage outData = DataMessage.createBuilder(TEXT_DATA_OUT_NAME)
+            .property(DATA_OUT_PROPERTY_TEXT, text)
+            .property(DATA_OUT_PROPERTY_IS_FINAL, true)
+            .build();
         env.sendMessage(outData);
     }
 

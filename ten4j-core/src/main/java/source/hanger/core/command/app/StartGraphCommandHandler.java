@@ -27,6 +27,8 @@ import source.hanger.core.remote.Remote;
 import source.hanger.core.tenenv.TenEnvProxy;
 import source.hanger.core.util.IdGenerator;
 
+import static source.hanger.core.common.ExtensionConstants.CMD_IN_ON_USER_JOINED;
+
 /**
  * `StartGraphCommandHandler` 处理 `StartGraphCommand` 命令，负责启动 Engine。
  */
@@ -176,17 +178,13 @@ public class StartGraphCommandHandler implements AppCommandHandler {
             CommandResult successResult;
             if (engineNewlyStarted) {
                 successResult = CommandResult.success(
-                    command.getId(),
-                    command.getType(),
-                    command.getName(),
+                    command,
                     "Engine %s started successfully.".formatted(graphId),
                     properties // 传递 properties
                 );
             } else {
                 successResult = CommandResult.success(
-                    command.getId(),
-                    command.getType(),
-                    command.getName(),
+                    command,
                     "Engine %s already running, connection attached.".formatted(graphId),
                     properties // 传递 properties
                 );
@@ -198,9 +196,7 @@ public class StartGraphCommandHandler implements AppCommandHandler {
 
     private void sendUserJoinedCommand(Engine engine, Connection connection, Command command) {
         if (connection != null) {
-            Command userJoinedCommand = new GenericCommand(IdGenerator.generateShortId(),
-                ExtensionConstants.CMD_IN_ON_USER_JOINED, null);
-            userJoinedCommand.setParentCommandId(command.getId());
+            Command userJoinedCommand = GenericCommand.create(CMD_IN_ON_USER_JOINED, command.getId());
             userJoinedCommand.setSrcLoc(new Location(connection.getUri(), engine.getGraphId(), null));
             userJoinedCommand.setDestLocs(List.of(new Location(engine.getApp().getAppUri(), engine.getGraphId(),
                 "client_connection")));

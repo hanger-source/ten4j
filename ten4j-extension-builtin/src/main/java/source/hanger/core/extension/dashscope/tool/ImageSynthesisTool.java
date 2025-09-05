@@ -41,11 +41,13 @@ public class ImageSynthesisTool implements LLMTool {
     }
 
     private static void sendImageData(TenEnv tenEnv, Command command, String imageUrl) {
-        DataMessage dataMessage = DataMessage.create(CONTENT_DATA_OUT_NAME);
-        dataMessage.setProperty(DATA_OUT_PROPERTY_ROLE, "assistant");
-        dataMessage.setProperty("data", imageUrl);
-        dataMessage.setProperty("type", "image_url");
-        dataMessage.setProperty("group_timestamp", command.getTimestamp());
+        DataMessage dataMessage = DataMessage.createBuilder(CONTENT_DATA_OUT_NAME)
+            .property(DATA_OUT_PROPERTY_ROLE, "assistant")
+            .property("data", imageUrl)
+            .property("type", "image_url")
+            .property("group_timestamp", command.getTimestamp())
+            .build();
+
         tenEnv.sendData(dataMessage);
     }
 

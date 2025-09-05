@@ -1,5 +1,6 @@
 package source.hanger.core.extension.dashscope.component.stream;
 
+import java.nio.ByteBuffer;
 import java.util.Base64;
 
 import com.alibaba.dashscope.aigc.multimodalconversation.AudioParameters;
@@ -63,7 +64,7 @@ public class QwenTTSStreamAdapter extends BaseTTSStreamAdapter<MultiModalConvers
             byte[] audioData = Base64.getDecoder().decode(result.getOutput().getAudio().getData());
             // 这里将音频数据封装成一个 OutputBlock，具体类型需要根据实际定义
             // 假设我们有一个 AudioOutputBlock，或者直接使用通用 OutputBlock 包含音频数据
-            TTSAudioOutputBlock block = new TTSAudioOutputBlock(audioData, originalMessage.getId(), 24000, 2, 1);
+            TTSAudioOutputBlock block = new TTSAudioOutputBlock(ByteBuffer.wrap(audioData), originalMessage.getId(), 24000, 2, 1);
             return Flowable.just(new PipelinePacket<>(block, originalMessage));
         } else {
             return null;

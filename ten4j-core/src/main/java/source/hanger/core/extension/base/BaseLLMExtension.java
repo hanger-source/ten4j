@@ -116,7 +116,7 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
         }
 
         String userText = dataMessage.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse("");
-        if (!dataMessage.getPropertyBool(DATA_OUT_PROPERTY_IS_FINAL).orElse(false)) {
+        if (!dataMessage.getPropertyBoolean(DATA_OUT_PROPERTY_IS_FINAL).orElse(false)) {
             log.info("[{}] LLM扩展收到非最终数据: text={}", env.getExtensionName(), userText);
             return;
         }
@@ -153,7 +153,7 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
         if (CMD_TOOL_REGISTER.equals(command.getName())) {
             try {
                 // 工具元数据
-                String toolJson = (String)command.getProperty(CMD_PROPERTY_TOOL);
+                String toolJson = command.getPropertyString(CMD_PROPERTY_TOOL).orElse(null);
                 LLMToolMetadata LLMToolMetadata = objectMapper.readValue(toolJson, LLMToolMetadata.class);
                 LLMToolOrchestrator.registerTool(LLMToolMetadata);
             } catch (JsonProcessingException e) {
@@ -166,7 +166,7 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
             log.info("[{}] 收到来自 {} CMD_FLUSH 命令，执行刷新操作并重置历史。", env.getExtensionName(),
                 command.getSrcLoc().getExtensionName());
             flushOperationCoordinator.triggerFlush(env);
-            env.sendCmd(GenericCommand.create(CMD_OUT_FLUSH, command.getId(), command.getType()));
+            env.sendCmd(GenericCommand.create(CMD_OUT_FLUSH, command.getId()));
             return;
         }
     }

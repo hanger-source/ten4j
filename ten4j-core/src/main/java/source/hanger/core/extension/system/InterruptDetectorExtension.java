@@ -11,7 +11,7 @@ import source.hanger.core.message.DataMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.message.command.GenericCommand;
 import source.hanger.core.tenenv.TenEnv;
-import source.hanger.core.util.MessageUtils;
+import source.hanger.core.util.IdGenerator;
 
 import static source.hanger.core.common.ExtensionConstants.ASR_DATA_OUT_NAME;
 import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_IS_FINAL;
@@ -72,18 +72,9 @@ public class InterruptDetectorExtension extends BaseExtension {
         // Then forward the original command to downstream
         try {
             // Use GenericCommand to forward the original command
-            GenericCommand newCmd = new GenericCommand(
-                MessageUtils.generateUniqueId(), // New ID for the forwarded command
-                command.getType(),
-                command.getSrcLoc(),
-                command.getDestLocs(),
-                command.getName(),
-                command.getParentCommandId());
-            // Copy properties from original command to new command
-            if (command.getProperties() != null) {
-                newCmd.setProperties(command.getProperties());
-            }
-
+            GenericCommand newCmd = ((GenericCommand)command).toBuilder()
+                .id(IdGenerator.generateShortId())
+                .build();
             env.sendCmd(newCmd);
             log.info("[{}] Forwarded command: {}",env.getExtensionName(), newCmd.getName());
         } catch (Exception e) {
@@ -101,15 +92,8 @@ public class InterruptDetectorExtension extends BaseExtension {
 
         if (TEXT_DATA_OUT_NAME.equals(data.getName())
             || ASR_DATA_OUT_NAME.equals(data.getName())) { // Check for text_data
-            String text = (String)data.getProperty(DATA_OUT_PROPERTY_TEXT);
-            Boolean isFinal = (Boolean)data.getProperty(DATA_OUT_PROPERTY_IS_FINAL);
-
-            if (text == null) {
-                text = "";
-            }
-            if (isFinal == null) {
-                isFinal = false;
-            }
+            String text = data.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse("");
+            Boolean isFinal = data.getPropertyBoolean(DATA_OUT_PROPERTY_IS_FINAL).orElse(false);
 
             log.debug("[{}] {}: {} {}: {}", env.getExtensionName(), DATA_OUT_PROPERTY_TEXT, text,
                 DATA_OUT_PROPERTY_IS_FINAL,
@@ -130,6 +114,6 @@ public class InterruptDetectorExtension extends BaseExtension {
         // Forward the original data message to downstream
         env.sendMessage(data);
         log.info("[{}] Forwarded data message: {} with text: {} and final: {}", env.getExtensionName(),
-            data.getName(), data.getProperty(DATA_OUT_PROPERTY_TEXT), data.getProperty(DATA_OUT_PROPERTY_IS_FINAL));
+            data.getName(), data.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse(""), data.getPropertyBoolean(DATA_OUT_PROPERTY_IS_FINAL).orElse(false));
     }
 }

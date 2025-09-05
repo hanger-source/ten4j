@@ -1,16 +1,13 @@
 package source.hanger.core.message.command;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
-import source.hanger.core.message.Location;
+import lombok.Getter;
+import lombok.experimental.SuperBuilder;
+import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.message.MessageType;
-import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
-import lombok.experimental.Accessors;
+
+import static source.hanger.core.message.MessageType.CMD_TIMEOUT;
 
 /**
  * 超时命令消息，对齐C/Python中的TEN_MSG_TYPE_CMD_TIMEOUT。
@@ -28,9 +25,9 @@ import lombok.experimental.Accessors;
  * 不再需要自定义的 Jackson `JsonSerializer` 和 `JsonDeserializer`。
  */
 @EqualsAndHashCode(callSuper = true)
-@Data
-@NoArgsConstructor
-@Accessors(chain = true)
+@Slf4j
+@SuperBuilder(toBuilder = true)
+@Getter
 public class TimeoutCommand extends Command {
 
     /**
@@ -40,34 +37,8 @@ public class TimeoutCommand extends Command {
     @JsonProperty("timer_id")
     private Long timerId;
 
-    /**
-     * 全参构造函数，用于创建超时命令消息。
-     *
-     * @param id         消息ID。
-     * @param srcLoc     源位置。
-     * @param destLocs   目的位置。
-     * @param properties 消息属性。
-     * @param timestamp  消息时间戳。
-     * @param timerId    定时器ID。
-     */
-    public TimeoutCommand(String id, Location srcLoc, List<Location> destLocs,
-            Map<String, Object> properties, long timestamp, Long timerId) {
-        super(id, srcLoc, MessageType.CMD_TIMEOUT, destLocs, properties, timestamp, MessageType.CMD_TIMER.name());
-        this.timerId = timerId;
+    @Override
+    public MessageType getType() {
+        return CMD_TIMEOUT;
     }
-
-    /**
-     * 用于内部创建的简化构造函数。
-     *
-     * @param id       消息ID。
-     * @param srcLoc   源位置。
-     * @param destLocs 目的位置。
-     * @param timerId  定时器ID。
-     */
-    public TimeoutCommand(String id, Location srcLoc, List<Location> destLocs, Long timerId) {
-        super(id, srcLoc, MessageType.CMD_TIMEOUT, destLocs, Collections.emptyMap(),
-            System.currentTimeMillis(), MessageType.CMD_TIMEOUT.name());
-        this.timerId = timerId;
-    }
-
 }

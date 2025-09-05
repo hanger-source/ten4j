@@ -466,11 +466,11 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
 
                 if (handle != null) {
                     log.debug("[{}] App {}：提交 CommandResult {} 到 CommandExecutionHandle。isFinal={}, isCompleted={}",
-                        "CommandResultProcessor", appUri, commandResult.getId(), commandResult.isFinal(), commandResult.isCompleted());
+                        "CommandResultProcessor", appUri, commandResult.getId(), commandResult.getIsFinal(), commandResult.getIsCompleted());
                     handle.submit(commandResult);
 
                     // 如果命令结果表示已完成或出错，则关闭 CommandExecutionHandle
-                    if (commandResult.isCompleted() || commandResult.getStatusCode() == StatusCode.ERROR) {
+                    if (commandResult.getIsCompleted() || commandResult.getStatusCode() == StatusCode.ERROR) {
                         log.info("[{}] App {}：CommandResult {} 表示命令已完成或出错，关闭 CommandExecutionHandle。",
                             "CommandResultProcessor", appUri, commandResult.getId());
                         commandHandles.remove(originalCommandId); // 移除 handle

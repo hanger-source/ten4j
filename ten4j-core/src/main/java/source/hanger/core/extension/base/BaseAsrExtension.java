@@ -1,6 +1,5 @@
 package source.hanger.core.extension.base;
 
-import java.nio.ByteBuffer;
 import java.util.Map;
 
 import io.reactivex.disposables.CompositeDisposable;
@@ -15,6 +14,7 @@ import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.MessageType;
 import source.hanger.core.tenenv.TenEnv;
+import source.hanger.core.util.ByteBufUtils;
 import source.hanger.core.util.MessageUtils;
 
 import static source.hanger.core.extension.component.output.MessageOutputSender.sendAsrTranscriptionOutput;
@@ -60,7 +60,7 @@ public abstract class BaseAsrExtension extends BaseExtension {
                 env.getExtensionName(), audioFrame.getId());
             return;
         }
-        asrStreamAdapter.onRequestAudioInput(env, ByteBuffer.wrap(audioFrame.getBuf()));
+        asrStreamAdapter.onRequestAudioInput(env, ByteBufUtils.toByteBuffer(audioFrame.getBuf()));
     }
 
     protected void sendAsrError(TenEnv env, String messageId, MessageType messageType, String messageName,

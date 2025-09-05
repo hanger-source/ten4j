@@ -1,17 +1,17 @@
 package source.hanger.core.message.command;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
+import lombok.experimental.SuperBuilder;
+import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.message.Location;
+import source.hanger.core.message.Message;
 import source.hanger.core.message.MessageType;
-import source.hanger.core.util.MessageUtils;
-import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
-import lombok.experimental.Accessors;
+
+import static source.hanger.core.message.MessageType.CMD_STOP_GRAPH;
 
 /**
  * 停止图命令消息，对齐C/Python中的TEN_MSG_TYPE_CMD_STOP_GRAPH。
@@ -29,9 +29,9 @@ import lombok.experimental.Accessors;
  * 不再需要自定义的 Jackson `JsonSerializer` 和 `JsonDeserializer`，因为其字段可以直接映射。
  */
 @EqualsAndHashCode(callSuper = true)
-@Data
-@NoArgsConstructor
-@Accessors(chain = true)
+@Slf4j
+@Getter
+@SuperBuilder(toBuilder = true)
 public class StopGraphCommand extends Command {
 
     /**
@@ -41,35 +41,17 @@ public class StopGraphCommand extends Command {
     @JsonProperty("graph_id")
     private String graphId;
 
-    /**
-     * 全参构造函数，用于创建停止图命令消息。
-     *
-     * @param id         消息ID。
-     * @param srcLoc     源位置。
-     * @param destLocs   目的位置。
-     * @param properties 消息属性。
-     * @param timestamp  消息时间戳。
-     * @param graphId    图ID。
-     */
-    public StopGraphCommand(String id, Location srcLoc, List<Location> destLocs,
-            Map<String, Object> properties, long timestamp, String graphId) {
-        super(id, srcLoc, MessageType.CMD_STOP_GRAPH, destLocs, properties,
-            timestamp, MessageType.CMD_STOP_GRAPH.name()); // 修正为调用 Command 的构造函数
-        this.graphId = graphId;
+    public static StopGraphCommand create(Location srcLoc, List<Location> destLocs, String graphId) {
+        return Message.defaultMessage(StopGraphCommand.builder())
+            .name(CMD_STOP_GRAPH.name())
+            .srcLoc(srcLoc)
+            .destLocs(destLocs)
+            .graphId(graphId)
+            .build();
     }
 
-    /**
-     * 用于内部创建的简化构造函数。
-     *
-     * @param srcLoc   源位置。
-     * @param destLocs 目的位置。
-     * @param graphId  图ID。
-     */
-    public StopGraphCommand(Location srcLoc, List<Location> destLocs, String graphId) {
-        super(MessageUtils.generateUniqueId(), srcLoc, MessageType.CMD_STOP_GRAPH, destLocs,
-            Collections.emptyMap(), System.currentTimeMillis(),
-            MessageType.CMD_STOP_GRAPH.name());
-        this.graphId = graphId;
+    @Override
+    public MessageType getType() {
+        return CMD_STOP_GRAPH;
     }
-
 }

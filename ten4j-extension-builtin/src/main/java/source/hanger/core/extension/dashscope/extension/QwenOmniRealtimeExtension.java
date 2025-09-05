@@ -10,10 +10,12 @@ import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.reactivex.Flowable;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.base.BaseRealtimeExtension;
 import source.hanger.core.extension.dashscope.client.realtime.QwenOmniRealtimeClient;
 import source.hanger.core.extension.dashscope.client.realtime.events.ConnectionClosedEvent;
@@ -58,6 +60,8 @@ import source.hanger.core.message.command.Command;
 import source.hanger.core.message.command.GenericCommand;
 import source.hanger.core.tenenv.TenEnv;
 import source.hanger.core.util.IdGenerator;
+
+import static source.hanger.core.common.ExtensionConstants.*;
 
 /**
  * Qwen Omni Realtime 扩展实现。
@@ -161,7 +165,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension<RealtimeEve
                 try {
                     // Python: env.send_data(Data.create("append", content=message))
                     DataMessage dataMessage = DataMessage.create("append");
-                    dataMessage.setData(objectMapper.writeValueAsBytes(message));
+                    //dataMessage.setData(objectMapper.writeValueAsBytes(message));
                     env.sendData(dataMessage);
                     log.debug("[{}] Sent Data.create(\"append\") for chat memory.", env.getExtensionName());
                 } catch (Exception e) {
@@ -285,11 +289,11 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension<RealtimeEve
     }
 
     @Override
-    protected void onSendAudioToRealtime(TenEnv env, byte[] audioData, Message originalMessage) {
+    protected void onSendAudioToRealtime(TenEnv env, ByteBuf audioData, Message originalMessage) {
         if (realtimeClient != null && realtimeClient.isConnected()) {
             try {
-                log.debug("[{}] Sending audio frame size: {}", env.getExtensionName(), audioData.length);
-                String audioBase64 = java.util.Base64.getEncoder().encodeToString(audioData);
+                log.debug("[{}] Sending audio frame size: {}", env.getExtensionName(), audioData.arrayOffset());
+                String audioBase64 = java.util.Base64.getEncoder().encodeToString(ByteBufUtil.getBytes(audioData));
 
                 realtimeClient.getConversation().appendAudio(audioBase64);
             } catch (Exception e) {
@@ -401,10 +405,10 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension<RealtimeEve
         // Handle specific commands related to Realtime API, e.g., user join/leave
         String commandName = command.getName();
         switch (commandName) {
-            case ExtensionConstants.CMD_IN_ON_USER_JOINED:
+            case CMD_IN_ON_USER_JOINED:
                 handleUserJoined(env, command);
                 break;
-            case ExtensionConstants.CMD_IN_ON_USER_LEFT:
+            case CMD_IN_ON_USER_LEFT:
                 handleUserLeft(env, command);
                 break;
             default:
@@ -582,7 +586,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension<RealtimeEve
         byte[] audioData = java.util.Base64.getDecoder().decode(event.getDelta());
         // Assuming 24000 sample rate, 2 bytes per sample, 1 channel for now based on
         // Python config
-        sendAudioOutput(env, eventId, responseId, audioData, sampleRate, 2, 1);
+        sendAudioOutput(env, eventId, responseId, Unpooled.wrappedBuffer(audioData), sampleRate, 2, 1);
         log.debug("[{}] Response Audio Delta received: eventId={}, responseId={}, size={}", env.getExtensionName(),
             eventId, responseId, audioData.length);
     }
@@ -736,18 +740,17 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension<RealtimeEve
             Map<String, Object> argumentsMap = objectMapper.readValue(arguments.toString(), new TypeReference<>() {});
 
             // 2. Create and send CMD_TOOL_CALL command to TenEnv
-            Command toolCallCommand = GenericCommand.create(ExtensionConstants.CMD_TOOL_CALL);
-            toolCallCommand.getProperties().put(ExtensionConstants.CMD_TOOL_CALL_PROPERTY_NAME,
-                "%s::%s".formatted(toolName, functionName));
-            toolCallCommand.getProperties().put(ExtensionConstants.CMD_TOOL_CALL_PROPERTY_ARGUMENTS, arguments);
+            String originalMessageId = originalMessage != null ? originalMessage.getId() : IdGenerator.generateShortId();
+
+            Command toolCallCommand = GenericCommand.createBuilder(CMD_TOOL_CALL, originalMessageId)
+                .property(CMD_TOOL_CALL_PROPERTY_NAME, "%s::%s".formatted(toolName, functionName))
+                .property(CMD_TOOL_CALL_PROPERTY_ARGUMENTS, arguments)
+                .id(originalMessageId)
+                .build();
 
             // If originalMessage is null, generate a dummy ID for command result
             // association.
-            String originalMessageId = originalMessage != null ? originalMessage.getId() : IdGenerator.generateShortId()
-                .toString();
             toolCallCommand.setId(originalMessageId);
-            toolCallCommand.setParentCommandId(originalMessageId);
-
             env.sendCmd(toolCallCommand); // env.sendCmd returns void
 
             // For now, assume success and retrieve result later if needed or via a callback
@@ -823,7 +826,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension<RealtimeEve
         lastContentIndex = 0;
 
         if (serverVad) {
-            Command flushCommand = GenericCommand.create(ExtensionConstants.CMD_IN_FLUSH);
+            Command flushCommand = GenericCommand.create(CMD_IN_FLUSH);
             try {
                 env.sendCmd(flushCommand);
                 log.info("[{}] Sent flush command due to server VAD speech started.", env.getExtensionName());

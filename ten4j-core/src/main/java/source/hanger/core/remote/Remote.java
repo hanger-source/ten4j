@@ -1,7 +1,5 @@
 package source.hanger.core.remote;
 
-import java.util.Collections;
-
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.app.MessageReceiver;
@@ -11,7 +9,8 @@ import source.hanger.core.message.Location;
 import source.hanger.core.message.Message;
 import source.hanger.core.message.command.StopGraphCommand;
 import source.hanger.core.runloop.Runloop;
-import java.util.concurrent.CompletableFuture; 
+
+import static java.util.Collections.*;
 
 /**
  * Remote 代表 TEN Framework 中的一个远程实体（例如另一个 App 或客户端）。
@@ -131,9 +130,8 @@ public class Remote implements MessageReceiver {
             // 这里的 graphId 应该就是当前 Remote 所关联的 Engine 的 graphId
             Location destLoc = new Location().setAppUri(engine.getApp().getAppUri()).setGraphId(engine.getGraphId());
             Location srcLoc = new Location().setAppUri(engine.getApp().getAppUri()).setGraphId(engine.getGraphId());
-            StopGraphCommand stopGraphCommand = new StopGraphCommand(srcLoc,
-                Collections.singletonList(destLoc), engine.getGraphId()); // 传递 graphId 给命令
-
+            StopGraphCommand stopGraphCommand = StopGraphCommand.create(srcLoc,
+                singletonList(destLoc), engine.getGraphId()); // 传递 graphId 给命令
             // 通过 App 的 submitCommand 方法发送命令
             // 确保 App 能够处理 StopGraphCommand
             engine.getApp().submitCommand(stopGraphCommand);

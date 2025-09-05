@@ -4,6 +4,7 @@ import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.base.BaseExtension;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
@@ -188,10 +189,12 @@ public class EchoExtension extends BaseExtension { // Extend BaseExtension
                 Thread.sleep(30);
 
                 // 创建回显数据
-                DataMessage echoData = DataMessage.create("text_data");
-                echoData.setProperty("original_data_name", data.getName());
-                echoData.setProperty("role", "assistant");
-                echoData.setProperty("text", "Echo: Hello %s".formatted(data.getProperty("text")));
+                DataMessage echoData = DataMessage.createBuilder(ExtensionConstants.TEXT_DATA_OUT_NAME)
+                        .property("original_data_name", data.getName())
+                        .property("role", "assistant")
+                        .property("text", "Echo: %s".formatted(
+                        data.getPropertyString(ExtensionConstants.DATA_OUT_PROPERTY_TEXT).orElse("")))
+                        .build();
 
                 // 设置目标位置（如果有的话）
                 if (data.getDestLocs() != null && !data.getDestLocs().isEmpty()) { // 修正为 getDestLocs()
@@ -240,8 +243,8 @@ public class EchoExtension extends BaseExtension { // Extend BaseExtension
         }
 
         messageCount++;
-        log.debug("EchoExtension收到视频帧: extensionName={}, frameName={}, frameSize={}, width={}, height={}",
-            env.getExtensionName(), videoFrame.getName(), videoFrame.getDataBytes().length,
+        log.debug("EchoExtension收到视频帧: extensionName={}, frameName={}, frameSize={}, height={}",
+            env.getExtensionName(), videoFrame.getName(),
             videoFrame.getWidth(), videoFrame.getHeight());
 
         // 视频帧通常不需要回显，只记录信息

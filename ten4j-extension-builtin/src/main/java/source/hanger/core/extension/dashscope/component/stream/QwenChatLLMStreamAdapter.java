@@ -18,6 +18,7 @@ import com.alibaba.dashscope.tools.ToolFunction;
 
 import io.reactivex.Flowable;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.component.common.OutputBlock;
@@ -82,7 +83,7 @@ public class QwenChatLLMStreamAdapter extends BaseLLMStreamAdapter<GenerationRes
                 .build());
         }
 
-        if (tools != null && !tools.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(tools)) {
             paramBuilder.tools(tools);
         }
 

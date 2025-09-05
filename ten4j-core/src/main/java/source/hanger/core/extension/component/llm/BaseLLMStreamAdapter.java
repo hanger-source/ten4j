@@ -55,14 +55,14 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RAW_RESULT, MESSAGE, TOOL_
         Message originalMessage) {
         log.info("[{}] 开始请求LLM并处理流. channelId={} originalId={} text={}",
             env.getExtensionName(), originalMessage.getId(), streamPipelineChannel.uuid(),
-            originalMessage.getProperty(DATA_OUT_PROPERTY_TEXT));
+            originalMessage.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse(""));
 
         Map<String, Object> streamContexts = initStreamContexts(env, messages, tools);
 
         // 获取 LLM 原始响应流
         log.info("[{}] 获取 LLM 原始响应流. channelId={} originalId={} text={}", env.getExtensionName(),
             streamPipelineChannel.uuid(), originalMessage.getId(),
-            originalMessage.getProperty(DATA_OUT_PROPERTY_TEXT));
+            originalMessage.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse(""));
         Flowable<GENERATION_RAW_RESULT> rawLlmFlowable = getRawLlmFlowable(env, messages, tools);
 
         // 转换原始 LLM 流为 LLMOutputBlock 流，实现真正的流式处理
@@ -112,7 +112,7 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RAW_RESULT, MESSAGE, TOOL_
         log.info("[{}] 处理单个 LLM 原始响应结果. channelId={} originalId={} text={}", env.getExtensionName(),
             streamPipelineChannel.uuid(),
             originalMessage.getId(),
-            originalMessage.getProperty(DATA_OUT_PROPERTY_TEXT));
+            originalMessage.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse(""));
         StringBuilder textBuffer = (StringBuilder)streamContexts.get(TEXT_BUFFER_STATE);
         StringBuilder fullTextBuffer = (StringBuilder)streamContexts.get(FULL_TEXT_BUFFER_STATE);
         Boolean hasStreamEnding = (Boolean)streamContexts.get(HAS_STREAMING_ENDING_STATE);
@@ -144,7 +144,7 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RAW_RESULT, MESSAGE, TOOL_
         if (endOfSegment && packetsToEmit.isEmpty()) {
             log.warn("[{}] LLM流响应block为空 channelId={} originalId={} text={}", env.getExtensionName(),
                 streamPipelineChannel.uuid(),
-                originalMessage.getId(), originalMessage.getProperty(DATA_OUT_PROPERTY_TEXT));
+                originalMessage.getId(), originalMessage.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse(""));
         }
 
         return Flowable.fromIterable(packetsToEmit);

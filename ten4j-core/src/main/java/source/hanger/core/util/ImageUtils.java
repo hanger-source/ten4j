@@ -12,15 +12,25 @@ import java.util.Base64;
 
 import javax.imageio.ImageIO;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil; // 导入 ByteBufUtil
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class ImageUtils {
 
-    public static String convertVideoFrameToJpegBase64(byte[] imageData, int width, int height, int pixelFormat) {
+    public static String convertVideoFrameToJpegBase64(ByteBuf imageData, int width, int height, int pixelFormat) {
+        if (imageData == null || !imageData.isReadable()) {
+            log.warn("[ImageUtils] Input imageData is null or not readable.");
+            return null;
+        }
+
+        // 获取 ByteBuf 的可读字节作为 byte[]，用于后续处理
+        byte[] imageBytes = ByteBufUtil.getBytes(imageData); // 这会复制数据，但对于图像处理是常见的，且不会改变原始 ByteBuf 的 readerIndex
+        int actualLen = imageBytes.length;
+
         try {
-            BufferedImage image = null;
-            int actualLen = imageData.length;
+            BufferedImage image;
             int expectedRgb = width * height * 3;
             int expectedRgba = width * height * 4;
 
@@ -32,7 +42,7 @@ public class ImageUtils {
             // 前端发送的JPEG数据，pixelFormat=1 表示JPEG
             // 临时处理：如果 pixelFormat 为 0 且数据长度远小于预期原始数据长度，也尝试按 JPEG 解码
             if (pixelFormat == 1) {
-                try (ByteArrayInputStream bais = new ByteArrayInputStream(imageData)) {
+                try (ByteArrayInputStream bais = new ByteArrayInputStream(imageBytes)) { // 使用 imageBytes
                     image = ImageIO.read(bais);
                 } catch (IOException e) {
                     log.error("[ImageUtils] Error decoding JPEG data: {}", e.getMessage());
@@ -40,10 +50,10 @@ public class ImageUtils {
                 }
             } else if (actualLen == expectedRgb) { // RGB
                 image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-                image.getRaster().setDataElements(0, 0, width, height, imageData);
+                image.getRaster().setDataElements(0, 0, width, height, imageBytes); // 使用 imageBytes
             } else if (actualLen == expectedRgba) { // RGBA
                 BufferedImage rgbaImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-                rgbaImage.getRaster().setDataElements(0, 0, width, height, imageData);
+                rgbaImage.getRaster().setDataElements(0, 0, width, height, imageBytes); // 使用 imageBytes
                 image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB); // Convert to RGB
                 image.getGraphics().drawImage(rgbaImage, 0, 0, null);
             } else if (actualLen == (int)(width * height * 1.5)) { // YUV420 - requires OpenCV in Java, for simplicity, we will skip it and log an error if encountered.

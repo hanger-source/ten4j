@@ -187,7 +187,7 @@ public class PathTable {
                     commandResult.getId());
         }
 
-        if (commandResult.isFinal()) {
+        if (commandResult.getIsFinal()) {
             log.debug("PathTable: FIRST_ERROR_OR_LAST_OK最终结果. CommandId: {}", commandResult.getId());
             CommandResult finalResult = pathOut.getCachedCommandResult() != null ? pathOut.getCachedCommandResult()
                     : commandResult;
@@ -202,9 +202,9 @@ public class PathTable {
     private void handleEachOkAndErrorPolicy(PathOut pathOut, CommandResult commandResult)
             throws CloneNotSupportedException {
         log.debug("PathTable: 流式返回结果: commandId={}, isSuccess={}, isFinal={}",
-                commandResult.getId(), commandResult.isSuccess(), commandResult.isFinal());
+                commandResult.getId(), commandResult.isSuccess(), commandResult.getIsFinal());
 
-        if (commandResult.isFinal()) {
+        if (commandResult.getIsFinal()) {
             log.debug("PathTable: EACH_OK_AND_ERROR最终结果. CommandId: {}", commandResult.getId());
             completeCommandResult(pathOut, commandResult);
         }
@@ -229,13 +229,11 @@ public class PathTable {
         }
 
         if (StringUtils.isNotEmpty(pathOut.getParentCommandId())) { // 检查是否为 null 或空字符串
-            CommandResult backtrackResult = commandResult.clone();
-
-            String parentCmdId = pathOut.getParentCommandId();
-            backtrackResult.setId(parentCmdId); // 修正为 setId
-
-            backtrackResult.setDestLocs(List.of(pathOut.getSourceLocation()));
-            backtrackResult.setSrcLoc(pathOut.getDestinationLocation());
+            CommandResult backtrackResult = commandResult.toBuilder()
+                .originalCommandId(pathOut.getCommandId())
+                .srcLoc(pathOut.getSourceLocation())
+                .destLocs(List.of(pathOut.getDestinationLocation()))
+                .build();
 
             messageSubmitter.submitInboundMessage(backtrackResult, null); // 传入 null 作为 connection 参数
             log.debug("PathTable: 命令结果已回溯: originalCommandId={}, parentCommandId={}",

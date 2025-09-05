@@ -22,6 +22,7 @@ import source.hanger.core.message.MessageType;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.message.command.GenericCommand;
 import source.hanger.core.tenenv.TenEnv;
+import source.hanger.core.util.ByteBufUtils;
 import source.hanger.core.util.MessageUtils;
 import source.hanger.core.util.SentenceProcessor;
 
@@ -82,7 +83,7 @@ public abstract class BaseTTSExtension extends BaseExtension {
             log.info("[{}] 收到 来自 {} CMD_FLUSH 命令，执行刷新操作并重置历史。", env.getExtensionName(),
                 command.getSrcLoc().getExtensionName());
             flushOperationCoordinator.triggerFlush(env);
-            env.sendCmd(GenericCommand.create(CMD_OUT_FLUSH, command.getId(), command.getType()));
+            env.sendCmd(GenericCommand.create(CMD_OUT_FLUSH, command.getId()));
             return;
         }
     }
@@ -133,14 +134,13 @@ public abstract class BaseTTSExtension extends BaseExtension {
             if (item instanceof TTSAudioOutputBlock ttsAudioBlock) {
                 // TTS 音频块
                 log.info(
-                    "[{}] TTSStream输出 (Audio): text={} originalId={} dataSize={}, sampleRate={}, channels={}, "
+                    "[{}] TTSStream输出 (Audio): text={} originalId={} sampleRate={}, channels={}, "
                         + "sampleBytes={}",
-                    env.getExtensionName(), originalMessage.getProperty(DATA_OUT_PROPERTY_TEXT),
+                    env.getExtensionName(), originalMessage.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse(""),
                     originalMessage.getId(),
-                    ttsAudioBlock.getData().length,
                     ttsAudioBlock.getSampleRate(), ttsAudioBlock.getChannels(), ttsAudioBlock.getSampleBytes());
 
-                MessageOutputSender.sendAudioOutput(env, originalMessage, ttsAudioBlock.getData(),
+                MessageOutputSender.sendAudioOutput(env, originalMessage, ByteBufUtils.fromByteBuffer(ttsAudioBlock.getData()),
                     ttsAudioBlock.getSampleRate(), ttsAudioBlock.getChannels(), ttsAudioBlock.getSampleBytes());
             } else {
                 // 处理其他类型的 OutputBlock，如果需要

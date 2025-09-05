@@ -1,16 +1,9 @@
 package source.hanger.core.message.command;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-
-import source.hanger.core.message.Location;
+import lombok.experimental.SuperBuilder;
+import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.message.MessageType;
-import source.hanger.core.util.MessageUtils;
-import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
-import lombok.experimental.Accessors;
 
 /**
  * 关闭应用命令消息，对齐C/Python中的TEN_MSG_TYPE_CMD_CLOSE_APP。
@@ -29,36 +22,12 @@ import lombok.experimental.Accessors;
  * - 因此，本Java类无需定义额外的字段，也不需要自定义Jackson序列化器/反序列化器。
  */
 @EqualsAndHashCode(callSuper = true)
-@Data
-@NoArgsConstructor
-@Accessors(chain = true)
+@Slf4j
+@SuperBuilder(toBuilder = true)
 public class CloseAppCommand extends Command {
 
-    /**
-     * 全参构造函数，用于创建关闭应用命令消息。
-     *
-     * @param id         消息ID，对应C端 `ten_msg_t.name`。
-     * @param srcLoc     源位置，对应C端 `ten_msg_t.src_loc`。
-     * @param timestamp  消息时间戳，对应C端 `ten_msg_t.timestamp`。
-     * @param destLocs   目的位置，对应C端 `ten_msg_t.dest_locs`。
-     * @param properties 消息属性，对应C端 `ten_msg_t.properties`。
-     */
-    public CloseAppCommand(String id, Location srcLoc, List<Location> destLocs,
-            Map<String, Object> properties, long timestamp) {
-        super(id, srcLoc, MessageType.CMD_CLOSE_APP, destLocs, properties, timestamp,
-            MessageType.CMD_CLOSE_APP.name()); // 修正为调用
-                                                                                                                         // Command
-                                                                                                                         // 的构造函数
+    @Override
+    public MessageType getType() {
+        return MessageType.CMD_CLOSE_APP;
     }
-
-    /**
-     * 用于内部创建的简化构造函数。
-     *
-     * @param srcLoc 源位置。
-     */
-    public CloseAppCommand(Location srcLoc) {
-        super(MessageUtils.generateUniqueId(), srcLoc, MessageType.CMD_CLOSE_APP, Collections.emptyList()
-            , Collections.emptyMap(), System.currentTimeMillis(), MessageType.CMD_CLOSE_APP.name());
-    }
-
 }

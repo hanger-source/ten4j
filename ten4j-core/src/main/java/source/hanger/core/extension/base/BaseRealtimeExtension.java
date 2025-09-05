@@ -1,7 +1,7 @@
 package source.hanger.core.extension.base;
 
+import io.netty.buffer.ByteBuf;
 import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.system.BaseFlushExtension;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
@@ -11,6 +11,8 @@ import source.hanger.core.message.MessageType;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
 import source.hanger.core.util.MessageUtils;
+
+import static source.hanger.core.common.ExtensionConstants.*;
 
 /**
  * Realtime API 扩展的抽象基类。
@@ -52,7 +54,7 @@ public abstract class BaseRealtimeExtension<REALTIME_EVENT> extends BaseFlushExt
             log.warn("[{}] 当前扩展已中断，丢弃数据消息", env.getExtensionName());
             return;
         }
-        String text = data.getPropertyString(ExtensionConstants.DATA_OUT_PROPERTY_TEXT).orElse("");
+        String text = data.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse("");
         if (!text.isEmpty()) {
             onSendTextToRealtime(env, text, data);
         } else {
@@ -106,7 +108,7 @@ public abstract class BaseRealtimeExtension<REALTIME_EVENT> extends BaseFlushExt
      * @param audioData       音频数据字节数组
      * @param originalMessage 原始消息（用于关联）
      */
-    protected abstract void onSendAudioToRealtime(TenEnv env, byte[] audioData, Message originalMessage);
+    protected abstract void onSendAudioToRealtime(TenEnv env, ByteBuf audioData, Message originalMessage);
 
     /**
      * 抽象方法：处理来自 Realtime API 的 JSON 事件。
@@ -133,7 +135,7 @@ public abstract class BaseRealtimeExtension<REALTIME_EVENT> extends BaseFlushExt
     public void onCmd(TenEnv env, Command command) {
         // Realtime 扩展可能需要处理特定的命令，例如用户加入/离开或特定的会话管理命令
         // 类似于 LLM 和 ASR 扩展，将 CMD_IN_FLUSH 传递给父类处理
-        if (ExtensionConstants.CMD_IN_FLUSH.equals(command.getName())) {
+        if (CMD_IN_FLUSH.equals(command.getName())) {
             super.onCmd(env, command);
         } else {
             // 处理其他 Realtime 相关的命令
@@ -166,16 +168,14 @@ public abstract class BaseRealtimeExtension<REALTIME_EVENT> extends BaseFlushExt
      */
     protected void sendTextOutput(TenEnv env, String eventId, String groupId, String text, boolean endOfSegment, String role) {
         try {
-            DataMessage outputData = DataMessage.create(ExtensionConstants.TEXT_DATA_OUT_NAME); // Define this
-            // constant
-            outputData.setId(eventId);
-            outputData.setProperty(ExtensionConstants.DATA_OUT_PROPERTY_TEXT, text);
-            outputData.setProperty(ExtensionConstants.DATA_OUT_PROPERTY_END_OF_SEGMENT, endOfSegment);
-            outputData.setProperty("extension_name", env.getExtensionName());
-            outputData.setProperty("group_id", groupId);
-            outputData.setProperty(ExtensionConstants.DATA_OUT_PROPERTY_ROLE, role); // Assuming assistant role
-            // for output
-
+            DataMessage outputData = DataMessage.createBuilder(TEXT_DATA_OUT_NAME)
+                .id(eventId)
+                .property(DATA_OUT_PROPERTY_TEXT, text)
+                .property(DATA_OUT_PROPERTY_END_OF_SEGMENT, endOfSegment)
+                .property("extension_name", env.getExtensionName())
+                .property("group_id", groupId)
+                .property(DATA_OUT_PROPERTY_ROLE, role)
+                .build();
             env.sendMessage(outputData);
             log.debug("[{}] Realtime文本输出发送成功: text={}, endOfSegment={}", env.getExtensionName(), text,
                 endOfSegment);
@@ -193,22 +193,20 @@ public abstract class BaseRealtimeExtension<REALTIME_EVENT> extends BaseFlushExt
      * @param bytesPerSample   每样本字节数
      * @param numberOfChannels 通道数
      */
-    protected void sendAudioOutput(TenEnv env, String eventId, String responseId, byte[] audioData,
+    protected void sendAudioOutput(TenEnv env, String eventId, String responseId, ByteBuf audioData,
         int sampleRate, int bytesPerSample, int numberOfChannels) {
         try {
-            AudioFrameMessage audioFrame = AudioFrameMessage.create("pcm_frame");
-            audioFrame.setId(eventId);
-            audioFrame.setSampleRate(sampleRate);
-            audioFrame.setBytesPerSample(bytesPerSample);
-            audioFrame.setNumberOfChannel(numberOfChannels);
-            audioFrame.setSamplesPerChannel(audioData.length / (bytesPerSample * numberOfChannels));
-            audioFrame.setBuf(audioData);
-            audioFrame.setType(MessageType.AUDIO_FRAME);
-            audioFrame.setProperty("extension_name", env.getExtensionName());
-            audioFrame.setProperty("group_id", responseId);
-
+            AudioFrameMessage audioFrame = AudioFrameMessage.createBuilder("pcm_frame")
+                .id(eventId)
+                .sampleRate(sampleRate)
+                .bytesPerSample(bytesPerSample)
+                .numberOfChannel(numberOfChannels)
+                .buf(audioData)
+                .property("extension_name", env.getExtensionName())
+                .property("group_id", responseId)
+                .build();
             env.sendMessage(audioFrame);
-            log.debug("[{}] Realtime音频帧发送成功: size={}", env.getExtensionName(), audioData.length);
+            log.debug("[{}] Realtime音频帧发送成功: size={}", env.getExtensionName(), audioData.readableBytes());
         } catch (Exception e) {
             log.error("[{}] Realtime音频帧发送异常: ", env.getExtensionName(), e);
         }

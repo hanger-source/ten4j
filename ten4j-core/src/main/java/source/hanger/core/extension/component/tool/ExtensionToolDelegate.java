@@ -42,9 +42,11 @@ public abstract class ExtensionToolDelegate {
 
                 try {
                     // 将工具元数据发送给LLM扩展
-                    Command registerCmd = GenericCommand.create(CMD_TOOL_REGISTER);
                     String toolJson = objectMapper.writeValueAsString(tool.getToolMetadata());
-                    registerCmd.setProperty(CMD_PROPERTY_TOOL, toolJson);
+                    Command registerCmd = GenericCommand.createBuilder(CMD_TOOL_REGISTER)
+                        .property(CMD_PROPERTY_TOOL, toolJson)
+                        .build();
+
                     env.sendCmd(registerCmd);
                     log.info("[{}] 工具注册命令发送成功: toolName={}", env.getExtensionName(), tool.getToolName());
                 } catch (Exception e) {
@@ -58,8 +60,8 @@ public abstract class ExtensionToolDelegate {
     }
 
     public void handleToolCallCommand(TenEnv env, Command command) {
-        String toolName = command.getProperty(CMD_TOOL_CALL_PROPERTY_NAME, String.class);
-        if (toolName == null || !tools.containsKey(toolName)) {
+        String toolName = command.getPropertyString(CMD_TOOL_CALL_PROPERTY_NAME).orElse("");
+        if (!tools.containsKey(toolName)) {
             log.warn("[{}] 收到非本扩展的工具调用或工具名称为空，忽略。toolName={}", env.getExtensionName(), toolName);
             return;
         }

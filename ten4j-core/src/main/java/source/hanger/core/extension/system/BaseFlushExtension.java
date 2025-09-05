@@ -8,7 +8,6 @@ import io.reactivex.processors.FlowableProcessor;
 import io.reactivex.processors.PublishProcessor;
 import io.reactivex.schedulers.Schedulers;
 import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.base.BaseExtension;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.Message;
@@ -17,6 +16,8 @@ import source.hanger.core.message.command.Command;
 import source.hanger.core.message.command.GenericCommand;
 import source.hanger.core.tenenv.TenEnv;
 import source.hanger.core.util.MessageUtils;
+
+import static source.hanger.core.common.ExtensionConstants.*;
 
 /**
  * 带有输入刷新（中断）功能的抽象基类
@@ -127,10 +128,9 @@ public abstract class BaseFlushExtension<T> extends BaseExtension {
         log.info("[{}] Received command: {}", env.getExtensionName(), command.getName());
         try {
             String commandName = command.getName();
-            if (ExtensionConstants.CMD_IN_FLUSH.equals(commandName)) {
+            if (CMD_IN_FLUSH.equals(commandName)) {
                 flushInputItems(env, command);
-                Command outFlushCmd = GenericCommand.create(ExtensionConstants.CMD_OUT_FLUSH, command.getId(),
-                    command.getType());
+                Command outFlushCmd = GenericCommand.create(CMD_OUT_FLUSH, command.getId());
                 log.info("[{}] 传递 flush: {}", env.getExtensionName(), commandName);
                 env.sendCmd(outFlushCmd);
                 log.info("[{}] 命令处理完成: {}", env.getExtensionName(), commandName);
