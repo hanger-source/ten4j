@@ -26,6 +26,7 @@ import source.hanger.core.util.ByteBufUtils;
 import source.hanger.core.util.MessageUtils;
 import source.hanger.core.util.SentenceProcessor;
 
+import static org.apache.commons.lang3.StringUtils.*;
 import static source.hanger.core.common.ExtensionConstants.CMD_IN_FLUSH;
 import static source.hanger.core.common.ExtensionConstants.CMD_OUT_FLUSH;
 import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_TEXT;
@@ -102,8 +103,10 @@ public abstract class BaseTTSExtension extends BaseExtension {
 
         // 【新增】过滤掉只包含标点符号的文本
         if (SentenceProcessor.isPureSymbols(filteredInputText)) {
-            log.warn("[{}] Received ignored text for TTS, ignoring. text={}", env.getExtensionName(),
-                filteredInputText);
+            if (isNotBlank(filteredInputText)) {
+                log.warn("[{}] Received ignored text for TTS, ignoring. text={}", env.getExtensionName(),
+                    filteredInputText);
+            }
             return;
         }
 
