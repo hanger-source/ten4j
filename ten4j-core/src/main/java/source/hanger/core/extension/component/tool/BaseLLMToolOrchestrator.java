@@ -1,8 +1,8 @@
 package source.hanger.core.extension.component.tool;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,7 +38,7 @@ public abstract class BaseLLMToolOrchestrator<MESSAGE, LLM_TOOL_FUNCTION> implem
 
     protected final LLMContextManager<MESSAGE> llmContextManager;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final Map<String, LLMToolMetadata> toolMap = new ConcurrentHashMap<>();
+    private final Map<String, LLMToolMetadata> toolMap = new HashMap<>();
     private final LLMStreamAdapter<MESSAGE, LLM_TOOL_FUNCTION> llmStreamAdapter;
 
     public BaseLLMToolOrchestrator(

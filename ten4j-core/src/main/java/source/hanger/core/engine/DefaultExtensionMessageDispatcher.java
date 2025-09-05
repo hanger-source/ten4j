@@ -1,6 +1,5 @@
 package source.hanger.core.engine;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
@@ -14,8 +13,10 @@ import source.hanger.core.message.Location;
 import source.hanger.core.message.Message;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.path.PathTable;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+
+import static java.util.Collections.*;
+import static org.apache.commons.collections4.CollectionUtils.*;
 
 /**
  * `DefaultExtensionMessageDispatcher` 是 `ExtensionMessageDispatcher` 接口的默认实现。
@@ -47,9 +48,9 @@ public class DefaultExtensionMessageDispatcher implements ExtensionMessageDispat
         List<Location> targetLocations = message.getDestLocs();
 
         // 如果消息没有明确的目的地，则尝试从图配置中确定
-        if (CollectionUtils.isEmpty(targetLocations)) {
+        if (isEmpty(targetLocations)) {
             targetLocations = determineMessageDestinationsFromGraph(message);
-            if (CollectionUtils.isEmpty(targetLocations)) {
+            if (isEmpty(targetLocations)) {
                 log.warn(
                     "DefaultExtensionMessageDispatcher: 消息 {} (Name: {}, Type: {}) 没有明确的 Extension "
                         + "目的地，也无法从图配置中确定，无法派发。",
@@ -73,12 +74,12 @@ public class DefaultExtensionMessageDispatcher implements ExtensionMessageDispat
             // 只有当原始消息有多个目的地，并且需要为每个目的地克隆时，才执行克隆
             // 现在 targetLocations 已经是经过处理的最终目的地列表，如果列表中有多个目的地
             // 并且消息是可变的，我们才需要为每个目的地创建副本
-            if (CollectionUtils.size(targetLocations) > 1 && !(message instanceof CommandResult)) { // CommandResult 不应被克隆以避免 PathTable
+            if (size(targetLocations) > 1 && !(message instanceof CommandResult)) { // CommandResult 不应被克隆以避免 PathTable
                 // 混乱
                 try {
                     finalMessageToSend = message.clone();
                     // 为克隆的消息设置单目的地，避免在下一层再次处理多目的地
-                    finalMessageToSend.setDestLocs(Collections.singletonList(targetLocation));
+                    finalMessageToSend.setDestLocs(singletonList(targetLocation));
                 } catch (CloneNotSupportedException e) {
                     log.error("DefaultExtensionMessageDispatcher: 克隆消息 {} (Name: {}) 失败，无法发送到多个目的地: {}",
                         message.getId(), message.getName(), e.getMessage());
@@ -130,7 +131,7 @@ public class DefaultExtensionMessageDispatcher implements ExtensionMessageDispat
             log.warn(
                 "DefaultExtensionMessageDispatcher: 消息 {} (Name: {}, Type: {}) 没有源 Extension，无法从图配置中确定目的地。",
                 message.getId(), message.getName(), message.getType());
-            return Collections.emptyList();
+            return emptyList();
         }
 
         // 2. 获取源 Extension 的 ExtensionInfo (其中包含 AllMessageDestInfo)
@@ -139,11 +140,11 @@ public class DefaultExtensionMessageDispatcher implements ExtensionMessageDispat
             log.warn(
                 "DefaultExtensionMessageDispatcher: 未找到源 Extension {} 的消息目的地信息 (AllMessageDestInfo) 或 ExtensionInfo。",
                 sourceExtensionName);
-            return Collections.emptyList();
+            return emptyList();
         }
 
         // 3. 根据消息类型获取对应的路由规则列表
-        List<RoutingRuleDefinition> rules = null;
+        List<RoutingRuleDefinition> rules;
         switch (message.getType()) {
             case CMD:
                 rules = sourceExtInfo.getMsgDestInfo().getCommandRules();
@@ -160,13 +161,13 @@ public class DefaultExtensionMessageDispatcher implements ExtensionMessageDispat
             default:
                 log.debug("DefaultExtensionMessageDispatcher: 消息类型 {} 不需要通过图配置进行路由。",
                     message.getType());
-                return Collections.emptyList();
+                return emptyList();
         }
 
-        if (CollectionUtils.isEmpty(rules)) {
+        if (isEmpty(rules)) {
             log.debug("DefaultExtensionMessageDispatcher: 源 Extension {} 没有为消息类型 {} 配置路由规则。",
                 sourceExtensionName, message.getType());
-            return Collections.emptyList();
+            return emptyList();
         }
 
         List<Location> determinedLocations = new java.util.ArrayList<>();
@@ -180,7 +181,7 @@ public class DefaultExtensionMessageDispatcher implements ExtensionMessageDispat
             boolean nameMatches = StringUtils.isEmpty(rule.getName())
                 || StringUtils.isNotEmpty(message.getName()) && rule.getName().equals(message.getName());
 
-            if (nameMatches && CollectionUtils.isNotEmpty(rule.getDestinations())) { // 修正：getDest() -> getDestinations()
+            if (nameMatches && isNotEmpty(rule.getDestinations())) { // 修正：getDest() -> getDestinations()
                 for (DestinationInfo destInfo : rule.getDestinations()) { // 修正：getDest() -> getDestinations()
                     // 将 DestinationInfo 转换为 Location
                     // 假设目的地在同一个 App 和 Graph 内，只关心 ExtensionName

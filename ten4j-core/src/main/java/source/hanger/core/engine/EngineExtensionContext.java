@@ -1,11 +1,10 @@
 package source.hanger.core.engine;
 
-import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -51,14 +50,10 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
     private final CommandSubmitter engineCommandSubmitter;
 
     // 新增：存储 ExtensionThread 实例，key 可以是 ExtensionGroup 的名称或其他逻辑分组 ID
-    private final ConcurrentHashMap<String, ExtensionThread> extensionThreads;
+    private final Map<String, ExtensionThread> extensionThreads;
 
     // 新增：存储 ExtensionGroup 实例
-    private final ConcurrentHashMap<String, ExtensionGroup> extensionGroups;
-
-    // 存储 Extension 的 Method 映射，优化反射调用性能
-    private final ConcurrentHashMap<Class<? extends Extension>, Map<String, Method>> extensionMethodCache
-        = new ConcurrentHashMap<>();
+    private final Map<String, ExtensionGroup> extensionGroups;
 
     @Getter
     private final String roleName;
@@ -73,8 +68,8 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
         this.engineCommandSubmitter = Objects.requireNonNull(engineCommandSubmitter,
             "Engine command submitter must not be null.");
 
-        extensionThreads = new ConcurrentHashMap<>();
-        extensionGroups = new ConcurrentHashMap<>(); // 初始化 extensionGroups
+        extensionThreads = new HashMap<>();
+        extensionGroups = new HashMap<>();
         roleName = "ExtensionContext-%s".formatted(engine.getGraphId());
 
         EngineExtensionContext.log.info("ExtensionContext created for Engine: {}", engine.getGraphId());

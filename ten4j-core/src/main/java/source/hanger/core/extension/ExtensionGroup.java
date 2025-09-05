@@ -1,7 +1,8 @@
 package source.hanger.core.extension;
 
+import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -18,8 +19,8 @@ public class ExtensionGroup {
 
     private final String name;
     private final ExtensionGroupInfo extensionGroupInfo;
-    private final ConcurrentHashMap<String, ExtensionEnvImpl> extensions = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, ExtensionInfo> extensionInfos = new ConcurrentHashMap<>();
+    private final Map<String, ExtensionEnvImpl> extensions = new HashMap<>();
+    private final Map<String, ExtensionInfo> extensionInfos = new HashMap<>();
     @Setter
     private TenEnv tenEnv;
 
