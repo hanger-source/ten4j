@@ -5,7 +5,7 @@
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <!-- 定义日志输出格式 -->
-            <pattern>%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %highlight(%-5level) --- [%blue(%25.25t)]%cyan(%-40.40logger{39}): %msg%n</pattern>
+            <pattern>%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %highlight(%-5level) --- [%blue(%45.50t)]%cyan(%-40.40logger{39}): %msg%n</pattern>
             <!-- 指定字符编码，避免乱码 -->
             <charset>UTF-8</charset>
         </encoder>

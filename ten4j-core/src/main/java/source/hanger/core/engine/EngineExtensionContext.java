@@ -531,7 +531,7 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
     @Override
     public CommandExecutionHandle<CommandResult> submitCommandFromExtension(Command command, String sourceExtensionName) {
         // 命令从 Extension 提交，委托给 Engine 的 commandSubmitter
-        EngineExtensionContext.log.info("ExtensionContext: Extension {} 提交命令 {} {} {} 到 Engine。",
+        log.info("[{}] ExtensionContext: 提交命令 {} {} {} 到 Engine。",
             sourceExtensionName,
             command.getId(), command.getName(), command.getProperties());
         // 修改 srcLoc 以反映真实的真实来源 Extension
