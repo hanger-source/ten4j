@@ -1,7 +1,6 @@
 package source.hanger.core.extension.component.asr;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.reactivex.Flowable;
@@ -30,11 +29,11 @@ public abstract class BaseASRStreamAdapter<RECOGNITION_RESULT> implements ASRStr
     private static final int INITIAL_DELAY_MS = 200;
     protected final ExtensionStateProvider extensionStateProvider;
     protected final StreamPipelineChannel<OutputBlock> streamPipelineChannel;
-    protected final AtomicBoolean reconnecting = new AtomicBoolean(false);
     private final FlowableProcessor<ByteBuffer> audioInputStreamProcessor; // 新增的音频输入处理器
     private final CompositeDisposable disposables = new CompositeDisposable();
     // 新增：重连尝试次数计数器
     private final AtomicInteger retryCount = new AtomicInteger(0);
+    protected transient boolean reconnecting = false;
     /**
      * 构造函数。
      *
@@ -51,7 +50,7 @@ public abstract class BaseASRStreamAdapter<RECOGNITION_RESULT> implements ASRStr
 
     @Override
     public void startASRStream(TenEnv env) {
-        log.info("[{}] ASR 流式配器启动", env.getExtensionName());
+        log.info("[{}] ASR 流式配器启动 channelId={}", env.getExtensionName(), streamPipelineChannel.uuid());
 
         Flowable<PipelinePacket<OutputBlock>> flowable = getRawAsrFlowable(env, audioInputStreamProcessor)
             .flatMap(result -> transformSingleRecognitionResult(result, env))
@@ -79,7 +78,8 @@ public abstract class BaseASRStreamAdapter<RECOGNITION_RESULT> implements ASRStr
             .doOnError(e -> {
                 if (e.getMessage().contains("timeout")) {
                     env.postTask(() -> {
-                        log.info("[{}] ASR Stream timeout, reconnecting...", env.getExtensionName());
+                        log.info("[{}] ASR Stream timeout, reconnecting... channelId={}",
+                            env.getExtensionName(), streamPipelineChannel.uuid());
                         onReconnect(env);
                     });;
                 } else {
@@ -94,7 +94,8 @@ public abstract class BaseASRStreamAdapter<RECOGNITION_RESULT> implements ASRStr
             .doOnComplete(() -> {
                 // 流正常完成时，也重置重试计数器
                 retryCount.set(0);
-                log.info("[{}] ASR Stream completed.", env.getExtensionName());
+                log.info("[{}] ASR Stream completed. channelId={}",
+                    env.getExtensionName(), streamPipelineChannel.uuid());
             });
 
         // 由于 retryWhen 已经包含了重连逻辑，我们不再需要在 doOnError/doOnComplete 中手动调用 onReconnect
@@ -116,28 +117,30 @@ public abstract class BaseASRStreamAdapter<RECOGNITION_RESULT> implements ASRStr
     @Override
     public void onReconnect(TenEnv env) {
         // 为了避免和内部重试机制冲突，我们可以让它在特定条件下触发。
-        if (reconnecting.compareAndSet(false, true)) {
-            log.info("[{}] Starting external reconnection process.", env.getExtensionName());
-            disposables.add(Flowable.timer(INITIAL_DELAY_MS, MILLISECONDS, Schedulers.io())
-                .doOnComplete(() -> {
+        reconnecting = true;
+        log.info("[{}] Starting external reconnection process.", env.getExtensionName());
+        disposables.add(Flowable.timer(INITIAL_DELAY_MS, MILLISECONDS, Schedulers.io())
+            .doOnComplete(() -> {
+                env.postTask(() -> {
                     try {
                         streamPipelineChannel.recreatePipeline(env);
                         startASRStream(env);
-                        log.info("[{}] Reconnection completed successfully.", env.getExtensionName());
+                        log.info("[{}] Reconnection completed successfully. channelId={}",
+                            env.getExtensionName(), streamPipelineChannel.uuid());
                     } catch (Exception e) {
-                        log.error("[{}] Reconnection failed: {}", env.getExtensionName(), e.getMessage(), e);
+                        log.error("[{}] Reconnection failed: {} channelId={}", env.getExtensionName(), e.getMessage(),
+                            streamPipelineChannel.uuid(), e);
                         disposables.add( // 新增：将 Disposable 添加到 CompositeDisposable
                             Flowable.timer(1000, MILLISECONDS, Schedulers.io())
                                 .subscribe(v -> onReconnect(env)));
                     } finally {
-                        reconnecting.set(false);
+                        reconnecting = false;
                     }
-                })
-                .subscribe(_ -> {}, e -> log.error("[{}] Reconnection timer error: {}", env.getExtensionName(), e.getMessage(), e))
-            );
-        } else {
-            log.debug("[{}] Reconnection already in progress, skipping external trigger.", env.getExtensionName());
-        }
+                });
+            })
+            .subscribe(_ -> {
+            }, e -> log.error("[{}] Reconnection timer error: {}", env.getExtensionName(), e.getMessage(), e))
+        );
     }
 
     /**
