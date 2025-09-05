@@ -67,14 +67,7 @@ public class Runloop {
             @Override
             public Thread newThread(@NotNull Runnable r) {
                 // 在虚拟线程中设置 ThreadLocal
-                return defaultFactory.newThread(() -> {
-                    currentRunloopThreadLocal.set(Runloop.this); // 在虚拟线程中设置 ThreadLocal
-                    try {
-                        r.run(); // 直接运行 TaskWrapper，耗时和日志已在其 run() 方法中处理
-                    } finally {
-                        currentRunloopThreadLocal.remove();
-                    }
-                });
+                return defaultFactory.newThread(r);
             }
         });
     }
@@ -322,7 +315,14 @@ public class Runloop {
 
         private void safeRun(Runnable task) {
             try {
-                virtualThreadExecutor.submit(task);
+                virtualThreadExecutor.submit(() -> {
+                    currentRunloopThreadLocal.set(Runloop.this); // 在虚拟线程中设置 ThreadLocal
+                    try {
+                        task.run(); // 直接运行 TaskWrapper，耗时和日志已在其 run() 方法中处理
+                    } finally {
+                        currentRunloopThreadLocal.remove();
+                    }
+                });
             } catch (Throwable e) {
                 log.error("Error executing task", e);
             }

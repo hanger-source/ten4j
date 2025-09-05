@@ -92,7 +92,7 @@ public abstract class BaseTurnDetectionExtension<MESSAGE> extends BaseExtension 
     public void onDataMessage(TenEnv env, DataMessage data) {
         log.info("[{}] Received data message: {}", env.getExtensionName(), data.getName());
 
-        if (!DATA_OUT_PROPERTY_TEXT.equals(data.getName())
+        if (!TEXT_DATA_OUT_NAME.equals(data.getName())
             && !ASR_DATA_OUT_NAME.equals(data.getName())) {
             env.sendMessage(data);
             return;

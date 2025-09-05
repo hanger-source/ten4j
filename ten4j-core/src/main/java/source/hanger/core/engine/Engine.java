@@ -585,16 +585,7 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
         CommandExecutionHandle<CommandResult> handle = new CommandExecutionHandle<>(runloop);
         commandHandles.put(command.getId(), handle);
 
-        // 确保在 Engine 的 Runloop 线程中执行
-        if (runloop.isNotCurrentThread()) {
-            runloop.postTask(() -> {
-                // 提交命令到消息队列，这里因为命令是内部生成，所以 connection 为 null
-                submitInboundMessage(command, null); // 更新这里
-            });
-        } else {
-            // 如果已经在 Runloop 线程，则直接执行
-            submitInboundMessage(command, null); // 更新这里
-        }
+        submitInboundMessage(command, null); // 更新这里
         // 返回 CommandExecutionHandle
         return handle;
     }
