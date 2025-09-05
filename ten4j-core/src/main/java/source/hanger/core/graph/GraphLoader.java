@@ -7,14 +7,15 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.util.ExpressionResolver;
+import source.hanger.core.util.IdGenerator;
 import source.hanger.core.util.ResourceUtils;
-import source.hanger.core.util.ExpressionResolver; 
+
 @Slf4j
 public class GraphLoader {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
@@ -116,7 +117,7 @@ public class GraphLoader {
                 // 如果 JSON 文件本身没有顶层 uuid，这里可以生成一个。
                 if (entry.getGraph() != null) {
                     if (entry.getGraph().getGraphId() == null) {
-                        entry.getGraph().setGraphId(UUID.randomUUID().toString());
+                        entry.getGraph().setGraphId(IdGenerator.generateShortId());
                     }
                 }
                 predefinedGraphs.add(entry);

@@ -19,6 +19,7 @@ import source.hanger.core.extension.dashscope.task.BailianPollingTaskRunner;
 import source.hanger.core.message.DataMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
+import source.hanger.core.util.JsonUtils;
 
 import static java.time.Duration.ofMillis;
 import static java.time.Duration.ofSeconds;
@@ -203,7 +204,8 @@ public class ImageSynthesisTool implements LLMTool {
                         taskRunner.submit(this, taskId, ofSeconds(TOTAL_TASK_TIMEOUT_SECONDS),
                             ofMillis(DEFAULT_POLLING_INTERVAL_MILLIS)); // 重新提交自身，指定轮询间隔
                     } else {
-                        log.error("[{}] 图片生成任务失败: {}", tenEnv.getExtensionName(), throwable.getMessage(),
+                        log.error("[{}] 图片生成任务失败: param={}", tenEnv.getExtensionName(),
+                            JsonUtils.writeValueAsString(param),
                             throwable);
                     }
                 }

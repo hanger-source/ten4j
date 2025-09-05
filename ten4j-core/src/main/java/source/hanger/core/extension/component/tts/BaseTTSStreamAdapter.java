@@ -34,12 +34,12 @@ public abstract class BaseTTSStreamAdapter<RAW_TTS_RESULT> implements TTSStreamA
             .flatMap(result -> transformSingleTTSResult(result, originalMessage, env))
             .takeWhile(_ -> !interruptionStateProvider.isInterrupted())
             .doOnError(error -> {
-                log.error("[{}] TTS流处理错误. 原始消息ID: {}. 错误: {}", env.getExtensionName(),
+                log.error("[{}] TTS流处理错误. originalId: {}. 错误: {}", env.getExtensionName(),
                     originalMessage.getId(), error.getMessage(), error);
             })
             .doOnComplete(() -> {
                 // 确保所有日志都带有前缀
-                log.info("[{}] TTS原始流处理完成. 原始消息ID: {}", env.getExtensionName(),
+                log.info("[{}] TTS原始流处理完成. originalId: {}", env.getExtensionName(),
                     originalMessage.getId());
             });
 

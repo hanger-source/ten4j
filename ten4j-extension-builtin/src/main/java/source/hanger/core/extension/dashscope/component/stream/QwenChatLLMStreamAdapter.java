@@ -92,11 +92,17 @@ public class QwenChatLLMStreamAdapter extends BaseLLMStreamAdapter<GenerationRes
             // 使用注入的 DashScope Generation 客户端进行调用
             return generation.streamCall(param)
                 .doOnNext(result -> {
-                    log.info("[{}] DashScope Generation 返回结果: {}", env.getExtensionName(), result);
+                    log.info("[{}] DashScope Generation {} 返回结果: {}", env.getExtensionName(),
+                        streamPipelineChannel.uuid(), result);
                 }).doOnComplete(() -> {
-                    log.info("[{}] DashScope Generation 返回结果完成", env.getExtensionName());
+                    log.info("[{}] DashScope Generation {} 返回结果完成", env.getExtensionName(),
+                        streamPipelineChannel.uuid());
                 }).doOnError(e -> {
-                    log.error("[{}] DashScope Generation 执行过程异常: {}", env.getExtensionName(), e.getMessage());
+                    log.error("[{}] DashScope Generation {} 执行过程异常: {}", env.getExtensionName(),
+                        streamPipelineChannel.uuid(), e.getMessage());
+                }).doOnCancel(() -> {
+                    log.info("[{}] DashScope Generation {} 返回结果取消", env.getExtensionName(),
+                        streamPipelineChannel.uuid());
                 });
         } catch (NoApiKeyException | InputRequiredException e) {
             log.error("[{}] Error calling DashScope stream: {}", env.getExtensionName(), e.getMessage());

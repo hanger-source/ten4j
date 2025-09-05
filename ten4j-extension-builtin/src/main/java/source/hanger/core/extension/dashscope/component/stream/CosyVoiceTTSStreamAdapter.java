@@ -90,7 +90,7 @@ public class CosyVoiceTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthe
             byte[] audioData = new byte[result.getAudioFrame().capacity()];
             result.getAudioFrame().get(audioData); // 将 ByteBuffer 转换为 byte[]
             TTSAudioOutputBlock block = new TTSAudioOutputBlock(audioData, originalMessage.getId(), 24000, 2, 1); // 假设采样率等信息
-            log.info("[{}] TTS原始流处理开始. text={} 原始消息ID: {}", env.getExtensionName(),
+            log.info("[{}] TTS原始流处理开始. text={} originalId: {}", env.getExtensionName(),
                 originalMessage.getProperty(ExtensionConstants.DATA_OUT_PROPERTY_TEXT),
                 originalMessage.getId()); // 修改这里
             return Flowable.just(new PipelinePacket<>(block, originalMessage));

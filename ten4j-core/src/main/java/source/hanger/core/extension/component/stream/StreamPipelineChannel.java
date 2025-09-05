@@ -11,6 +11,7 @@ import source.hanger.core.tenenv.TenEnv;
  */
 public interface StreamPipelineChannel<T extends OutputBlock> { // 引入泛型 T，约束为 LLMOutputBlock 的子类
 
+    String uuid();
     /**
      * 初始化流管道，并订阅其数据流。
      * 此方法应在 Extension 启动时调用。

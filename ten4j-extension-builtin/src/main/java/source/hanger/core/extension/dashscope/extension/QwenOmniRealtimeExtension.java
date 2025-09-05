@@ -3,7 +3,6 @@ package source.hanger.core.extension.dashscope.extension;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import com.alibaba.dashscope.audio.omni.OmniRealtimeParam;
 import com.alibaba.dashscope.exception.NoApiKeyException;
@@ -58,6 +57,7 @@ import source.hanger.core.message.MessageType;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.message.command.GenericCommand;
 import source.hanger.core.tenenv.TenEnv;
+import source.hanger.core.util.IdGenerator;
 
 /**
  * Qwen Omni Realtime 扩展实现。
@@ -268,7 +268,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension<RealtimeEve
         if (realtimeClient != null && realtimeClient.isConnected()) {
             try {
                 // 使用 Jackson 将对象转换为 JSON 字符串
-                String eventId = UUID.randomUUID().toString(); // Generate a unique event_id
+                String eventId = IdGenerator.generateShortId(); // Generate a unique event_id
                 String messageJson = objectMapper.writeValueAsString(buildResponseCreateMessage(text, eventId));
                 realtimeClient.getConversation().sendRaw(messageJson); // 使用 sendRaw 发送构建好的 JSON 字符串
                 log.info("[{}] Sent text as ResponseCreate to Realtime API: eventId={}, text={}", env
@@ -420,7 +420,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension<RealtimeEve
         String greeting = env.getPropertyString("greeting").orElse("");
         if (!StringUtils.isEmpty(greeting)) {
             try {
-                String eventId = UUID.randomUUID().toString(); // Generate a unique event_id
+                String eventId = IdGenerator.generateShortId(); // Generate a unique event_id
                 // 使用 Jackson 将对象转换为 JSON 字符串
                 ResponseCreateMessage createMessage = buildResponseCreateMessage("对我说：'%s'".formatted(greeting),
                     eventId);
@@ -743,7 +743,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension<RealtimeEve
 
             // If originalMessage is null, generate a dummy ID for command result
             // association.
-            String originalMessageId = originalMessage != null ? originalMessage.getId() : UUID.randomUUID()
+            String originalMessageId = originalMessage != null ? originalMessage.getId() : IdGenerator.generateShortId()
                 .toString();
             toolCallCommand.setId(originalMessageId);
             toolCallCommand.setParentCommandId(originalMessageId);

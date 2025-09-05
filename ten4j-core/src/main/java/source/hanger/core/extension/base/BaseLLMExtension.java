@@ -185,10 +185,11 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
             try {
                 llmContextManager.onAssistantMsg(greeting); // 调用 LLMHistoryManager
                 sendTextOutput(env, command, greeting, true);
-                log.info("[{}] Greeting {} sent to user.", env.getExtensionName(), greeting);
+                log.info("[{}] Greeting {} sent to user. channelId={}", env.getExtensionName(), greeting,
+                    streamPipelineChannel.uuid());
             } catch (Exception e) {
-                log.error("[{}] Failed to send greeting [{}], error: {}", env.getExtensionName(), greeting,
-                    e.getMessage(), e);
+                log.error("[{}] Failed to send greeting [{}], channelId={} error: {}", env.getExtensionName(), greeting,
+                    streamPipelineChannel.uuid(), e.getMessage(), e);
             }
             flushOperationCoordinator.triggerFlush(env);
         }

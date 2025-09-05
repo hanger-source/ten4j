@@ -100,8 +100,9 @@ public abstract class BaseTTSExtension extends BaseExtension {
             .replace("\n", "").strip();
 
         // 【新增】过滤掉只包含标点符号的文本
-        if (SentenceProcessor.isPurePunctuation(filteredInputText)) {
-            log.warn("[{}] Received empty text for TTS, ignoring.", env.getExtensionName());
+        if (SentenceProcessor.isPureSymbols(filteredInputText)) {
+            log.warn("[{}] Received ignored text for TTS, ignoring. text={}", env.getExtensionName(),
+                filteredInputText);
             return;
         }
 
@@ -132,7 +133,7 @@ public abstract class BaseTTSExtension extends BaseExtension {
             if (item instanceof TTSAudioOutputBlock ttsAudioBlock) {
                 // TTS 音频块
                 log.info(
-                    "[{}] TTSStream输出 (Audio): text={} 原始消息ID={} dataSize={}, sampleRate={}, channels={}, "
+                    "[{}] TTSStream输出 (Audio): text={} originalId={} dataSize={}, sampleRate={}, channels={}, "
                         + "sampleBytes={}",
                     env.getExtensionName(), originalMessage.getProperty(DATA_OUT_PROPERTY_TEXT),
                     originalMessage.getId(),

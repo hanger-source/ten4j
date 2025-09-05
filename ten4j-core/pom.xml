@@ -35,6 +35,11 @@
             <artifactId>jackson-annotations</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.fasterxml.uuid</groupId>
+            <artifactId>java-uuid-generator</artifactId>
+        </dependency>
+
         <!-- DashScope SDK for Alibaba Cloud LLM -->
         <dependency>
             <groupId>com.alibaba</groupId>

@@ -1,12 +1,11 @@
 package source.hanger.server.handler;
 
-import java.util.UUID;
-
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.app.App;
 import source.hanger.core.message.Location;
+import source.hanger.core.util.IdGenerator;
 import source.hanger.server.connection.NettyConnection;
 
 /**
@@ -25,7 +24,7 @@ public class NettyConnectionHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         // 当一个新的 Netty Channel 活跃时，创建对应的 NettyConnection 实例
-        String connectionId = UUID.randomUUID().toString(); // 生成唯一 ID
+        String connectionId = IdGenerator.generateShortId(); // 生成唯一 ID
         NettyConnection connection = new NettyConnection(
             connectionId,
             ctx.channel().remoteAddress(),

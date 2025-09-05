@@ -22,6 +22,7 @@
         <netty.version>4.1.116.Final</netty.version> <!-- 升级版本 -->
         <agrona.version>2.2.4</agrona.version>
         <jackson.version>2.18.4</jackson.version> <!-- 使用最新的 Jackson 版本 -->
+        <fasterxml.uuid.version>5.1.0</fasterxml.uuid.version>
         <spring.version>6.2.1</spring.version>
         <slf4j.version>2.0.16</slf4j.version>
         <logback.version>1.5.12</logback.version>
@@ -101,6 +102,12 @@
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-annotations</artifactId>
                 <version>${jackson.version}</version>
+            </dependency>
+            <!-- https://mvnrepository.com/artifact/com.fasterxml.uuid/java-uuid-generator -->
+            <dependency>
+                <groupId>com.fasterxml.uuid</groupId>
+                <artifactId>java-uuid-generator</artifactId>
+                <version>${fasterxml.uuid.version}</version>
             </dependency>
 
             <!-- 日志框架 -->

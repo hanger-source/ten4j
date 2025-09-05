@@ -3,13 +3,13 @@ package source.hanger.core.command.app;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.app.App;
 import source.hanger.core.app.AppEnvImpl;
+import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.connection.Connection;
 import source.hanger.core.engine.Engine;
 import source.hanger.core.extension.ExtensionGroupInfo;
@@ -21,11 +21,11 @@ import source.hanger.core.graph.runtime.PredefinedGraphRuntimeInfo;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.Location;
 import source.hanger.core.message.command.Command;
+import source.hanger.core.message.command.GenericCommand;
 import source.hanger.core.message.command.StartGraphCommand;
 import source.hanger.core.remote.Remote;
 import source.hanger.core.tenenv.TenEnvProxy;
-import source.hanger.core.common.ExtensionConstants; // 导入 ExtensionConstants
-import source.hanger.core.message.command.GenericCommand; // 导入 GenericCommand
+import source.hanger.core.util.IdGenerator;
 
 /**
  * `StartGraphCommandHandler` 处理 `StartGraphCommand` 命令，负责启动 Engine。
@@ -81,7 +81,7 @@ public class StartGraphCommandHandler implements AppCommandHandler {
                     String graphJson = new ObjectMapper().writeValueAsString(loadedDefinition);
                     graphDefinition = GraphLoader.loadGraphDefinitionFromJson(graphJson,
                         startCommand.getProperties()); // 重新加载以确保完整性
-                    graphDefinition.setGraphId(UUID.randomUUID().toString());
+                    graphDefinition.setGraphId(IdGenerator.generateShortId());
                     log.info("StartGraphCommandHandler: 找到预定义图 {}。", targetGraphId);
                     graphDefinition.setGraphName(targetGraphId);
                 } catch (JsonProcessingException e) {
@@ -198,7 +198,7 @@ public class StartGraphCommandHandler implements AppCommandHandler {
 
     private void sendUserJoinedCommand(Engine engine, Connection connection, Command command) {
         if (connection != null) {
-            Command userJoinedCommand = new GenericCommand(UUID.randomUUID().toString(),
+            Command userJoinedCommand = new GenericCommand(IdGenerator.generateShortId(),
                 ExtensionConstants.CMD_IN_ON_USER_JOINED, null);
             userJoinedCommand.setParentCommandId(command.getId());
             userJoinedCommand.setSrcLoc(new Location(connection.getUri(), engine.getGraphId(), null));

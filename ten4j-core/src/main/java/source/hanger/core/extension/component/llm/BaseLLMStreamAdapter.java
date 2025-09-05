@@ -53,13 +53,15 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RAW_RESULT, MESSAGE, TOOL_
     @Override
     public void onRequestLLMAndProcessStream(TenEnv env, List<MESSAGE> messages, List<TOOL_FUNCTION> tools,
         Message originalMessage) {
-        log.info("[{}] 开始请求LLM并处理流. 原始消息ID={} text={}", env.getExtensionName(),
+        log.info("[{}] 开始请求LLM并处理流. channelId={} originalId={} text={}",
+            env.getExtensionName(), streamPipelineChannel.uuid(),
             originalMessage.getId(), originalMessage.getProperty(DATA_OUT_PROPERTY_TEXT));
 
         Map<String, Object> streamContexts = initStreamContexts(env, messages, tools);
 
         // 获取 LLM 原始响应流
-        log.info("[{}] 获取 LLM 原始响应流. 原始消息ID={} text={}", env.getExtensionName(), originalMessage.getId(),
+        log.info("[{}] 获取 LLM 原始响应流. channelId={} originalId={} text={}", env.getExtensionName(),
+            streamPipelineChannel.uuid(), originalMessage.getId(),
             originalMessage.getProperty(DATA_OUT_PROPERTY_TEXT));
         Flowable<GENERATION_RAW_RESULT> rawLlmFlowable = getRawLlmFlowable(env, messages, tools);
 
@@ -70,13 +72,15 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RAW_RESULT, MESSAGE, TOOL_
             // 中断检测，flush后中断当前流处理
             .takeWhile(_ -> !interruptionStateProvider.isInterrupted())
             .doOnError(error -> {
-                log.error("[{}] LLM流转换错误. 原始消息ID: {}. 错误: {}", env.getExtensionName(),
+                log.error("[{}] LLM流转换错误. channelId={} originalId: {}. 错误: {}", env.getExtensionName(),
+                    streamPipelineChannel.uuid(),
                     originalMessage.getId(), error.getMessage(), error);
                 // 可以在这里将错误信息包装成 LLMOutputBlock 推送到管道，或进行其他错误处理
             })
             .doOnComplete(() -> {
                 // 确保所有日志都带有前缀
-                log.info("[{}] LLM原始流处理完成. 原始消息ID: {}", env.getExtensionName(),
+                log.info("[{}] LLM原始流处理完成. channelId={} originalId: {}", env.getExtensionName(),
+                    streamPipelineChannel.uuid(),
                     originalMessage.getId());
             });
 
@@ -105,7 +109,8 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RAW_RESULT, MESSAGE, TOOL_
         Message originalMessage,
         Map<String, Object> streamContexts, TenEnv env
     ) {
-        log.info("[{}] 处理单个 LLM 原始响应结果. 原始消息ID={} text={}", env.getExtensionName(),
+        log.info("[{}] 处理单个 LLM 原始响应结果. channelId={} originalId={} text={}", env.getExtensionName(),
+            streamPipelineChannel.uuid(),
             originalMessage.getId(),
             originalMessage.getProperty(DATA_OUT_PROPERTY_TEXT));
         StringBuilder textBuffer = (StringBuilder)streamContexts.get(TEXT_BUFFER_STATE);
@@ -137,7 +142,8 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RAW_RESULT, MESSAGE, TOOL_
         processOtherStreamResult(result, originalMessage, env, finishReason, packetsToEmit, streamContexts);
 
         if (endOfSegment && packetsToEmit.isEmpty()) {
-            log.warn("[{}] LLM流响应block为空 原始消息ID={} text={}", env.getExtensionName(),
+            log.warn("[{}] LLM流响应block为空 channelId={} originalId={} text={}", env.getExtensionName(),
+                streamPipelineChannel.uuid(),
                 originalMessage.getId(), originalMessage.getProperty(DATA_OUT_PROPERTY_TEXT));
         }
 
@@ -181,7 +187,8 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RAW_RESULT, MESSAGE, TOOL_
 
             // 发出所有完整的句子
             for (String sentence : parsingResult.getSentences()) {
-                log.debug("[{}] 发出LLMTextOutputBlock. 文本: {}", env.getExtensionName(), sentence);
+                log.debug("[{}] 发出LLMTextOutputBlock. channelId={} sentence={}", env.getExtensionName(),
+                    streamPipelineChannel.uuid(), sentence);
                 packetsToEmit.add(new PipelinePacket<>(
                     new TextOutputBlock(originalMessage.getId(), sentence, false), // 是片段
                     originalMessage
@@ -226,15 +233,17 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RAW_RESULT, MESSAGE, TOOL_
             env, originalMessage);
 
         if (completeToolCall != null) {
-            log.info("[{}] 发现并聚合完成工具调用. 工具ID: {}, 名称: {}. 将提交给ToolRegistryAndCaller.",
-                env.getExtensionName(), completeToolCall.getId(), completeToolCall.getToolName());
+            log.info(
+                "[{}] 发现并聚合完成工具调用. channelId={} toolCallId={}, toolName={}. 将提交给ToolRegistryAndCaller.",
+                env.getExtensionName(), streamPipelineChannel.uuid(), completeToolCall.getId(),
+                completeToolCall.getToolName());
             packetsToEmit.add(new PipelinePacket<>(completeToolCall, originalMessage));
         }
     }
 
     @Override
     public void onCancelLLM(TenEnv env) {
-        log.info("[{}] 收到取消LLM请求", env.getExtensionName());
+        log.info("[{}] 收到取消LLM请求 channelId={}", env.getExtensionName(), streamPipelineChannel.uuid());
     }
 
     /**
@@ -307,8 +316,8 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RAW_RESULT, MESSAGE, TOOL_
 
         String id = incomingFragment.id();
         if (id == null) {
-            log.warn("[{}] 收到没有toolCallId的工具调用片段，将忽略. 名称: {}", env.getExtensionName(),
-                incomingFragment.name());
+            log.warn("[{}] 收到没有toolCallId的工具调用片段，将忽略. channelId={} toolName={}", env.getExtensionName(),
+                streamPipelineChannel.uuid(), incomingFragment.name());
             return null; // 没有 ID 无法累积
         }
 
@@ -331,8 +340,9 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RAW_RESULT, MESSAGE, TOOL_
         if ("tool_calls".equalsIgnoreCase(finishReason)) {
             ToolCallOutputFragment completeToolCall = accumulatingToolCallFragments.remove(id);
             if (completeToolCall != null) {
-                log.info("[{}] 工具调用 {} 聚合完成并移除. ID: {}", env.getExtensionName(), completeToolCall.name(),
-                    completeToolCall.id());
+                log.info("[{}] 工具调用聚合完成并移除. channelId={} toolCallId={} toolCallName={}",
+                    env.getExtensionName(), streamPipelineChannel.uuid(),
+                    completeToolCall.id(), completeToolCall.name());
                 return new ToolCallOutputBlock(
                     originalMessage.getId(),
                     completeToolCall.name(),

@@ -1,10 +1,10 @@
 package source.hanger.core.util;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
 
 /**
  * 辅助类：用于处理和解析句子片段
@@ -29,6 +29,24 @@ public class SentenceProcessor {
             return true;
         }
         return text.chars().allMatch(c -> isPunctuation((char) c));
+    }
+
+    /**
+     * 判断给定的字符串是否只包含符号（非字母、非数字、非中文汉字）。
+     * @param text 待检查的字符串。
+     * @return 如果字符串为空或只包含符号，则返回 true；否则返回 false。
+     */
+    public static boolean isPureSymbols(String text) {
+        String trimmedText = text.trim();
+        if (trimmedText.isEmpty()) {
+            return true;
+        }
+        // 正则表达式：查找字符串中是否存在任何字母、数字或中文汉字
+        // \p{L}：匹配任何Unicode字母
+        // \p{N}：匹配任何Unicode数字
+        // \p{IsHan}：匹配任何中文汉字
+        String semanticCharPattern = ".*[\\p{L}\\p{N}\\p{IsHan}].*";
+        return !trimmedText.matches(semanticCharPattern);
     }
 
     /**
