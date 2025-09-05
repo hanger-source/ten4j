@@ -1,13 +1,13 @@
 package source.hanger.core.app;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap; // 显式导入 ConcurrentMap
+import java.util.concurrent.CopyOnWriteArrayList; // 导入 CopyOnWriteArrayList
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -111,7 +111,7 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
         this.appUri = appUri;
         this.hasOwnRunloopPerEngine = hasOwnRunloopPerEngine;
         engines = new ConcurrentHashMap<>();
-        orphanConnections = Collections.synchronizedList(new java.util.ArrayList<>());
+        orphanConnections = new CopyOnWriteArrayList<>(); // 替换为 CopyOnWriteArrayList
         remotes = new ConcurrentHashMap<>(); // 初始化远程连接映射
         availableExtensions = new ConcurrentHashMap<>(); // 初始化 Extension 注册表
 

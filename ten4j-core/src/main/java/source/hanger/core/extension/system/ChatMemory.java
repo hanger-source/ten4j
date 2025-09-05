@@ -5,6 +5,8 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Deque; // 导入 Deque 接口
+import java.util.concurrent.ConcurrentLinkedDeque; // 导入 ConcurrentLinkedDeque
 import java.util.function.Consumer;
 
 import lombok.extern.slf4j.Slf4j;
@@ -16,14 +18,14 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ChatMemory {
 
-    private final List<Map<String, Object>> history;
+    private final Deque<Map<String, Object>> history; // 更改为 Deque<Map<String, Object>>
     private final int maxHistory;
     private Consumer<Map<String, Object>> onMemoryExpiredCallback; // Callback for expired messages
     private Consumer<Map<String, Object>> onMemoryAppendedCallback; // Callback for appended messages
 
     public ChatMemory(int maxHistory) {
         this.maxHistory = maxHistory;
-        this.history = Collections.synchronizedList(new ArrayList<>());
+        this.history = new ConcurrentLinkedDeque<>(); // 替换为 ConcurrentLinkedDeque
     }
 
     /**
@@ -45,7 +47,7 @@ public class ChatMemory {
      * @param message 消息的 Map 表示
      */
     public void put(Map<String, Object> message) {
-        history.add(message);
+        history.addLast(message); // 使用 addLast
         smartTruncateHistory();
         if (onMemoryAppendedCallback != null) {
             onMemoryAppendedCallback.accept(message);
@@ -57,7 +59,7 @@ public class ChatMemory {
      */
     private void smartTruncateHistory() {
         while (history.size() > maxHistory) {
-            Map<String, Object> removed = history.remove(0); // 移除最旧的消息
+            Map<String, Object> removed = history.removeFirst(); // 移除最旧的消息，使用 removeFirst
             if (onMemoryExpiredCallback != null) {
                 onMemoryExpiredCallback.accept(removed);
             }
@@ -71,7 +73,9 @@ public class ChatMemory {
      * @return 聊天历史记录的不可修改视图
      */
     public List<Map<String, Object>> get() {
-        return Collections.unmodifiableList(history);
+        // ConcurrentLinkedDeque 不直接支持 Collections.unmodifiableList
+        // 为了返回不可修改的 List 视图，可以先转换为 ArrayList
+        return Collections.unmodifiableList(new ArrayList<>(history)); // 创建副本并包装为不可修改 List
     }
 
     /**

@@ -51,7 +51,7 @@ public class CommandExecutionHandle<T> {
     public CommandExecutionHandle(Runloop runloop) {
         this.publisher = new SubmissionPublisher<>(runloop::postTask, 256); // 使用硬编码的默认缓冲区大小
         this.future = new CompletableFuture<>();
-        this.results = Collections.synchronizedList(new ArrayList<>());
+        this.results = new ArrayList<>(); // 移除冗余的 Collections.synchronizedList
 
         // 订阅 publisher，当所有 T 都发布完毕后，完成 future
         publisher.subscribe(new Flow.Subscriber<T>() {
@@ -186,7 +186,7 @@ public class CommandExecutionHandle<T> {
         public RunloopShiftingProcessor(Runloop targetRunloop) {
             this.publisher = new SubmissionPublisher<>(targetRunloop::postTask, 256);
             this.completedFuture = new CompletableFuture<>();
-            this.results = Collections.synchronizedList(new ArrayList<>());
+            this.results = new ArrayList<>(); // 移除冗余的 Collections.synchronizedList
 
             // 订阅 publisher，当所有 T 都发布完毕后，完成 completedFuture
             publisher.subscribe(new Flow.Subscriber<T>() {

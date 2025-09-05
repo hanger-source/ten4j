@@ -1,7 +1,5 @@
 package source.hanger.core.engine;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,13 +7,13 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArrayList; // 导入 CopyOnWriteArrayList
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.ManyToOneConcurrentArrayQueue;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 import source.hanger.core.app.App;
 import source.hanger.core.app.MessageReceiver;
 import source.hanger.core.command.EngineCommandHandler;
@@ -107,7 +105,7 @@ public class Engine implements Agent, MessageSubmitter, CommandSubmitter,
             (ConcurrentMap) commandHandles); // Cast
 
         inMsgs = new ManyToOneConcurrentArrayQueue<>(Runloop.DEFAULT_INTERNAL_QUEUE_CAPACITY); // 初始化消息输入队列
-        orphanConnections = Collections.synchronizedList(new ArrayList<>());
+        orphanConnections = new CopyOnWriteArrayList<>(); // 替换为 CopyOnWriteArrayList
         remotes = new ConcurrentHashMap<>(); // 初始化远程连接映射
 
         // 初始化 Engine 自身的 TenEnvProxy 实例
