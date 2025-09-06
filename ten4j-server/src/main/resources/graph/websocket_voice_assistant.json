@@ -25,7 +25,7 @@
       "model": "qwen-vl-max"
     }]
   },
-  "voices": ["cosy_voices"],
+  "voices": ["cosy_voice"],
   "models" : ["bailian"],
   "graph": {
     "nodes": [
