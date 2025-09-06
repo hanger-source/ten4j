@@ -33,6 +33,8 @@ public final class ExtensionConstants {
     // ten-framework不存在这种类型，自创的委托，特定情况（例如llm节点直接委托给其他llm节点）会将 text 委托给其他extension处理
     public static final String DELEGATE_TEXT_DATA_OUT_NAME = "delegate_text_data";
 
+    public static final String DEST_TTS_EXTENSION_PROPERTY_NAME = "dest_tts";
+
     private ExtensionConstants() {
         // Prevent instantiation
     }

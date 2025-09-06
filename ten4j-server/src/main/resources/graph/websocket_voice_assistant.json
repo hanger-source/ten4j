@@ -59,7 +59,16 @@
       },
       {
         "type": "extension",
-        "name": "tts",
+        "name": "tts_adapter",
+        "addon": "source.hanger.core.extension.system.TTSAdapterExtension",
+        "extension_group": "tts_group",
+        "property": {
+          "dest_tts": "tts_cosy",
+          "tts_cosy": "{{cosy_voice_name}}"
+        }
+      },{
+        "type": "extension",
+        "name": "tts_cosy",
         "addon": "source.hanger.core.extension.dashscope.extension.CosyVoiceTTSExtension",
         "extension_group": "tts_group",
         "property": {
@@ -214,7 +223,7 @@
             "name": "flush",
             "dest": [
               {
-                "extension": "tts"
+                "extension": "tts_adapter"
               },{
                 "extension": "vision"
               }
@@ -243,14 +252,17 @@
                 "extension": "client_connection"
               },
               {
-                "extension": "tts"
+                "extension": "tts_adapter"
               }
             ]
           }
         ]
       },
       {
-        "extension": "tts",
+        "extension": "tts_adapter"
+      },
+      {
+        "extension": "tts_cosy",
         "cmd": [
           {
             "name": "flush",
@@ -321,7 +333,7 @@
             "name": "flush",
             "dest": [
               {
-                "extension": "tts"
+                "extension": "tts_adapter"
               }
             ]
           }
@@ -334,7 +346,7 @@
                 "extension": "client_connection"
               },
               {
-                "extension": "tts"
+                "extension": "tts_adapter"
               }
             ]
           }
