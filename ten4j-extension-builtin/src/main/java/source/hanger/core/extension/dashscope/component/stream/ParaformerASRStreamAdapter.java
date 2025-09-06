@@ -16,13 +16,11 @@ import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.common.PipelinePacket;
 import source.hanger.core.extension.component.state.ExtensionStateProvider;
 import source.hanger.core.extension.component.stream.StreamPipelineChannel;
-import source.hanger.core.extension.dashscope.test.AudioFileWriter;
 import source.hanger.core.tenenv.TenEnv;
 
 @Slf4j
 public class ParaformerASRStreamAdapter extends BaseASRStreamAdapter<RecognitionResult> {
 
-    private final AudioFileWriter audioFileWriter = new AudioFileWriter("output", "output");
     private final Recognition recognition  = new Recognition();
 
     public ParaformerASRStreamAdapter(
@@ -72,15 +70,13 @@ public class ParaformerASRStreamAdapter extends BaseASRStreamAdapter<Recognition
 
     @Override
     public void onRequestAudioInput(TenEnv env, ByteBuffer rawAudioInput) {
-        // 用于排查音频是否正常 audioFileWriter.writeAudioFrame(rawAudioInput);
+        // 用于排查音频是否正常 AudioFileWriter.DEFAULT.writeAudioFrame(rawAudioInput);
         super.onRequestAudioInput(env, rawAudioInput);
     }
 
     @Override
     protected Flowable<PipelinePacket<OutputBlock>> transformSingleRecognitionResult(
-        RecognitionResult result,
-        TenEnv env
-    ) {
+        RecognitionResult result,TenEnv env) {
         // 从 env 获取 originalMessageId
         String originalMessageId = env.getPropertyString("original_message_id").orElse(null);
         return Flowable.just(

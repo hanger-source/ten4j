@@ -28,13 +28,17 @@ import source.hanger.core.tenenv.TenEnv;
 @Slf4j
 public class QwenTTSStreamAdapter extends BaseTTSStreamAdapter<MultiModalConversationResult> {
 
-    private final MultiModalConversation multiModalConversation;
+    private MultiModalConversation multiModalConversation;
 
     public QwenTTSStreamAdapter(
         InterruptionStateProvider interruptionStateProvider,
         StreamPipelineChannel<OutputBlock> streamPipelineChannel) {
         super(interruptionStateProvider, streamPipelineChannel);
-        this.multiModalConversation = new MultiModalConversation();
+    }
+
+    @Override
+    public void onStart(TenEnv env) {
+        multiModalConversation = new MultiModalConversation();
     }
 
     @Override

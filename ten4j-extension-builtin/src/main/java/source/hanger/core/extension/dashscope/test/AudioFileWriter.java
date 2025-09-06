@@ -20,9 +20,11 @@ public class AudioFileWriter {
 
     private BufferedOutputStream outputStream;
     private long currentChunkBytes = 0;
-    private AtomicInteger chunkCount = new AtomicInteger(0);
-    private String baseFileName;
-    private String outputDirectory;
+    private final AtomicInteger chunkCount = new AtomicInteger(0);
+    private final String baseFileName;
+    private final String outputDirectory;
+
+    public static AudioFileWriter DEFAULT = new AudioFileWriter("output", "output");
 
     public AudioFileWriter(String baseFileName, String outputDirectory) {
         this.baseFileName = baseFileName;
@@ -39,14 +41,20 @@ public class AudioFileWriter {
                 createNewChunkFile();
             }
 
-            byte[] bytes = new byte[audioFrame.remaining()];
-            audioFrame.get(bytes);
-            outputStream.write(bytes);
-            currentChunkBytes += bytes.length;
+            // 检查 ByteBuffer 是否基于数组，并且数据是连续的
+            if (audioFrame.hasArray() && audioFrame.arrayOffset() == 0) {
+                outputStream.write(audioFrame.array(), audioFrame.position(), audioFrame.remaining());
+                currentChunkBytes += audioFrame.remaining();
+            } else {
+                // 如果不是，回退到第一种方法
+                byte[] bytes = new byte[audioFrame.remaining()];
+                audioFrame.get(bytes);
+                outputStream.write(bytes);
+                currentChunkBytes += bytes.length;
+            }
 
             if (currentChunkBytes >= TEN_SECONDS_IN_BYTES) {
                 closeCurrentChunkFile();
-                // No need to create new chunk here, it will be created on next write if needed
             }
         } catch (IOException e) {
             log.error("Error writing audio frame to file: {}", e.getMessage(), e);

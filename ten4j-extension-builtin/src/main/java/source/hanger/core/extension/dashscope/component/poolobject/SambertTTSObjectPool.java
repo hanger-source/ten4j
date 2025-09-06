@@ -1,9 +1,7 @@
 package source.hanger.core.extension.dashscope.component.poolobject;
 
-import com.alibaba.dashscope.audio.ttsv2.SpeechSynthesisAudioFormat;
-import com.alibaba.dashscope.audio.ttsv2.SpeechSynthesisParam;
-import com.alibaba.dashscope.audio.ttsv2.SpeechSynthesizer;
-
+import com.alibaba.dashscope.audio.tts.SpeechSynthesisParam;
+import com.alibaba.dashscope.audio.tts.SpeechSynthesizer;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.pool2.PooledObject;
@@ -17,10 +15,10 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * CosyVoice SpeechSynthesizer 对象的对象池。
+ * Sambert SpeechSynthesizer 对象的对象池。
  */
 @Slf4j
-public class CosyVoiceObjectPool {
+public class SambertTTSObjectPool {
     public static GenericObjectPool<SpeechSynthesizer> synthesizerPool;
     private static final Lock lock = new ReentrantLock();
 
@@ -30,14 +28,7 @@ public class CosyVoiceObjectPool {
             if (synthesizerPool == null) {
                 //int objectPoolSize = getObjectivePoolSize(env);
                 int objectPoolSize = 5;
-
-                String apiKey = env.getPropertyString("api_key").orElseThrow(() -> new IllegalStateException("No api key found"));
-                String voiceName = env.getPropertyString("voice_name").orElseThrow(() -> new IllegalStateException("No voiceName found"));
-                String model = env.getPropertyString("model").orElseThrow(() -> new IllegalStateException("No model found"));
-                SpeechSynthesisAudioFormat format = SpeechSynthesisAudioFormat.PCM_24000HZ_MONO_16BIT; // 固定格式
-
-                SpeechSynthesizerObjectFactory speechSynthesizerObjectFactory =
-                        new SpeechSynthesizerObjectFactory(apiKey, model, voiceName, format);
+                SpeechSynthesizerObjectFactory speechSynthesizerObjectFactory = new SpeechSynthesizerObjectFactory();
                 GenericObjectPoolConfig<SpeechSynthesizer> config =
                         new GenericObjectPoolConfig<>();
                 config.setMaxTotal(objectPoolSize);
@@ -55,45 +46,30 @@ public class CosyVoiceObjectPool {
     @AllArgsConstructor
     public static class SpeechSynthesizerObjectFactory implements PooledObjectFactory<SpeechSynthesizer> {
 
-        private final String apiKey;
-        private final String model;
-        private final String voiceName;
-        private final SpeechSynthesisAudioFormat format;
-
         @Override
         public PooledObject<SpeechSynthesizer> makeObject() throws Exception {
-            log.info("创建一个新的 SpeechSynthesizer 实例. Model: {}, Voice: {}", model, voiceName);
-            SpeechSynthesisParam param = SpeechSynthesisParam.builder()
-                .apiKey(apiKey)
-                .model(model)
-                .voice(voiceName)
-                .format(format)
-                .build();
-            return new DefaultPooledObject<>(new SpeechSynthesizer(param, null));
+            log.info("创建一个新的 SpeechSynthesizer 实例.");
+            return new DefaultPooledObject<>(new SpeechSynthesizer());
         }
 
         @Override
         public void destroyObject(PooledObject<SpeechSynthesizer> p) throws Exception {
             SpeechSynthesizer synthesizer = p.getObject();
-            synthesizer.getDuplexApi().close(1000, "bye");
-            // 如果 SpeechSynthesizer 有 close 方法，可以在这里调用
+            synthesizer.getSyncApi().close(1000, "bye");
             log.info("销毁 SpeechSynthesizer 实例.");
         }
 
         @Override
         public boolean validateObject(PooledObject<SpeechSynthesizer> p) {
-            // 可以实现更复杂的验证逻辑，例如检查连接状态
             return p.getObject() != null;
         }
 
         @Override
         public void activateObject(PooledObject<SpeechSynthesizer> p) throws Exception {
-            // 对象被借用时调用，如果需要重置状态可以在这里实现
         }
 
         @Override
         public void passivateObject(PooledObject<SpeechSynthesizer> p) throws Exception {
-            // 对象归还到池中时调用，如果需要清理状态可以在这里实现
         }
     }
 }

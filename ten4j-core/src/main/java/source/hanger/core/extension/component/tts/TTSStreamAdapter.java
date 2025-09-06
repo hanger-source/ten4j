@@ -9,6 +9,8 @@ import source.hanger.core.tenenv.TenEnv;
  */
 public interface TTSStreamAdapter {
 
+    default void onStart(TenEnv env) {
+    }
     /**
      * 处理接收到的语音转录消息，并生成 TTS 音频流。
      *

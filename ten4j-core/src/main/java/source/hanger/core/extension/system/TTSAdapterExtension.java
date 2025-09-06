@@ -25,6 +25,7 @@ public class TTSAdapterExtension extends BaseExtension {
     @Override
     protected void onExtensionConfigure(TenEnv env, Map<String, Object> properties) {
         destTTSExtension = determineDestTTSExtension(env);
+        log.info("[{}] TTSAdapterExtension 配置完成。目标ttsExtension={}", env.getExtensionName(), destTTSExtension);
     }
 
     @Override

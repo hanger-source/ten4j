@@ -27,6 +27,8 @@ import static source.hanger.core.common.ExtensionConstants.*;
 @Slf4j
 public class CosyVoiceTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthesisResult> {
 
+    private GenericObjectPool<SpeechSynthesizer> pool;
+
     public CosyVoiceTTSStreamAdapter(
         InterruptionStateProvider interruptionStateProvider,
         StreamPipelineChannel<OutputBlock> streamPipelineChannel) {
@@ -34,8 +36,12 @@ public class CosyVoiceTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthe
     }
 
     @Override
+    public void onStart(TenEnv env) {
+        pool = CosyVoiceObjectPool.getInstance(env);
+    }
+
+    @Override
     protected Flowable<SpeechSynthesisResult> getRawTtsFlowable(TenEnv env, String text) {
-        GenericObjectPool<SpeechSynthesizer> pool = CosyVoiceObjectPool.getInstance(env);
 
         String apiKey = env.getPropertyString("api_key").orElseThrow(
             () -> new IllegalStateException("No api key found"));
@@ -55,8 +61,8 @@ public class CosyVoiceTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthe
                     .voice(voiceName)
                     .format(format)
                     .build(), null);
-                log.debug("[{}] SpeechSynthesizer 实例参数更新完毕. (Text: {})",
-                    env.getExtensionName(), text);
+                log.debug("[{}] SpeechSynthesizer 实例参数更新完毕.  channelId={} text={})",
+                    streamPipelineChannel.uuid(), env.getExtensionName(), text);
 
                 return s;
             },
@@ -65,9 +71,8 @@ public class CosyVoiceTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthe
                     .subscribeOn(Schedulers.io()) // 确保 TTS SDK 调用在 IO 线程进行
                     .doOnError(throwable -> {
                         s.getDuplexApi().close(1000, "bye");
-                        log.error("[{}] 调用 DashScope Cosy Voice TTS API 错误: {}. (Text: {})",
-                            env.getExtensionName(),
-                            throwable.getMessage(), text, throwable);
+                        log.error("[{}] 调用 DashScope Cosy Voice TTS API 错误  channelId={} text={}",
+                            streamPipelineChannel.uuid(), env.getExtensionName(), text, throwable);
                     });
             },
             s -> { // disposeResource: 释放资源 (归还到池中)
@@ -75,25 +80,28 @@ public class CosyVoiceTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthe
                     s.getDuplexApi().close(1000, "bye");
                     // https://help.aliyun.com/zh/model-studio/sambert-in-high-concurrency-scenarios#6d104fd2e1jrm
                     // 异常 4、服务端报错 Invalid action('run-task')! Please follow the protocol!
-                    log.info("[{}] 检测到中断，关闭连接. (Text: {})",
-                        env.getExtensionName(), text);
+                    log.info("[{}] 检测到中断，关闭连接. channelId={} text={})",
+                        streamPipelineChannel.uuid(), env.getExtensionName(), text);
                 }
                 pool.returnObject(s);
-                log.info("[{}] '{}' 归还 SpeechSynthesizer 实例到对象池. (Text: {})",
-                    env.getExtensionName(), text, text);
+                log.info("[{}] '{}' 归还 SpeechSynthesizer 实例到对象池.  channelId={} text={})",
+                    streamPipelineChannel.uuid(), env.getExtensionName(), text, text);
             }
         );
     }
 
     @Override
     protected Flowable<PipelinePacket<OutputBlock>> transformSingleTTSResult(SpeechSynthesisResult result, Message originalMessage, TenEnv env) {
-        if (result.getAudioFrame() != null && result.getAudioFrame().capacity() > 0) {
+        if (result.getAudioFrame() != null && result.getAudioFrame().remaining() > 0) {
             TTSAudioOutputBlock block = new TTSAudioOutputBlock(result.getAudioFrame(), originalMessage.getId(), 24000, 2, 1); // 假设采样率等信息
             log.info("[{}] TTS原始流处理开始. text={} originalId: {}", env.getExtensionName(),
                 originalMessage.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse(""),
                 originalMessage.getId()); // 修改这里
             return Flowable.just(new PipelinePacket<>(block, originalMessage));
         } else {
+            log.warn("[{}] TTS原始流音频数据空. text={} originalId: {}", env.getExtensionName(),
+                originalMessage.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse(""),
+                originalMessage.getId());
             return Flowable.empty();
         }
     }

@@ -65,9 +65,10 @@
         "addon": "source.hanger.core.extension.system.TTSAdapterExtension",
         "extension_group": "tts_group",
         "property": {
-          "dest_tts": "tts_cosy,tts_qwen",
+          "dest_tts": "tts_cosy,tts_qwen,tts_sambert",
           "tts_cosy": "{{voice_model == 'cosy_voice'}}",
-          "tts_qwen": "{{voice_model == 'qwen_tts'}}"
+          "tts_qwen": "{{voice_model == 'qwen_tts'}}",
+          "tts_sambert": "{{voice_model == 'smart_bert'}}"
         }
       },{
         "type": "extension",
@@ -88,6 +89,15 @@
           "api_key": "{{env('bailian.dashscope.api.key')}}",
           "voice_name": "{{voice_name}}",
           "model": "qwen-tts-latest"
+        }
+      },{
+        "type": "extension",
+        "name": "tts_sambert",
+        "addon": "source.hanger.core.extension.dashscope.extension.SambertTTSExtension",
+        "extension_group": "tts_group",
+        "property": {
+          "api_key": "{{env('bailian.dashscope.api.key')}}",
+          "voice_name": "{{voice_name}}"
         }
       },
       {
@@ -298,6 +308,28 @@
         ]
       },{
         "extension": "tts_qwen",
+        "cmd": [
+          {
+            "name": "flush",
+            "dest": [
+              {
+                "extension": "client_connection"
+              }
+            ]
+          }
+        ],
+        "audio_frame": [
+          {
+            "name": "pcm_frame",
+            "dest": [
+              {
+                "extension": "client_connection"
+              }
+            ]
+          }
+        ]
+      },{
+        "extension": "tts_sambert",
         "cmd": [
           {
             "name": "flush",
