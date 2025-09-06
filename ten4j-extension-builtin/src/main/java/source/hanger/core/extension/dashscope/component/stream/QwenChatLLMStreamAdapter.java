@@ -20,6 +20,7 @@ import io.reactivex.Flowable;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.time.StopWatch;
 import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.common.PipelinePacket;
@@ -87,23 +88,33 @@ public class QwenChatLLMStreamAdapter extends BaseLLMStreamAdapter<GenerationRes
             paramBuilder.tools(tools);
         }
 
+        StopWatch stopWatch = StopWatch.createStarted();
         GenerationParam param = paramBuilder.build();
 
         try {
             // 使用注入的 DashScope Generation 客户端进行调用
             return generation.streamCall(param)
                 .doOnNext(result -> {
-                    log.info("[{}] DashScope Generation {} 返回结果: {}", env.getExtensionName(),
+                    if (!stopWatch.isStopped()) {
+                        stopWatch.stop();
+                        log.info("[{}] DashScope Generation channelId={} 首字输出 elapsed_time={}ms ",
+                            env.getExtensionName(), streamPipelineChannel.uuid(), stopWatch.getTime());
+                    }
+                    log.info("[{}] DashScope Generation channelId={} 返回结果: {} ", env.getExtensionName(),
                         streamPipelineChannel.uuid(), result);
                 }).doOnComplete(() -> {
-                    log.info("[{}] DashScope Generation {} 返回结果完成", env.getExtensionName(),
+                    log.info("[{}] DashScope Generation channelId={} 返回结果完成", env.getExtensionName(),
                         streamPipelineChannel.uuid());
                 }).doOnError(e -> {
-                    log.error("[{}] DashScope Generation {} 执行过程异常: {}", env.getExtensionName(),
+                    log.error("[{}] DashScope Generation channelId={} 执行过程异常: {}", env.getExtensionName(),
                         streamPipelineChannel.uuid(), e.getMessage());
                 }).doOnCancel(() -> {
-                    log.info("[{}] DashScope Generation {} 返回结果取消", env.getExtensionName(),
+                    log.info("[{}] DashScope Generation channelId={} 返回结果取消", env.getExtensionName(),
                         streamPipelineChannel.uuid());
+                }).doOnTerminate(() -> {
+                    if (!stopWatch.isStopped()) {
+                        stopWatch.stop();
+                    }
                 });
         } catch (NoApiKeyException | InputRequiredException e) {
             log.error("[{}] Error calling DashScope stream: {}", env.getExtensionName(), e.getMessage());
