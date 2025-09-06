@@ -5,8 +5,10 @@
   "doc_url": "",
   "metadata": {
     "replaceableVoices": [{
-      "key": "cosy_voice_name",
-      "voice": "longhuohuo"
+      "key": "voice_name",
+      "model_key": "voice_model",
+      "voice": "longhuohuo",
+      "model": "cosy_voice"
     }],
     "replaceableModels": [{
       "type": "文本生成",
@@ -25,7 +27,7 @@
       "model": "qwen-vl-max"
     }]
   },
-  "voices": ["cosy_voice"],
+  "voices": ["cosy_voice", "smart_bert", "qwen_tts"],
   "models" : ["bailian"],
   "graph": {
     "nodes": [
@@ -63,8 +65,9 @@
         "addon": "source.hanger.core.extension.system.TTSAdapterExtension",
         "extension_group": "tts_group",
         "property": {
-          "dest_tts": "tts_cosy",
-          "tts_cosy": "{{cosy_voice_name}}"
+          "dest_tts": "tts_cosy,tts_qwen",
+          "tts_cosy": "{{voice_model == 'cosy_voice'}}",
+          "tts_qwen": "{{voice_model == 'qwen_tts'}}"
         }
       },{
         "type": "extension",
@@ -73,8 +76,18 @@
         "extension_group": "tts_group",
         "property": {
           "api_key": "{{env('bailian.dashscope.api.key')}}",
-          "voice_name": "{{cosy_voice_name}}",
+          "voice_name": "{{voice_name}}",
           "model": "cosyvoice-v2"
+        }
+      },{
+        "type": "extension",
+        "name": "tts_qwen",
+        "addon": "source.hanger.core.extension.dashscope.extension.QwenTTSExtension",
+        "extension_group": "tts_group",
+        "property": {
+          "api_key": "{{env('bailian.dashscope.api.key')}}",
+          "voice_name": "{{voice_name}}",
+          "model": "qwen-tts-latest"
         }
       },
       {
@@ -263,6 +276,28 @@
       },
       {
         "extension": "tts_cosy",
+        "cmd": [
+          {
+            "name": "flush",
+            "dest": [
+              {
+                "extension": "client_connection"
+              }
+            ]
+          }
+        ],
+        "audio_frame": [
+          {
+            "name": "pcm_frame",
+            "dest": [
+              {
+                "extension": "client_connection"
+              }
+            ]
+          }
+        ]
+      },{
+        "extension": "tts_qwen",
         "cmd": [
           {
             "name": "flush",

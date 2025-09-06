@@ -4,7 +4,6 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import source.hanger.core.extension.base.BaseExtension;
 import source.hanger.core.message.DataMessage;
 import source.hanger.core.message.Location;
@@ -41,7 +40,9 @@ public class TTSAdapterExtension extends BaseExtension {
 
     @Override
     public void onDataMessage(TenEnv env, DataMessage dataMessage) {
-        log.info("[{}] 适配器收到 DataMessage，将 DataMessage 转发给 destTTSExtension={}", env.getExtensionName(), destTTSExtension);
+        log.info("[{}] 适配器收到 DataMessage，将 DataMessage 转发给 destTTSExtension={} text={}",
+            env.getExtensionName(), destTTSExtension,
+            dataMessage.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse(""));
         env.sendMessage(dataMessage.toBuilder()
             .destLocs(singletonList(new Location(env.getAppUri(), env.getGraphId(), destTTSExtension)))
             .build());
@@ -52,8 +53,7 @@ public class TTSAdapterExtension extends BaseExtension {
         String destExtension = tenEnv.getPropertyString(DEST_TTS_EXTENSION_PROPERTY_NAME)
             .orElseThrow(() -> new RuntimeException("dest_tts is not set"));
         return Stream.of( destExtension.split(","))
-            .filter(e -> {
-                return tenEnv.getPropertyString(e).map(StringUtils::isNotBlank).orElse(false);
-            }).findFirst().orElseThrow(() -> new RuntimeException("dest_tts is not set"));
+            .filter(e -> tenEnv.getPropertyBool(e).orElse(false))
+            .findFirst().orElseThrow(() -> new RuntimeException("dest_tts is not set"));
     }
 }

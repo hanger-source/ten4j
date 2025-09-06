@@ -10,6 +10,8 @@ import source.hanger.core.extension.component.stream.StreamPipelineChannel;
 import source.hanger.core.message.Message;
 import source.hanger.core.tenenv.TenEnv;
 
+import static source.hanger.core.common.ExtensionConstants.*;
+
 /**
  * TTS 流适配器抽象基类。
  * 负责 TTS 原始输出的复杂解析、音频数据块的生成，并将其转换为更高级的“逻辑块”推送到主管道。
@@ -37,12 +39,12 @@ public abstract class BaseTTSStreamAdapter<RAW_TTS_RESULT> implements TTSStreamA
             .flatMap(result -> transformSingleTTSResult(result, originalMessage, env))
             .takeWhile(_ -> !interruptionStateProvider.isInterrupted())
             .doOnError(error -> {
-                log.error("[{}] TTS流处理错误. originalId: {}. 错误: {}", env.getExtensionName(),
-                    originalMessage.getId(), error.getMessage(), error);
+                log.error("[{}] TTS流处理错误. originalId={} text={}. 错误: {}", env.getExtensionName(),
+                    originalMessage.getId(), originalMessage.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse(""), error.getMessage(), error);
             })
             .doOnComplete(() -> {
                 // 确保所有日志都带有前缀
-                log.info("[{}] TTS原始流处理完成. originalId: {}", env.getExtensionName(),
+                log.info("[{}] TTS原始流处理完成. originalId={}", env.getExtensionName(),
                     originalMessage.getId());
             });
 

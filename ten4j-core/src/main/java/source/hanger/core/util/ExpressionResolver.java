@@ -33,34 +33,21 @@ public class ExpressionResolver {
             combinedContext.putAll(context);
         }
 
-        StringBuilder sb = new StringBuilder();
         Matcher matcher = EXPRESSION_PATTERN.matcher(expressionString);
-        boolean found = false;
 
-        while (matcher.find()) {
-            found = true;
+        if (matcher.matches()) {
             String mvelExpression = matcher.group(1).trim();
-
             try {
                 Serializable compiledExpression = MVEL.compileExpression(mvelExpression);
                 ParserContext parserContext = new ParserContext();
-                Object result = MVEL.executeExpression(compiledExpression, parserContext, new InnerVariableResolverFactory(combinedContext));
-                if (result == null) {
-                    return null;
-                }
-                matcher.appendReplacement(sb, Matcher.quoteReplacement(String.valueOf(result)));
+                return MVEL.executeExpression(compiledExpression, parserContext, new InnerVariableResolverFactory(combinedContext));
             } catch (Exception e) {
-                log.warn("Error resolving MVEL expression {}. Returning original placeholder. Error: {}", mvelExpression, e.getMessage());
-                matcher.appendReplacement(sb, Matcher.quoteReplacement(matcher.group(0)));
+                throw new IllegalStateException(
+                    "Error resolving MVEL expression {}. Returning original placeholder. Error: {}%s"
+                        .formatted(mvelExpression), e);
             }
         }
-        matcher.appendTail(sb);
-
-        if (found) {
-            return sb.toString();
-        } else {
-            return expressionString;
-        }
+        return expressionString;
     }
 
     public static Object resolveProperties(Object value, Map<String, Object> context) {

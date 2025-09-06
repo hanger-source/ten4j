@@ -24,12 +24,12 @@ import source.hanger.core.message.command.GenericCommand;
 import source.hanger.core.tenenv.TenEnv;
 import source.hanger.core.util.ByteBufUtils;
 import source.hanger.core.util.MessageUtils;
-import source.hanger.core.util.SentenceProcessor;
 
 import static org.apache.commons.lang3.StringUtils.*;
 import static source.hanger.core.common.ExtensionConstants.CMD_IN_FLUSH;
 import static source.hanger.core.common.ExtensionConstants.CMD_OUT_FLUSH;
 import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_TEXT;
+import static source.hanger.core.util.SentenceProcessor.*;
 
 @Slf4j
 public abstract class BaseTTSExtension extends BaseExtension {
@@ -98,11 +98,16 @@ public abstract class BaseTTSExtension extends BaseExtension {
         String inputText = dataMessage.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse("");
         // 使用 EmojiManager 过滤掉 inputText 中的 emoji
         String filteredInputText = EmojiManager.removeAllEmojis(inputText)
-            // 移除换行符和空格
-            .replace("\n", "").strip();
+                // 移除换行符和空格
+                .replace("\n", "").strip();
+
+        // 移除最后一个是标点符号的纯标点符号
+        while (!filteredInputText.isEmpty() && isPunctuation(filteredInputText.charAt(filteredInputText.length() - 1))) {
+            filteredInputText = filteredInputText.substring(0, filteredInputText.length() - 1);
+        }
 
         // 【新增】过滤掉只包含标点符号的文本
-        if (SentenceProcessor.isPureSymbols(filteredInputText)) {
+        if (isPureSymbols(filteredInputText)) {
             if (isNotBlank(filteredInputText)) {
                 log.warn("[{}] Received ignored text for TTS, ignoring. text={}", env.getExtensionName(),
                     filteredInputText);

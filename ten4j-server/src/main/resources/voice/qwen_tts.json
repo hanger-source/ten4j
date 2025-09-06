@@ -1,0 +1,55 @@
+{
+  "voiceModel": "qwen_tts",
+  "voiceModelName": "Qwen-TTS",
+  "candidates": [
+    {
+      "name": "Chelsie",
+      "voice": "Chelsie",
+      "tag": ["中文"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250702/hzkrka/Chelsie_ZH.wav",
+      "feature": "女声"
+    },
+    {
+      "name": "Cherry",
+      "voice": "Cherry",
+      "tag": ["中文"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250702/ouaitf/Cherry_ZH.wav",
+      "feature": "女声"
+    },
+    {
+      "name": "Ethan",
+      "voice": "Ethan",
+      "tag": ["中文"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250702/vllnyj/Ethan_ZH.wav",
+      "feature": "男声"
+    },
+    {
+      "name": "Serena",
+      "voice": "Serena",
+      "tag": ["中文"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250702/ljamey/Serena_ZH.wav",
+      "feature": "女声"
+    },
+    {
+      "name": "Jada",
+      "voice": "Jada",
+      "tag": ["吴语"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250702/lwkztj/%E4%B8%8A%E6%B5%B7%E8%AF%9D-zh.wav",
+      "feature": "女声"
+    },
+    {
+      "name": "Dylan",
+      "voice": "Dylan",
+      "tag": ["北京话"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250702/vuqwdw/%E5%8C%97%E4%BA%AC%E8%AF%9D-zh.wav",
+      "feature": "男声"
+    },
+    {
+      "name": "Sunny",
+      "voice": "Sunny",
+      "tag": ["四川话"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250702/harddq/%E5%9B%9B%E5%B7%9D%E8%AF%9D-zh.wav",
+      "feature": "女声"
+    }
+  ]
+}

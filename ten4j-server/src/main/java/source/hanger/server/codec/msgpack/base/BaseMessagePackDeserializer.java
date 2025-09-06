@@ -1,6 +1,7 @@
 package source.hanger.server.codec.msgpack.base;
 
 import org.msgpack.core.MessageUnpacker;
+import org.msgpack.value.Value;
 import source.hanger.core.message.Message;
 import source.hanger.core.message.Location;
 import source.hanger.server.codec.msgpack.MessagePackDeserializer;
@@ -50,9 +51,33 @@ public abstract class BaseMessagePackDeserializer<T extends Message,  B extends 
         Map<String, Object> properties = new HashMap<>(size);
         for (int i = 0; i < size; i++) {
             String key = unpacker.unpackString();
-            properties.put(key, unpacker.unpackValue());
+            Value value = unpacker.unpackValue();
+            properties.put(key, convertMsgPackValue(value)); // 调用新的辅助方法
         }
         return properties;
+    }
+
+    /**
+     * 将 MessagePack Value 对象转换为对应的 Java 对象。
+     * @param value MessagePack Value 对象
+     * @return 转换后的 Java 对象
+     */
+    private Object convertMsgPackValue(Value value) {
+        return switch (value.getValueType()) {
+            case NIL -> null;
+            case BOOLEAN -> value.asBooleanValue().getBoolean();
+            case INTEGER ->
+                // 这里选择 asLong() 以涵盖更大的整数范围
+                value.asIntegerValue().asLong();
+            case FLOAT ->
+                // 这里选择 asDouble() 以保留浮点数的精度
+                value.asFloatValue().asNumberValue().toDouble();
+            case STRING -> value.asStringValue().asString();
+            case BINARY ->
+                // 对于二进制数据，转换为 byte[]
+                value.asBinaryValue().asByteArray();
+            default -> value.toJson(); // Fallback to JSON string for unknown types
+        };
     }
 
     private List<Location> deserializeLocationList(MessageUnpacker unpacker) throws IOException {

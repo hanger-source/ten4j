@@ -14,7 +14,7 @@ public class SentenceProcessor {
     /**
      * 辅助方法：判断字符是否是标点符号
      */
-    private static boolean isPunctuation(char c) {
+    public static boolean isPunctuation(char c) {
         return c == ',' || c == '，' || c == ';' || c == '；' || c == ':' || c == '：' ||
             c == '.' || c == '。' || c == '!' || c == '！' || c == '?' || c == '？';
     }

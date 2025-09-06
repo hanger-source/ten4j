@@ -1,0 +1,307 @@
+{
+  "voiceModel": "smart_bert",
+  "voiceModelName": "SmartBert",
+  "candidates": [
+    {
+      "name": "知楠",
+      "voice": "sambert-zhinan-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/cymq/知楠.wav",
+      "feature": "广告男声"
+    },
+    {
+      "name": "知琪",
+      "voice": "sambert-zhiqi-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230712/wnqs/知琪.wav",
+      "feature": "温柔女声"
+    },
+    {
+      "name": "知厨",
+      "voice": "sambert-zhichu-v1",
+      "tag": ["新闻播报"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230712/enuf/知厨.wav",
+      "feature": "舌尖男声"
+    },
+    {
+      "name": "知德",
+      "voice": "sambert-zhide-v1",
+      "tag": ["新闻播报"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/bfcm/知德.wav",
+      "feature": "新闻男声"
+    },
+    {
+      "name": "知佳",
+      "voice": "sambert-zhijia-v1",
+      "tag": ["新闻播报"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230712/acre/知佳.wav",
+      "feature": "标准女声"
+    },
+    {
+      "name": "知茹",
+      "voice": "sambert-zhiru-v1",
+      "tag": ["新闻播报"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230712/motm/知茹.wav",
+      "feature": "新闻女声"
+    },
+    {
+      "name": "知倩",
+      "voice": "sambert-zhiqian-v1",
+      "tag": ["配音解说","新闻播报"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230712/trye/知倩.wav",
+      "feature": "资讯女声"
+    },
+    {
+      "name": "知祥",
+      "voice": "sambert-zhixiang-v1",
+      "tag": ["配音解说"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230712/jdjf/知祥.wav",
+      "feature": "磁性男声"
+    },
+    {
+      "name": "知薇",
+      "voice": "sambert-zhiwei-v1",
+      "tag": ["阅读产品简介"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230712/grnn/知薇.wav",
+      "feature": "萝莉女声"
+    },
+    {
+      "name": "知浩",
+      "voice": "sambert-zhihao-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/bmnx/知浩.wav",
+      "feature": "咨询男声"
+    },
+    {
+      "name": "知婧",
+      "voice": "sambert-zhijing-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/lmgc/知婧.wav",
+      "feature": "严厉女声"
+    },
+    {
+      "name": "知茗",
+      "voice": "sambert-zhiming-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/enps/知茗.wav",
+      "feature": "诙谐男声"
+    },
+    {
+      "name": "知墨",
+      "voice": "sambert-zhimo-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/ipxx/知墨.wav",
+      "feature": "情感男声"
+    },
+    {
+      "name": "知娜",
+      "voice": "sambert-zhina-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/zyza/知娜.wav",
+      "feature": "浙普女声"
+    },
+    {
+      "name": "知树",
+      "voice": "sambert-zhishu-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/pzzm/知树.wav",
+      "feature": "资讯男声"
+    },
+    {
+      "name": "知莎",
+      "voice": "sambert-zhistella-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230712/rtbv/知莎.wav",
+      "feature": "知性女声"
+    },
+    {
+      "name": "知婷",
+      "voice": "sambert-zhiting-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/wwpw/知婷.wav",
+      "feature": "电台女声"
+    },
+    {
+      "name": "知笑",
+      "voice": "sambert-zhixiao-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/mrcm/知笑.wav",
+      "feature": "资讯女声"
+    },
+    {
+      "name": "知雅",
+      "voice": "sambert-zhiya-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/ofma/知雅.wav",
+      "feature": "严厉女声"
+    },
+    {
+      "name": "知晔",
+      "voice": "sambert-zhiye-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/xewu/知晔.wav",
+      "feature": "青年男声"
+    },
+    {
+      "name": "知颖",
+      "voice": "sambert-zhiying-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/lrbj/知颖.wav",
+      "feature": "软萌童声"
+    },
+    {
+      "name": "知媛",
+      "voice": "sambert-zhiyuan-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/lkvm/知媛.wav",
+      "feature": "知心姐姐"
+    },
+    {
+      "name": "知悦",
+      "voice": "sambert-zhiyue-v1",
+      "tag": ["客服"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230712/ejzf/知悦.wav",
+      "feature": "温柔女声"
+    },
+    {
+      "name": "知柜",
+      "voice": "sambert-zhigui-v1",
+      "tag": ["阅读产品简介"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/ytij/知柜.wav",
+      "feature": "直播女声"
+    },
+    {
+      "name": "知硕",
+      "voice": "sambert-zhishuo-v1",
+      "tag": ["数字人"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230712/cxae/知硕.wav",
+      "feature": "自然男声"
+    },
+    {
+      "name": "知妙（多情感）",
+      "voice": "sambert-zhimiao-emo-v1",
+      "tag": ["阅读产品简介、数字人、直播"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/vept/知妙.wav",
+      "feature": "多种情感女声"
+    },
+    {
+      "name": "知猫",
+      "voice": "sambert-zhimao-v1",
+      "tag": ["阅读产品简介","配音解说","数字人","直播"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230712/vwtv/知猫.wav",
+      "feature": "直播女声"
+    },
+    {
+      "name": "知伦",
+      "voice": "sambert-zhilun-v1",
+      "tag": ["配音解说"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/lxag/知伦.wav",
+      "feature": "悬疑解说"
+    },
+    {
+      "name": "知飞",
+      "voice": "sambert-zhifei-v1",
+      "tag": ["配音解说"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/bbqy/知飞.wav",
+      "feature": "激昂解说"
+    },
+    {
+      "name": "知达",
+      "voice": "sambert-zhida-v1",
+      "tag": ["新闻播报"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230712/wfjx/知达.wav",
+      "feature": "标准男声"
+    },
+    {
+      "name": "Camila",
+      "voice": "sambert-camila-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/kfkc/Camila.wav",
+      "feature": "西班牙语女声"
+    },
+    {
+      "name": "Perla",
+      "voice": "sambert-perla-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/lzji/Perla.wav",
+      "feature": "意大利语女声"
+    },
+    {
+      "name": "Indah",
+      "voice": "sambert-indah-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230712/cgun/Indah.wav",
+      "feature": "印尼语女声"
+    },
+    {
+      "name": "Clara",
+      "voice": "sambert-clara-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/bssi/Clara.wav",
+      "feature": "法语女声"
+    },
+    {
+      "name": "Hanna",
+      "voice": "sambert-hanna-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/usrq/Hanna.wav",
+      "feature": "德语女声"
+    },
+    {
+      "name": "Beth",
+      "voice": "sambert-beth-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/zgct/Beth.wav",
+      "feature": "咨询女声"
+    },
+    {
+      "name": "Betty",
+      "voice": "sambert-betty-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/cshl/Betty.wav",
+      "feature": "客服女声"
+    },
+    {
+      "name": "Cally",
+      "voice": "sambert-cally-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/ggtn/Cally.wav",
+      "feature": "自然女声"
+    },
+    {
+      "name": "Cindy",
+      "voice": "sambert-cindy-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/xoac/Cindy.wav",
+      "feature": "对话女声"
+    },
+    {
+      "name": "Eva",
+      "voice": "sambert-eva-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/gtbq/Eva.wav",
+      "feature": "陪伴女声"
+    },
+    {
+      "name": "Donna",
+      "voice": "sambert-donna-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/olzr/Donna.wav",
+      "feature": "教育女声"
+    },
+    {
+      "name": "Brian",
+      "voice": "sambert-brian-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/jcwr/Brian.wav",
+      "feature": "客服男声"
+    },
+    {
+      "name": "Waan",
+      "voice": "sambert-waan-v1",
+      "tag": ["通用场景"],
+      "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/ealm/Waan.wav",
+      "feature": "泰语女声"
+    }
+  ]
+}

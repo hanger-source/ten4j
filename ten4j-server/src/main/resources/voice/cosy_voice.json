@@ -1,6 +1,6 @@
 {
   "voiceModel": "cosy_voice",
-  "voiceModelName": "语音合成-CosyVoice",
+  "voiceModelName": "CosyVoice",
   "candidates": [
     {
       "name": "龙火火",
