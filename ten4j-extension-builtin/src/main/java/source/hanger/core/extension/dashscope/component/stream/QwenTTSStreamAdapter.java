@@ -13,6 +13,7 @@ import com.alibaba.dashscope.exception.UploadFileException;
 import io.reactivex.Flowable;
 import io.reactivex.schedulers.Schedulers;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.time.StopWatch;
 import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.common.PipelinePacket;
 import source.hanger.core.extension.component.flush.InterruptionStateProvider;
@@ -56,8 +57,29 @@ public class QwenTTSStreamAdapter extends BaseTTSStreamAdapter<MultiModalConvers
             .build();
 
         try {
+            StopWatch stopWatch = StopWatch.createStarted();
             return multiModalConversation.streamCall(param)
-                .subscribeOn(Schedulers.io());
+                .subscribeOn(Schedulers.io())
+                .doOnNext(result -> {
+                    if (!stopWatch.isStopped()) {
+                        stopWatch.stop();
+                        log.info("[{}] DashScope MultiModalConversation channelId={} 音频首帧输出 elapsed_time={}ms text={}",
+                            env.getExtensionName(), streamPipelineChannel.uuid(), stopWatch.getTime(), text);
+                    }
+                }).doOnComplete(() -> {
+                    log.info("[{}] DashScope MultiModalConversation channelId={} 流输出完成", env.getExtensionName(),
+                        streamPipelineChannel.uuid());
+                }).doOnError(e -> {
+                    log.error("[{}] DashScope MultiModalConversation channelId={} 执行过程异常: {}", env.getExtensionName(),
+                        streamPipelineChannel.uuid(), e.getMessage());
+                }).doOnCancel(() -> {
+                    log.info("[{}] DashScope MultiModalConversation channelId={} 流输出取消", env.getExtensionName(),
+                        streamPipelineChannel.uuid());
+                }).doOnTerminate(() -> {
+                    if (!stopWatch.isStopped()) {
+                        stopWatch.stop();
+                    }
+                });
         } catch (NoApiKeyException | UploadFileException e) {
             log.error("[{}] 调用 DashScope TTS API 出现错误: {}", env.getExtensionName(), e.getMessage(), e);
             return Flowable.error(e);

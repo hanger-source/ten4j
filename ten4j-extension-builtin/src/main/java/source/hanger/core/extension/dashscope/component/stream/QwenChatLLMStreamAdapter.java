@@ -102,16 +102,14 @@ public class QwenChatLLMStreamAdapter extends BaseLLMStreamAdapter<GenerationRes
                         log.info("[{}] DashScope Generation channelId={} 首字输出 elapsed_time={}ms ",
                             env.getExtensionName(), streamPipelineChannel.uuid(), stopWatch.getTime());
                     }
-                    log.info("[{}] DashScope Generation channelId={} 返回结果: {} ", env.getExtensionName(),
-                        streamPipelineChannel.uuid(), result);
                 }).doOnComplete(() -> {
-                    log.info("[{}] DashScope Generation channelId={} 返回结果完成", env.getExtensionName(),
+                    log.info("[{}] DashScope Generation channelId={} 流输出完成", env.getExtensionName(),
                         streamPipelineChannel.uuid());
                 }).doOnError(e -> {
                     log.error("[{}] DashScope Generation channelId={} 执行过程异常: {}", env.getExtensionName(),
                         streamPipelineChannel.uuid(), e.getMessage());
                 }).doOnCancel(() -> {
-                    log.info("[{}] DashScope Generation channelId={} 返回结果取消", env.getExtensionName(),
+                    log.info("[{}] DashScope Generation channelId={} 流输出取消", env.getExtensionName(),
                         streamPipelineChannel.uuid());
                 }).doOnTerminate(() -> {
                     if (!stopWatch.isStopped()) {
