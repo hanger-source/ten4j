@@ -1,5 +1,6 @@
 package source.hanger.core.graph;
 
+import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -37,4 +38,8 @@ public class PredefinedGraphEntry {
      */
     @JsonProperty("graph")
     private GraphDefinition graph;
+
+    private List<String> voices;
+
+    private List<String> models;
 }

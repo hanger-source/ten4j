@@ -11,9 +11,15 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
 import source.hanger.core.graph.GraphConfig;
 import source.hanger.core.graph.GraphLoader;
 import source.hanger.core.graph.PredefinedGraphEntry;
+import source.hanger.server.loader.ResourceLoader;
+import source.hanger.server.pojo.resource.ModelOption;
+import source.hanger.server.pojo.resource.VoiceOption;
+
+import static org.apache.commons.collections4.CollectionUtils.*;
 
 @Slf4j
 @HttpRequestController(value = "/graphs")
@@ -23,23 +29,25 @@ public class GraphController {
 
     @HttpRequestMapping(path = "/", method = "GET")
     public String getGraphs(FullHttpRequest request) {
+        ResourceLoader resourceLoader = ResourceLoader.getInstance();
         List<GraphInfo> graphs = new ArrayList<>();
 
         try {
-            // 调用 GraphLoader 加载预定义图配置
             GraphConfig graphConfig = GraphLoader.loadPredefinedGraphsConfig();
 
             if (graphConfig != null && graphConfig.getPredefinedGraphs() != null) {
                 for (PredefinedGraphEntry entry : graphConfig.getPredefinedGraphs()) {
                     if (entry != null && entry.getGraph() != null) {
-                        // 确保 uuid 存在，因为 GraphLoader 已经处理了生成随机 uuid 的逻辑
                         String uuid = entry.getGraph().getGraphId();
                         String name = entry.getName();
                         boolean autoStart = entry.isAutoStart();
                         String docUrl = entry.getDocUrl();
                         Object metadata = entry.getMetadata();
 
-                        graphs.add(new GraphInfo(uuid, name, entry.getIndex(), autoStart, docUrl, metadata));
+                        List<VoiceOption> graphVoices = loadVoices(entry, resourceLoader);
+                        List<ModelOption> graphModels = loadModels(entry, resourceLoader);
+
+                        graphs.add(new GraphInfo(uuid, name, entry.getIndex(), autoStart, docUrl, metadata, graphVoices, graphModels));
                     } else {
                         log.warn("Invalid PredefinedGraphEntry found, skipping: {}", entry);
                     }
@@ -55,16 +63,38 @@ public class GraphController {
         }
     }
 
-    // 内部类，用于表示图的信息（与前端期望的结构一致）
     @Getter
     @AllArgsConstructor
     private static class GraphInfo {
-        // Getter 方法（Jackson 序列化需要）
-        public String uuid;
-        public String name;
-        public Integer index;
-        public boolean autoStart;
-        public String docUrl;
-        public Object metadata;
+        private String uuid;
+        private String name;
+        private Integer index;
+        private boolean autoStart;
+        private String docUrl;
+        private Object metadata;
+        private List<VoiceOption> voices;
+        private List<ModelOption> models;
+    }
+
+    private List<VoiceOption> loadVoices(PredefinedGraphEntry entry, ResourceLoader resourceLoader) {
+        if (isEmpty(entry.getVoices())) {
+            return new ArrayList<>();
+        }
+        return entry.getVoices().stream()
+                .map(resourceLoader.getVoicesMap()::get)
+                .filter(CollectionUtils::isNotEmpty)
+                .flatMap(List::stream)
+                .collect(Collectors.toList());
+    }
+
+    private List<ModelOption> loadModels(PredefinedGraphEntry entry, ResourceLoader resourceLoader) {
+        if (isEmpty(entry.getModels())) {
+            return new ArrayList<>();
+        }
+        return entry.getModels().stream()
+                .map(resourceLoader.getModelsMap()::get)
+                .filter(CollectionUtils::isNotEmpty)
+                .flatMap(List::stream)
+                .collect(Collectors.toList());
     }
 }
