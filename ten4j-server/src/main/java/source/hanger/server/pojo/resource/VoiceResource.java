@@ -4,19 +4,15 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.Accessors;
 
 import java.util.List;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class VoiceOption {
-
-    @JsonProperty("name")
-    private String name;
-
-    @JsonProperty("voice")
-    private String voice;
+@Accessors(chain = true)
+public class VoiceResource {
 
     @JsonProperty("voiceModel")
     private String voiceModel;
@@ -24,12 +20,6 @@ public class VoiceOption {
     @JsonProperty("voiceModelName")
     private String voiceModelName;
 
-    @JsonProperty("tag")
-    private List<String> tag;
-
-    @JsonProperty("previewAudioUrl")
-    private String previewAudioUrl;
-
-    @JsonProperty("feature")
-    private String feature;
+    @JsonProperty("candidates")
+    private List<VoiceOption> candidates;
 }
