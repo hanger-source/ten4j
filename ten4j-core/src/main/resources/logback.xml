@@ -11,9 +11,20 @@
         </encoder>
     </appender>
 
+    <!-- 异步日志配置 -->
+    <appender name="ASYNC_STDOUT" class="ch.qos.logback.classic.AsyncAppender">
+        <!-- 队列大小，默认为 256。根据日志量和内存情况调整。 -->
+        <queueSize>512</queueSize>
+        <!-- 当队列满时，阻塞调用线程。设置为 true 可能会导致性能下降，但能保证日志不丢失。
+             对于高性能实时系统，通常更倾向于丢弃部分日志以保证主业务线程响应性，可以考虑设为 false。 -->
+        <neverBlock>false</neverBlock>
+        <!-- 引入 AsyncAppender 时，通常会引用另一个 Appender -->
+        <appender-ref ref="STDOUT" />
+    </appender>
+
     <!-- 设置根Logger，将所有级别为DEBUG及以上的日志输出到STDOUT -->
     <root level="INFO">
-        <appender-ref ref="STDOUT" />
+        <appender-ref ref="ASYNC_STDOUT" />
     </root>
 
 </configuration>
