@@ -54,6 +54,7 @@ public abstract class BaseASRStreamAdapter<RECOGNITION_RESULT> implements ASRStr
         log.info("[{}] ASR 流式配器启动 channelId={}", env.getExtensionName(), streamPipelineChannel.uuid());
 
         Flowable<PipelinePacket<OutputBlock>> flowable = getRawAsrFlowable(env, audioInputStreamProcessor)
+            // transform执行在 IO_OFFLOAD_SCHEDULER
             .observeOn(DefaultSchedulers.IO_OFFLOAD_SCHEDULER)
             .flatMap(result -> transformSingleRecognitionResult(result, env))
             .takeWhile(_ -> !extensionStateProvider.isInterrupted())

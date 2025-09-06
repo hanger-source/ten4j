@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import io.reactivex.Flowable;
+import io.reactivex.schedulers.Schedulers;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.common.DefaultSchedulers;
 import source.hanger.core.extension.component.common.OutputBlock;
@@ -68,6 +69,7 @@ public abstract class BaseLLMStreamAdapter<GENERATION_RAW_RESULT, MESSAGE, TOOL_
 
         // 转换原始 LLM 流为 LLMOutputBlock 流，实现真正的流式处理
         Flowable<PipelinePacket<OutputBlock>> transformedOutputFlowable = rawLlmFlowable
+            // transform执行在 IO_OFFLOAD_SCHEDULER
             .observeOn(DefaultSchedulers.IO_OFFLOAD_SCHEDULER)
             .flatMap(
                 result -> transformSingleGenerationResult(result, originalMessage, streamContexts, env))

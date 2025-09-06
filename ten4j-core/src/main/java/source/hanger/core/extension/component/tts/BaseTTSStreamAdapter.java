@@ -32,6 +32,7 @@ public abstract class BaseTTSStreamAdapter<RAW_TTS_RESULT> implements TTSStreamA
         Flowable<RAW_TTS_RESULT> rawTtsFlowable = getRawTtsFlowable(env, speechTranscription);
 
         Flowable<PipelinePacket<OutputBlock>> transformedOutputFlowable = rawTtsFlowable
+            // transform执行在 IO_OFFLOAD_SCHEDULER
             .observeOn(DefaultSchedulers.IO_OFFLOAD_SCHEDULER)
             .flatMap(result -> transformSingleTTSResult(result, originalMessage, env))
             .takeWhile(_ -> !interruptionStateProvider.isInterrupted())

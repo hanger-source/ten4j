@@ -16,6 +16,7 @@ import com.alibaba.dashscope.tools.ToolCallFunction;
 import com.alibaba.dashscope.tools.ToolFunction;
 
 import io.reactivex.Flowable;
+import io.reactivex.schedulers.Schedulers;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import source.hanger.core.extension.component.common.OutputBlock;
@@ -69,7 +70,8 @@ public class QwenMultiModalLLMStreamAdapter
 
         try {
             // 使用注入的 DashScope Generation 客户端进行调用
-            return conversation.streamCall(param);
+            return conversation.streamCall(param)
+                .subscribeOn(Schedulers.io());
         } catch (NoApiKeyException | UploadFileException e) {
             log.error("[{}] Error calling DashScope stream: {}", env.getExtensionName(), e.getMessage());
             return Flowable.error(e);

@@ -17,6 +17,7 @@ import com.alibaba.dashscope.tools.ToolCallFunction;
 import com.alibaba.dashscope.tools.ToolFunction;
 
 import io.reactivex.Flowable;
+import io.reactivex.schedulers.Schedulers;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -94,6 +95,7 @@ public class QwenChatLLMStreamAdapter extends BaseLLMStreamAdapter<GenerationRes
         try {
             // 使用注入的 DashScope Generation 客户端进行调用
             return generation.streamCall(param)
+                .subscribeOn(Schedulers.io())
                 .doOnNext(result -> {
                     if (!stopWatch.isStopped()) {
                         stopWatch.stop();

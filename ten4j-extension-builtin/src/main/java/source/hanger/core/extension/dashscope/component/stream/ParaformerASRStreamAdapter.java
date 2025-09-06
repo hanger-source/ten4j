@@ -8,6 +8,7 @@ import com.alibaba.dashscope.audio.asr.recognition.RecognitionResult;
 import com.alibaba.dashscope.exception.NoApiKeyException;
 
 import io.reactivex.Flowable;
+import io.reactivex.schedulers.Schedulers;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.component.asr.ASRTranscriptionOutputBlock;
 import source.hanger.core.extension.component.asr.BaseASRStreamAdapter;
@@ -56,8 +57,8 @@ public class ParaformerASRStreamAdapter extends BaseASRStreamAdapter<Recognition
 
             log.info("[{}] ParaformerASRClient recognition started successfully. channelId={}",
                 env.getExtensionName(), streamPipelineChannel.uuid());
-            return resultFlowable;
-
+            return resultFlowable
+                .subscribeOn(Schedulers.io());
         } catch (NoApiKeyException e) {
             log.error("[{}] No API Key provided for Paraformer ASR. channelId={}",
                 env.getExtensionName(), streamPipelineChannel.uuid(), e);

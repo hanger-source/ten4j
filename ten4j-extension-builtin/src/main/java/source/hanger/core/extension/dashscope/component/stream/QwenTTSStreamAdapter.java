@@ -11,6 +11,7 @@ import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.exception.UploadFileException;
 
 import io.reactivex.Flowable;
+import io.reactivex.schedulers.Schedulers;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.common.PipelinePacket;
@@ -51,7 +52,8 @@ public class QwenTTSStreamAdapter extends BaseTTSStreamAdapter<MultiModalConvers
             .build();
 
         try {
-            return multiModalConversation.streamCall(param);
+            return multiModalConversation.streamCall(param)
+                .subscribeOn(Schedulers.io());
         } catch (NoApiKeyException | UploadFileException e) {
             log.error("[{}] 调用 DashScope TTS API 出现错误: {}", env.getExtensionName(), e.getMessage(), e);
             return Flowable.error(e);
