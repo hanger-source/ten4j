@@ -9,6 +9,7 @@ import io.reactivex.processors.FlowableProcessor;
 import io.reactivex.processors.PublishProcessor;
 import io.reactivex.schedulers.Schedulers;
 import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.common.DefaultSchedulers;
 import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.common.PipelinePacket;
 import source.hanger.core.extension.component.state.ExtensionStateProvider;
@@ -53,6 +54,7 @@ public abstract class BaseASRStreamAdapter<RECOGNITION_RESULT> implements ASRStr
         log.info("[{}] ASR 流式配器启动 channelId={}", env.getExtensionName(), streamPipelineChannel.uuid());
 
         Flowable<PipelinePacket<OutputBlock>> flowable = getRawAsrFlowable(env, audioInputStreamProcessor)
+            .observeOn(DefaultSchedulers.IO_OFFLOAD_SCHEDULER)
             .flatMap(result -> transformSingleRecognitionResult(result, env))
             .takeWhile(_ -> !extensionStateProvider.isInterrupted())
             // 引入 retryWhen 实现指数退避和重试限制

@@ -2,6 +2,7 @@ package source.hanger.core.extension.component.tts;
 
 import io.reactivex.Flowable;
 import lombok.extern.slf4j.Slf4j;
+import source.hanger.core.common.DefaultSchedulers;
 import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.common.PipelinePacket;
 import source.hanger.core.extension.component.flush.InterruptionStateProvider;
@@ -31,6 +32,7 @@ public abstract class BaseTTSStreamAdapter<RAW_TTS_RESULT> implements TTSStreamA
         Flowable<RAW_TTS_RESULT> rawTtsFlowable = getRawTtsFlowable(env, speechTranscription);
 
         Flowable<PipelinePacket<OutputBlock>> transformedOutputFlowable = rawTtsFlowable
+            .observeOn(DefaultSchedulers.IO_OFFLOAD_SCHEDULER)
             .flatMap(result -> transformSingleTTSResult(result, originalMessage, env))
             .takeWhile(_ -> !interruptionStateProvider.isInterrupted())
             .doOnError(error -> {
