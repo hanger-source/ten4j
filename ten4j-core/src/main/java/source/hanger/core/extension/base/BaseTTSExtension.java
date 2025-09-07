@@ -17,6 +17,7 @@ import source.hanger.core.extension.component.stream.StreamPipelineChannel;
 import source.hanger.core.extension.component.tts.TTSAudioOutputBlock;
 import source.hanger.core.extension.component.tts.TTSStreamAdapter;
 import source.hanger.core.message.CommandResult;
+import source.hanger.core.message.CommandResult.CommandResultBuilder;
 import source.hanger.core.message.DataMessage;
 import source.hanger.core.message.MessageType;
 import source.hanger.core.message.command.Command;
@@ -28,6 +29,9 @@ import source.hanger.core.util.MessageUtils;
 import static org.apache.commons.lang3.StringUtils.*;
 import static source.hanger.core.common.ExtensionConstants.CMD_IN_FLUSH;
 import static source.hanger.core.common.ExtensionConstants.CMD_OUT_FLUSH;
+import static source.hanger.core.common.ExtensionConstants.CMD_RESULT_TTS_AVAILABLE;
+import static source.hanger.core.common.ExtensionConstants.CMD_RESULT_TTS_UNAVAILABLE;
+import static source.hanger.core.common.ExtensionConstants.CMD_TTS_DISCOVERY;
 import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_TEXT;
 import static source.hanger.core.util.SentenceProcessor.*;
 
@@ -75,19 +79,42 @@ public abstract class BaseTTSExtension extends BaseExtension {
     }
 
     @Override
-    public void onCmd(TenEnv env, Command command) {
+    public void onStop(TenEnv env) {
+        super.onStop(env);
+        ttsStreamAdapter.onStop(env);
+        streamPipelineChannel.disposeCurrent();
+    }
+
+    @Override
+    public void onCmd(TenEnv env, Command ttsDiscoveryCmd) {
         if (!isRunning()) {
             log.warn("[{}] Extension未运行，忽略 Command。", env.getExtensionName());
             return;
         }
         // 处理 CMD_FLUSH 命令
-        if (CMD_IN_FLUSH.equals(command.getName())) {
+        if (CMD_IN_FLUSH.equals(ttsDiscoveryCmd.getName())) {
             log.info("[{}] 收到 来自 {} CMD_FLUSH 命令，执行刷新操作并重置历史。", env.getExtensionName(),
-                command.getSrcLoc().getExtensionName());
+                ttsDiscoveryCmd.getSrcLoc().getExtensionName());
             flushOperationCoordinator.triggerFlush(env);
-            env.sendCmd(GenericCommand.create(CMD_OUT_FLUSH, command.getId()));
+            env.sendCmd(GenericCommand.create(CMD_OUT_FLUSH, ttsDiscoveryCmd.getId()));
             return;
         }
+
+        if (CMD_TTS_DISCOVERY.equals(ttsDiscoveryCmd.getName())) {
+            CommandResultBuilder<?, ?> builder = CommandResult.createSuccessBuilder(ttsDiscoveryCmd);
+            if (canDiscovery(env, ttsDiscoveryCmd)) {
+                builder.property(CMD_RESULT_TTS_AVAILABLE, env.getExtensionName());
+            } else {
+                builder.property(CMD_RESULT_TTS_UNAVAILABLE, env.getExtensionName());
+                onStop(env);
+            }
+            env.sendResult(builder.build());
+            return;
+        }
+    }
+
+    protected boolean canDiscovery(TenEnv env, Command command) {
+        return false;
     }
 
     @Override

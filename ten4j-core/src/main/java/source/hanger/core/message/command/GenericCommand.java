@@ -32,4 +32,14 @@ public class GenericCommand extends Command {
     public MessageType getType() {
         return CMD;
     }
+
+    @Override
+    public GenericCommandBuilder<?, ?> cloneBuilder() {
+        return (GenericCommandBuilder<?, ?>)super.cloneBuilder();
+    }
+
+    @Override
+    protected GenericCommandBuilder<?, ?> innerToBuilder() {
+        return toBuilder();
+    }
 }

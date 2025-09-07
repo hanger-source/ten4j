@@ -126,4 +126,14 @@ public class VideoFrameMessage extends Message {
     public MessageType getType() {
         return VIDEO_FRAME;
     }
+
+    @Override
+    public VideoFrameMessageBuilder<?, ?> cloneBuilder() {
+        return (VideoFrameMessageBuilder<?, ?>)super.cloneBuilder();
+    }
+
+    @Override
+    protected VideoFrameMessageBuilder<?, ?> innerToBuilder() {
+        return toBuilder();
+    }
 }

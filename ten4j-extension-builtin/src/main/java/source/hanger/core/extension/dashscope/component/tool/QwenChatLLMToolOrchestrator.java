@@ -67,7 +67,7 @@ public class QwenChatLLMToolOrchestrator extends BaseLLMToolOrchestrator<Message
         return Message.builder()
             .role(Role.TOOL.getValue())
             .toolCallId(toolCallOutputBlock.getToolCallId())
-            .content("工具调用失败: %s".formatted(cmdThrowable.getMessage())) // 错误信息作为 content
+            .content("工具调用失败: %s".formatted(cmdThrowable.getMessage())) // 错误信息作为 toolCallContext
             .build();
     }
 

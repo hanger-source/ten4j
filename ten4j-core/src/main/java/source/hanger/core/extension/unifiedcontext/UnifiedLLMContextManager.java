@@ -186,7 +186,7 @@ public class UnifiedLLMContextManager implements LLMContextManager<UnifiedMessag
     public void setCommonSystemPrompt(String commonSystemPrompt) { // 提供更新 commonSystemPrompt 的方法
         if (commonSystemPrompt != null && !commonSystemPrompt.isEmpty()) {
             if (this.commonSystemPrompt == null || !this.commonSystemPrompt.equals(commonSystemPrompt)) {
-                log.info("[UnifiedContext] Updating common system prompt. Old: \'{}\', New: \'{}\'", this.commonSystemPrompt, commonSystemPrompt);
+                log.info("[UnifiedContext] Updating common system assistantMessage. Old: \'{}\', New: \'{}\'", this.commonSystemPrompt, commonSystemPrompt);
                 this.commonSystemPrompt = commonSystemPrompt;
             }
         }

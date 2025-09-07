@@ -31,6 +31,7 @@ import source.hanger.core.graph.GraphLoader;
 import source.hanger.core.graph.PredefinedGraphEntry;
 import source.hanger.core.graph.runtime.PredefinedGraphRuntimeInfo;
 import source.hanger.core.message.CommandResult;
+import source.hanger.core.message.DefaultCommandExecutionHandle;
 import source.hanger.core.message.Location;
 import source.hanger.core.message.Message;
 import source.hanger.core.message.MessageType;
@@ -524,8 +525,8 @@ public class App implements Agent, MessageReceiver { // 修正：添加 MessageR
      * @param command 要提交的命令。
      * @return 一个 CompletableFuture，当命令处理完成并返回结果时，它将被完成。
      */
-    public CommandExecutionHandle<CommandResult> submitCommand(Command command) {
-        CommandExecutionHandle<CommandResult> handle = new CommandExecutionHandle<>(appRunloop);
+    public CommandExecutionHandle<CommandResult> submitCommandWithResultHandle(Command command) {
+        CommandExecutionHandle<CommandResult> handle = new DefaultCommandExecutionHandle<>(appRunloop);
         commandHandles.put(command.getId(), handle);
 
         // 确保在 App 的 Runloop 线程中执行命令提交

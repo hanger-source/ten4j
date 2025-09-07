@@ -8,8 +8,9 @@ import java.util.concurrent.Executors;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.base.tool.LLMTool;
-import source.hanger.core.extension.base.tool.LLMToolResult;
+import source.hanger.core.extension.base.tool.ToolCallPayload;
 import source.hanger.core.extension.base.tool.ParameterlessLLMTool;
+import source.hanger.core.extension.component.tool.ToolCallPayloadEmitter;
 import source.hanger.core.message.Message;
 import source.hanger.core.message.VideoFrameMessage;
 import source.hanger.core.message.command.Command;
@@ -67,7 +68,7 @@ public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLL
             llmContextManager.onUserVideoMsg(userText, latestNBuffer.getLatest(VIDEO_FRAME_COUNT));
 
             List<MESSAGE> messagesForLlm = llmContextManager.getMessagesForLLM();
-            List<TOOL_FUNCTION> registeredTools = LLMToolOrchestrator.getRegisteredToolFunctions();
+            List<TOOL_FUNCTION> registeredTools = llmToolOrchestrator.getRegisteredToolFunctions();
             // 请求 LLM 并处理流
             llmStreamAdapter.onRequestLLMAndProcessStream(env, messagesForLlm, registeredTools, originalMessage);
         }
@@ -139,10 +140,14 @@ public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLL
         private TenEnv env;
 
         @Override
-        public LLMToolResult runTool(TenEnv env, Command command, Map<String, Object> args) {
+        public void runTool(ToolCallPayloadEmitter payloadEmitter, TenEnv env, Command command,
+            Map<String, Object> args) {
             String prompt = command.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse("");
             onUserTextInput(env, prompt, command);
-            return LLMToolResult.noop("已分析摄像头实时画面");
+            payloadEmitter.emmit(ToolCallPayload
+                .finalPayload()
+                .secondRound(false)
+                .toolCallContext("已分析摄像头实时画面。"));
         }
 
         @Override

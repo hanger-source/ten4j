@@ -7,7 +7,8 @@ import java.util.Map;
 
 import source.hanger.core.extension.base.tool.LLMTool;
 import source.hanger.core.extension.base.tool.LLMToolMetadata;
-import source.hanger.core.extension.base.tool.LLMToolResult;
+import source.hanger.core.extension.base.tool.ToolCallPayload;
+import source.hanger.core.extension.component.tool.ToolCallPayloadEmitter;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
 
@@ -23,11 +24,15 @@ public class GetCurrentDateTimeTool implements LLMTool {
     }
 
     @Override
-    public LLMToolResult runTool(TenEnv env, Command command, Map<String, Object> args) {
+    public void runTool(ToolCallPayloadEmitter payloadEmitter, TenEnv env, Command command, Map<String, Object> args) {
         LocalDateTime now = LocalDateTime.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         String formattedDateTime = now.format(formatter);
-        return LLMToolResult.llmResult(true, "此次询问结果的日期和时间是: %s".formatted(formattedDateTime));
+
+        payloadEmitter.emmit(ToolCallPayload
+            .finalPayload()
+            .secondRound(true)
+            .toolCallContext(formattedDateTime));
     }
 
     @Override

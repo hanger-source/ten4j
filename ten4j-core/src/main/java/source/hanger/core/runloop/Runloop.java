@@ -235,17 +235,17 @@ public class Runloop {
                 stopWatch.stop(); // 停止计时
                 long taskDurationMillis = stopWatch.getTime(); // 获取耗时
 
-                if (taskDurationMillis > 300) {
+                if (taskDurationMillis > 100) {
                     RuntimeException submissionOriginException = new RuntimeException(
-                        "Runloop任务执行耗时过长 (超过 300ms): %d ms. Task: %s. 提交源堆栈：".formatted(
+                        "Runloop任务执行耗时过长 (超过 100ms): %d ms. Task: %s. 提交源堆栈：".formatted(
                             taskDurationMillis, taskDescription));
                     if (submissionStackTrace != null) {
                         submissionOriginException.setStackTrace(submissionStackTrace); // 设置为提交时的堆栈
                     }
-                    log.error("[{}] Runloop任务执行耗时过长 (超过 300ms): {} ms. Task: {}. 提交源堆栈：",
+                    log.error("[{}] Runloop任务执行耗时过长 (超过 100ms): {} ms. Task: {}. 提交源堆栈：",
                         runloopRoleName, taskDurationMillis, taskDescription, submissionOriginException);
-                } else if (taskDurationMillis > 150) {
-                    log.warn("[{}] Runloop任务执行耗时较长 (超过 150ms): {} ms. Task: {}", runloopRoleName,
+                } else if (taskDurationMillis > 50) {
+                    log.warn("[{}] Runloop任务执行耗时较长 (超过 50ms): {} ms. Task: {}", runloopRoleName,
                         taskDurationMillis, taskDescription);
                 }
             }

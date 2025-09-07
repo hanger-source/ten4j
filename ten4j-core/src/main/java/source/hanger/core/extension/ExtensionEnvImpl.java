@@ -12,6 +12,7 @@ import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandExecutionHandle;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.DataMessage;
+import source.hanger.core.message.DefaultCommandExecutionHandle;
 import source.hanger.core.message.VideoFrameMessage;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.runloop.Runloop;
@@ -64,7 +65,7 @@ public class ExtensionEnvImpl implements TenEnv {
     }
 
     @Override
-    public CommandExecutionHandle<CommandResult> sendAsyncCmd(Command command) {
+    public CommandExecutionHandle<CommandResult> submitCommandWithResultHandle(Command command) {
         // Extension 发送命令，通过 commandSubmitter 委托给 Engine 处理
         if (commandSubmitter != null) {
             // 获取 Engine 返回的原始 CommandExecutionHandle
@@ -74,7 +75,7 @@ public class ExtensionEnvImpl implements TenEnv {
             return engineHandle.onRunloop(extensionRunloop);
         } else {
             // 如果 commandSubmitter 为空，立即返回一个带有异常的 CommandExecutionHandle
-            CommandExecutionHandle<CommandResult> handle = new CommandExecutionHandle<>(extensionRunloop);
+            CommandExecutionHandle<CommandResult> handle = new DefaultCommandExecutionHandle<>(extensionRunloop);
             RuntimeException ex = new IllegalStateException(
                 "ExtensionCommandSubmitter is null, cannot send command for Extension: %s"
                     .formatted(extensionName));
@@ -84,10 +85,20 @@ public class ExtensionEnvImpl implements TenEnv {
     }
 
     @Override
+    public void sendCmd(Command command) {
+        if (commandSubmitter != null) {
+            messageSubmitter.submitMessageFromExtension(command, extensionName);
+        } else {
+            log.warn("ExtensionCommandSubmitter is null, cannot send command for Extension: {}. Command dropped.",
+                extensionName);
+        }
+    }
+
+    @Override
     public void sendResult(CommandResult result) {
         // Extension 发送命令结果，通过 commandSubmitter 委托给 Engine 处理
         if (commandSubmitter != null) {
-            commandSubmitter.routeCommandResultFromExtension(result, extensionName);
+            commandSubmitter.submitCommandResultFromExtension(result, extensionName);
         } else {
             log.warn(
                 "ExtensionCommandSubmitter is null, cannot route command result for Extension: {}. Result dropped.",

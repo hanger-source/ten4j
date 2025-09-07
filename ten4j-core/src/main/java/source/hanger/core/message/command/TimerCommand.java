@@ -55,4 +55,14 @@ public class TimerCommand extends Command {
     public MessageType getType() {
         return MessageType.CMD_TIMER;
     }
+
+    @Override
+    public TimerCommandBuilder<?, ?> cloneBuilder() {
+        return (TimerCommandBuilder<?, ?>)super.cloneBuilder();
+    }
+
+    @Override
+    protected TimerCommandBuilder<?, ?> innerToBuilder() {
+        return toBuilder();
+    }
 }

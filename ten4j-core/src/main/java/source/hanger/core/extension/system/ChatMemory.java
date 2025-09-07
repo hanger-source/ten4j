@@ -37,7 +37,7 @@ public class ChatMemory {
     public void put(String role, String content) {
         Map<String, Object> msg = new LinkedHashMap<>(); // Use LinkedHashMap to preserve insertion order
         msg.put("role", role);
-        msg.put("content", content);
+        msg.put("toolCallContext", content);
         put(msg);
     }
 

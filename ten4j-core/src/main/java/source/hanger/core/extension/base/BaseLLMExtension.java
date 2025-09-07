@@ -54,7 +54,7 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
     protected StreamPipelineChannel<OutputBlock> streamPipelineChannel;
     protected LLMContextManager<MESSAGE> llmContextManager;
     protected LLMStreamAdapter<MESSAGE, TOOL_FUNCTION> llmStreamAdapter;
-    protected LLMToolOrchestrator<TOOL_FUNCTION> LLMToolOrchestrator;
+    protected LLMToolOrchestrator<TOOL_FUNCTION> llmToolOrchestrator;
 
     @Override
     protected void onExtensionConfigure(TenEnv env, Map<String, Object> properties) {
@@ -73,7 +73,7 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
         log.info("[{}] 配置中，初始化 LLMStreamAdapter。", env.getExtensionName());
 
         // 5. 初始化 ToolRegistryAndCaller (由子类提供具体实现)
-        this.LLMToolOrchestrator = createToolOrchestrator();
+        this.llmToolOrchestrator = createToolOrchestrator();
         log.info("[{}] 配置中，初始化 ToolRegistryAndCaller。", env.getExtensionName());
 
         // 6. 初始化 FlushOperationCoordinator (由子类提供具体实现，或使用通用实现)
@@ -130,7 +130,7 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
             llmContextManager.onUserMsg(userText);
 
             List<MESSAGE> messagesForLlm = llmContextManager.getMessagesForLLM();
-            List<TOOL_FUNCTION> registeredTools = LLMToolOrchestrator.getRegisteredToolFunctions();
+            List<TOOL_FUNCTION> registeredTools = llmToolOrchestrator.getRegisteredToolFunctions();
             // 请求 LLM 并处理流
             llmStreamAdapter.onRequestLLMAndProcessStream(env, messagesForLlm, registeredTools, originalMessage);
         }
@@ -155,7 +155,7 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
                 // 工具元数据
                 String toolJson = command.getPropertyString(CMD_PROPERTY_TOOL).orElse(null);
                 LLMToolMetadata LLMToolMetadata = objectMapper.readValue(toolJson, LLMToolMetadata.class);
-                LLMToolOrchestrator.registerTool(LLMToolMetadata);
+                llmToolOrchestrator.registerTool(LLMToolMetadata);
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
@@ -166,6 +166,7 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
             log.info("[{}] 收到来自 {} CMD_FLUSH 命令，执行刷新操作并重置历史。", env.getExtensionName(),
                 command.getSrcLoc().getExtensionName());
             flushOperationCoordinator.triggerFlush(env);
+            llmToolOrchestrator.triggerFlush(env);
             env.sendCmd(GenericCommand.create(CMD_OUT_FLUSH, command.getId()));
             return;
         }
@@ -214,7 +215,7 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
                 log.info("[{}] Stream输出 (Tool Call): Name={}, Arguments={}, Tool ID={}",
                     env.getExtensionName(), toolCallBlock.getToolName(), toolCallBlock.getArgumentsJson(),
                     toolCallBlock.getId());
-                LLMToolOrchestrator.processToolCall(env, toolCallBlock, originalMessage);
+                llmToolOrchestrator.processToolCall(env, toolCallBlock, originalMessage);
             }
         };
     }

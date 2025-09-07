@@ -1,6 +1,6 @@
 {
-  "voiceModel": "smart_bert",
-  "voiceModelName": "SmartBert",
+  "voiceModel": "sambert",
+  "voiceModelName": "SamBert",
   "candidates": [
     {
       "name": "知楠",

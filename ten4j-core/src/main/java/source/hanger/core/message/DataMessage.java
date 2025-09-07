@@ -49,4 +49,14 @@ public class DataMessage extends Message {
     public MessageType getType() {
         return MessageType.DATA;
     }
+
+    @Override
+    public DataMessageBuilder<?, ?> cloneBuilder() {
+        return (DataMessageBuilder<?, ?>)super.cloneBuilder();
+    }
+
+    @Override
+    protected DataMessageBuilder<?, ?> innerToBuilder() {
+        return toBuilder();
+    }
 }

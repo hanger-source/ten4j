@@ -9,7 +9,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.app.App;
 import source.hanger.core.app.AppEnvImpl;
-import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.connection.Connection;
 import source.hanger.core.engine.Engine;
 import source.hanger.core.extension.ExtensionGroupInfo;
@@ -200,7 +199,7 @@ public class StartGraphCommandHandler implements AppCommandHandler {
             userJoinedCommand.setSrcLoc(new Location(connection.getUri(), engine.getGraphId(), null));
             userJoinedCommand.setDestLocs(List.of(new Location(engine.getApp().getAppUri(), engine.getGraphId(),
                 "client_connection")));
-            engine.submitCommand(userJoinedCommand);
+            engine.submitInboundMessage(userJoinedCommand, null);
             log.info("StartGraphCommandHandler: 已发送 CMD_IN_ON_USER_JOINED 命令到 Engine {}.", engine.getGraphId());
         }
     }

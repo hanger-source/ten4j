@@ -20,7 +20,7 @@ public class HelloWorldController {
     @HttpRequestMapping(path = "/greet", method = "POST")
     public String greet(FullHttpRequest request) {
         String content = request.content().toString(io.netty.util.CharsetUtil.UTF_8);
-        log.info("Received /greet POST request with content: {}", content);
+        log.info("Received /greet POST request with toolCallContext: {}", content);
         return "Greeting received: %s".formatted(content);
     }
 

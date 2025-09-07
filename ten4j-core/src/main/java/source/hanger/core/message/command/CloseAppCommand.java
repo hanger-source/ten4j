@@ -30,4 +30,14 @@ public class CloseAppCommand extends Command {
     public MessageType getType() {
         return MessageType.CMD_CLOSE_APP;
     }
+
+    @Override
+    public CloseAppCommandBuilder<?, ?> cloneBuilder() {
+        return (CloseAppCommandBuilder<?, ?>)super.cloneBuilder();
+    }
+
+    @Override
+    protected CloseAppCommandBuilder<?, ?> innerToBuilder() {
+        return toBuilder();
+    }
 }

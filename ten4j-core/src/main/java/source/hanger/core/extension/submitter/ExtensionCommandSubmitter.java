@@ -7,5 +7,5 @@ import source.hanger.core.message.CommandExecutionHandle;
 public interface ExtensionCommandSubmitter {
     CommandExecutionHandle<CommandResult> submitCommandFromExtension(Command command, String sourceExtensionName);
 
-    void routeCommandResultFromExtension(CommandResult commandResult, String sourceExtensionName);
+    void submitCommandResultFromExtension(CommandResult commandResult, String sourceExtensionName);
 }

@@ -54,4 +54,14 @@ public class StopGraphCommand extends Command {
     public MessageType getType() {
         return CMD_STOP_GRAPH;
     }
+
+    @Override
+    public StopGraphCommandBuilder<?, ?> cloneBuilder() {
+        return (StopGraphCommandBuilder<?, ?>)super.cloneBuilder();
+    }
+
+    @Override
+    protected StopGraphCommandBuilder<?, ?> innerToBuilder() {
+        return toBuilder();
+    }
 }

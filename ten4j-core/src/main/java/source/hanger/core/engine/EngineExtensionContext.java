@@ -8,6 +8,7 @@ import java.util.Objects;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import source.hanger.core.app.App;
 import source.hanger.core.extension.Extension;
@@ -19,6 +20,8 @@ import source.hanger.core.extension.ExtensionThread;
 import source.hanger.core.extension.submitter.ExtensionCommandSubmitter;
 import source.hanger.core.extension.submitter.ExtensionMessageSubmitter;
 import source.hanger.core.graph.AllMessageDestInfo;
+import source.hanger.core.graph.DestinationInfo;
+import source.hanger.core.graph.RoutingRuleDefinition;
 import source.hanger.core.message.CommandExecutionHandle;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.Location;
@@ -31,6 +34,9 @@ import source.hanger.core.util.ReflectionUtils;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
+import static org.apache.commons.collections4.CollectionUtils.*;
+import static org.apache.commons.collections4.CollectionUtils.isEmpty;
+import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 
 /**
  * 管理 Engine 中 Extension 的生命周期和交互。
@@ -372,7 +378,7 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
                 "ExtensionContext: 未找到 ExtensionThread 来处理 Extension {} 的消息 {} (Type: {}).",
                 extensionName, message.getId(), message.getType());
             if (message instanceof Command command) {
-                routeCommandResultFromExtension(
+                submitCommandResultFromExtension(
                     CommandResult.fail(command,
                         "ExtensionThread for Extension not found: %s".formatted(extensionName)),
                     command.getSrcLoc().getExtensionName() != null ? command.getSrcLoc().getExtensionName()
@@ -406,66 +412,6 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
         // 将处理后的消息委托给 ExtensionThread 进行分发
         Message finalProcessedMessage = processedMessage;
         extensionThread.dispatchMessage(finalProcessedMessage, extensionName);
-    }
-
-    /**
-     * 将命令提交给 Extension 进行处理。
-     * 这是 Engine 消息分发到 Extension 的入口点，消息将在 Extension 专属线程上处理。
-     * 注意：这里假设命令是点对点发送给特定的 Extension，而不是广播。
-     *
-     * @param command           要处理的命令。
-     * @param targetExtensionId 目标 Extension 的 ID。
-     */
-    public void dispatchCommandToExtension(Command command, String targetExtensionId) {
-        if (StringUtils.isEmpty(targetExtensionId)) {
-            EngineExtensionContext.log.warn(
-                "ExtensionContext: 目标 Extension ID 为空或 null，无法分发命令 {}.getId()。跳过分发。",
-                command.getId());
-            return;
-        }
-
-        // 查找目标 Extension 所在的 ExtensionThread
-        ExtensionThread extensionThread = findExtensionThreadForExtension(targetExtensionId);
-        if (extensionThread == null) {
-            EngineExtensionContext.log.error(
-                "ExtensionContext: 未找到 ExtensionThread 来处理 Extension {} 的命令 {} (Type: {}).",
-                targetExtensionId, command.getId(), command.getType());
-            if (command.getOriginalCommandId() != null) {
-                routeCommandResultFromExtension(
-                    CommandResult.fail(command,
-                        "ExtensionThread for Extension not found: %s".formatted(targetExtensionId)),
-                    command.getSrcLoc().getExtensionName() != null ? command.getSrcLoc().getExtensionName()
-                        : "Engine"); // Engine 作为发送方
-            }
-            return;
-        }
-
-        // --- 消息转换逻辑开始 (对于入站命令) ---
-        Message processedCommand = command;
-        // 从 ExtensionGroup 中获取 ExtensionInfo 进行消息转换
-        ExtensionGroup targetGroup = extensionThread.getExtensionGroup(); // 获取 ExtensionThread 关联的 ExtensionGroup
-        if (targetGroup == null) {
-            EngineExtensionContext.log.warn(
-                "ExtensionContext: ExtensionThread {} 没有关联 ExtensionGroup，无法执行消息转换。忽略命令 {}.",
-                extensionThread.getThreadName(), command.getId());
-            return;
-        }
-        // 从 ExtensionGroup 中获取 ExtensionInfo
-        ExtensionInfo targetExtInfo = targetGroup.getExtensionInfo(targetExtensionId);
-        if (targetExtInfo != null && targetExtInfo.getMsgConversionContexts() != null) {
-            for (MessageConversionContext context : targetExtInfo.getMsgConversionContexts()) {
-                Message converted = MessageConverter.convertMessage(processedCommand, context);
-                if (converted != processedCommand) { // 如果消息被转换了
-                    processedCommand = converted;
-                    EngineExtensionContext.log.debug("ExtensionContext: 入站命令 {} 被转换。", processedCommand.getId());
-                }
-            }
-        }
-        // --- 消息转换逻辑结束 ---
-
-        // 将处理后的命令委托给 ExtensionThread 进行分发
-        Command finalProcessedCommand = (Command)processedCommand;
-        extensionThread.dispatchCommand(finalProcessedCommand, targetExtensionId);
     }
 
     // 辅助方法：根据 ExtensionId 查找其所属的 ExtensionThread
@@ -536,7 +482,11 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
             command.getSrcLoc().setGraphId(engine.getGraphId()).setExtensionName(sourceExtensionName);
         }
         command.getSrcLoc().setExtensionName(sourceExtensionName);
-        return engineCommandSubmitter.submitCommand(command);
+        // 确定消息目的地
+        if (command.getDestLocs() == null) {
+            command.setDestLocs(determineMessageDestinationsFromGraph(command));
+        }
+        return engineCommandSubmitter.submitCommandWithResultHandle(command);
     }
 
     // 实现 ExtensionMessageSubmitter 接口方法
@@ -551,12 +501,109 @@ public class EngineExtensionContext implements ExtensionCommandSubmitter, Extens
         } else {
             message.getSrcLoc().setGraphId(engine.getGraphId()).setExtensionName(sourceExtensionName);
         }
+        Location srcLoc = message.getSrcLoc();
+        if (CollectionUtils.isNotEmpty(message.getDestLocs())) {
+            List<Location> selfDestLocs = message.getDestLocs().stream().filter(srcLoc::equals).toList();
+            if (CollectionUtils.isNotEmpty(selfDestLocs)) {
+                message.getDestLocs().removeIf(loc -> loc.equals(srcLoc));
+                log.warn("ExtensionContext: 忽略消息 {} 的目的地 {}，因为消息的源和目的地相同。", message.getId(), srcLoc);
+            }
+        }
+        // 确定消息目的地
+        if (isEmpty(message.getDestLocs())) {
+            message.setDestLocs(determineMessageDestinationsFromGraph(message));
+        }
         engineMessageSubmitter.submitInboundMessage(message, null); // 传入 null 作为 connection 参数
+    }
+
+    /**
+     * 根据图的配置（Graph Definition）为消息确定目的地。
+     * 模拟 C 语言的 `_extension_determine_out_msg_dest_from_graph` 逻辑。
+     * 此方法在消息没有明确目的地时被调用。
+     *
+     * @param message 待处理的消息。
+     * @return 包含根据图配置确定的目的地 Location 列表。如果未找到规则，则返回空列表。
+     */
+    private List<Location> determineMessageDestinationsFromGraph(Message message) {
+        // 1. 获取消息的源 Extension 名称
+        String sourceExtensionName = message.getSrcLoc() != null ? message.getSrcLoc().getExtensionName() : null;
+        if (StringUtils.isEmpty(sourceExtensionName)) {
+            log.warn(
+                "DefaultExtensionMessageDispatcher: 消息 {} (Name: {}, Type: {}) 没有源 Extension，无法从图配置中确定目的地。",
+                message.getId(), message.getName(), message.getType());
+            return emptyList();
+        }
+
+        // 2. 获取源 Extension 的 ExtensionInfo (其中包含 AllMessageDestInfo)
+        ExtensionInfo sourceExtInfo = getExtensionInfo(sourceExtensionName);
+        if (sourceExtInfo == null || sourceExtInfo.getMsgDestInfo() == null) {
+            log.warn(
+                "DefaultExtensionMessageDispatcher: 未找到源 Extension {} 的消息目的地信息 (AllMessageDestInfo) 或 ExtensionInfo。",
+                sourceExtensionName);
+            return emptyList();
+        }
+
+        // 3. 根据消息类型获取对应的路由规则列表
+        List<RoutingRuleDefinition> rules;
+        switch (message.getType()) {
+            case CMD:
+                rules = sourceExtInfo.getMsgDestInfo().getCommandRules();
+                break;
+            case DATA:
+                rules = sourceExtInfo.getMsgDestInfo().getDataRules();
+                break;
+            case VIDEO_FRAME:
+                rules = sourceExtInfo.getMsgDestInfo().getVideoFrameRules();
+                break;
+            case AUDIO_FRAME:
+                rules = sourceExtInfo.getMsgDestInfo().getAudioFrameRules();
+                break;
+            default:
+                log.debug("DefaultExtensionMessageDispatcher: 消息类型 {} 不需要通过图配置进行路由。",
+                    message.getType());
+                return emptyList();
+        }
+
+        if (isEmpty(rules)) {
+            log.debug("DefaultExtensionMessageDispatcher: 源 Extension {} 没有为消息类型 {} 配置路由规则。",
+                sourceExtensionName, message.getType());
+            return emptyList();
+        }
+
+        List<Location> determinedLocations = new java.util.ArrayList<>();
+        String appUri = getEngine().getApp().getAppUri();
+        String graphId = getEngine().getGraphId();
+
+        // 4. 遍历规则，查找匹配的 Destination
+        for (RoutingRuleDefinition rule : rules) {
+            // 消息名称匹配：如果规则定义了名称，则消息的名称必须与规则名称匹配。
+            // 否则，如果规则名称为 null，则视为匹配成功（不进行名称过滤）。
+            boolean nameMatches = StringUtils.isEmpty(rule.getName())
+                || StringUtils.isNotEmpty(message.getName()) && rule.getName().equals(message.getName());
+
+            if (nameMatches && isNotEmpty(rule.getDestinations())) { // 修正：getDest() -> getDestinations()
+                for (DestinationInfo destInfo : rule.getDestinations()) { // 修正：getDest() -> getDestinations()
+                    // 将 DestinationInfo 转换为 Location
+                    // 假设目的地在同一个 App 和 Graph 内，只关心 ExtensionName
+                    // 复杂的跨 App/Graph 路由在 Engine/App 层面处理
+                    String targetExtensionName = destInfo.getExtensionName(); // 修正：getExtension() -> getExtensionName()
+                    if (StringUtils.isNotEmpty(targetExtensionName)) {
+                        determinedLocations.add(new Location(appUri, graphId, targetExtensionName));
+                    } else {
+                        log.warn("DefaultExtensionMessageDispatcher: 路由规则中目的地 Extension 名称为空，规则: {}",
+                            rule);
+                    }
+                }
+            }
+        }
+        log.debug("DefaultExtensionMessageDispatcher: 根据图配置为消息 {} (Name: {}, Type: {}) 确定了 {} 个目的地。",
+            message.getId(), message.getName(), message.getType(), determinedLocations.size());
+        return determinedLocations;
     }
 
     // 实现 ExtensionCommandSubmitter 接口中新增的方法
     @Override
-    public void routeCommandResultFromExtension(CommandResult commandResult, String sourceExtensionName) {
+    public void submitCommandResultFromExtension(CommandResult commandResult, String sourceExtensionName) {
         EngineExtensionContext.log.debug("ExtensionContext: Extension {} 路由命令结果 {} 到 Engine。",
             sourceExtensionName,
             commandResult.getId());

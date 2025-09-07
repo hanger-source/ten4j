@@ -2,7 +2,6 @@ package source.hanger.core.tenenv;
 
 import java.util.Optional;
 
-import org.slf4j.LoggerFactory;
 import source.hanger.core.extension.Extension;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandExecutionHandle;
@@ -28,17 +27,9 @@ public interface TenEnv extends Env {
      * @param command 要发送的命令。
      * @return 一个 RunloopFuture，当命令处理完成并返回结果时，它将被完成。
      */
-    CommandExecutionHandle<CommandResult> sendAsyncCmd(Command command);
+    CommandExecutionHandle<CommandResult> submitCommandWithResultHandle(Command command);
 
-    default void sendCmd(Command command) {
-        sendAsyncCmd(command).toCompletedFuture().whenComplete((commandResult, throwable) -> {
-            if (throwable != null) {
-                LoggerFactory.getLogger(TenEnv.class).warn("[{}] Fire-and-forget command {} (ID: {}) failed with exception: {}",
-                    getAttachedExtension() != null ? getAttachedExtension().getClass().getSimpleName() : "Unknown",
-                    command.getName(), command.getId(), throwable.getMessage());
-            }
-        });
-    }
+    void sendCmd(Command command);
 
     void sendResult(CommandResult result);
 

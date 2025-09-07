@@ -134,7 +134,7 @@ public class Remote implements MessageReceiver {
                 singletonList(destLoc), engine.getGraphId()); // 传递 graphId 给命令
             // 通过 App 的 submitCommand 方法发送命令
             // 确保 App 能够处理 StopGraphCommand
-            engine.getApp().submitCommand(stopGraphCommand);
+            engine.getApp().submitCommandWithResultHandle(stopGraphCommand);
 
             log.info("Remote {}: 已向 App 发送 StopGraphCommand 以停止 Engine {}。", uri, engine.getGraphId());
         }

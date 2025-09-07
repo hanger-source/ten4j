@@ -19,6 +19,6 @@ public class UserMessageItem implements RealtimeItem {
     @JsonProperty("role")
     private String role;
 
-    @JsonProperty("content")
+    @JsonProperty("toolCallContext")
     private List<InputTextContent> content;
 }

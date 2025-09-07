@@ -30,4 +30,14 @@ public class StartGraphCommand extends Command {
     public MessageType getType() {
         return CMD_START_GRAPH;
     }
+
+    @Override
+    public StartGraphCommandBuilder<?, ?> cloneBuilder() {
+        return (StartGraphCommandBuilder<?, ?>)super.cloneBuilder();
+    }
+
+    @Override
+    protected StartGraphCommandBuilder<?, ?> innerToBuilder() {
+        return toBuilder();
+    }
 }

@@ -21,4 +21,7 @@ public interface TTSStreamAdapter {
     void onRequestSpeechTranscription(TenEnv env, String speechTranscription, Message originalMessage);
 
     void onCancelTTS(TenEnv currentEnv);
+
+    default void onStop(TenEnv env) {
+    }
 }

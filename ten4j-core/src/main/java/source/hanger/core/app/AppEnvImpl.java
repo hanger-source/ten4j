@@ -47,8 +47,13 @@ public class AppEnvImpl implements TenEnv {
     }
 
     @Override
-    public CommandExecutionHandle<CommandResult> sendAsyncCmd(Command command) {
-        return app.submitCommand(command);
+    public CommandExecutionHandle<CommandResult> submitCommandWithResultHandle(Command command) {
+        return app.submitCommandWithResultHandle(command);
+    }
+
+    @Override
+    public void sendCmd(Command command) {
+        app.handleInboundMessage(command, null);
     }
 
     @Override

@@ -111,7 +111,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension<RealtimeEve
         enableStorage = env.getPropertyBool("enable_storage").orElse(false);
         String systemPrompt = env.getPropertyString("system_prompt").orElse(
             "请用清晰、简洁的语言回复我。在回答问题之前，请充分理解问题。\n");
-        prompt = "%s -（%s）\n".formatted(systemPrompt, env.getPropertyString("prompt").orElse(""));
+        prompt = "%s -（%s）\n".formatted(systemPrompt, env.getPropertyString("assistantMessage").orElse(""));
 
         log.info("[{}] Config: model={}, language={}, voice={}, sampleRate={}, audioOut={}"
                 + ", inputTranscript={}, serverVad={}, vadType={}, vadThreshold={}, vadPrefixPaddingMs={}"
@@ -163,7 +163,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension<RealtimeEve
             // This involves sending Data.create("append") if enable_storage is true.
             if (enableStorage) {
                 try {
-                    // Python: env.send_data(Data.create("append", content=message))
+                    // Python: env.send_data(Data.create("append", toolCallContext=message))
                     DataMessage dataMessage = DataMessage.create("append");
                     //dataMessage.setData(objectMapper.writeValueAsBytes(message));
                     env.sendData(dataMessage);
@@ -614,7 +614,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension<RealtimeEve
         String itemId = event.getItemId();
         log.info("[{}] Conversation Item Created: eventId={}, itemId={}", env.getExtensionName(), eventId, itemId);
         lastItemId = itemId;
-        lastContentIndex = 0; // Reset content index for new item
+        lastContentIndex = 0; // Reset toolCallContext index for new item
     }
 
     private void handleResponseCreated(TenEnv env, ResponseCreatedEvent event) {
@@ -638,7 +638,7 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension<RealtimeEve
             env.getExtensionName(), eventId, responseId, itemId, outputIndex, outputType, contentParts);
         // This event signifies that a new item (e.g., message, function call) has been added to the response output.
         // In Python, this might trigger _send_response_output_item_start(item_json).
-        // For now, just logging as the subsequent delta/done events will carry content.
+        // For now, just logging as the subsequent delta/done events will carry toolCallContext.
     }
 
     private void handleResponseContentPartAdded(TenEnv env, ResponseContentPartAddedEvent event) {
@@ -651,11 +651,11 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension<RealtimeEve
         String content = event.getContent();
         log.info(
             "[{}] Response Content Part Added: eventId={}, responseId={}, itemId={}, outputIndex={},  "
-                + "contentIndex={}, contentType={}, content={}",
+                + "contentIndex={}, contentType={}, toolCallContext={}",
             env.getExtensionName(), eventId, responseId, itemId, outputIndex, contentIndex, contentType, content);
-        // This event is typically followed by delta events for the content part.
+        // This event is typically followed by delta events for the toolCallContext part.
         // Python's _send_response_content_part_start is called here.
-        // For now, logging, as the content will come via delta events.
+        // For now, logging, as the toolCallContext will come via delta events.
     }
 
     private void handleResponseAudioTranscriptDelta(TenEnv env, ResponseAudioTranscriptDeltaEvent event) {
@@ -687,8 +687,8 @@ public class QwenOmniRealtimeExtension extends BaseRealtimeExtension<RealtimeEve
         boolean isFinal = true;
         log.info("[{}] Response Content Part Done: eventId={}, responseId={}, isFinal={}", env.getExtensionName(),
             eventId, responseId, isFinal);
-        // This event signifies the end of the content part stream.
-        // No direct action required here, as content is handled by delta events.
+        // This event signifies the end of the toolCallContext part stream.
+        // No direct action required here, as toolCallContext is handled by delta events.
     }
 
     private void handleResponseOutputItemDone(TenEnv env, ResponseOutputItemDoneEvent event) {

@@ -2,9 +2,10 @@ package source.hanger.core.extension.dashscope.component.stream;
 
 import java.nio.ByteBuffer;
 
-import com.alibaba.dashscope.audio.asr.recognition.Recognition;
-import com.alibaba.dashscope.audio.asr.recognition.RecognitionParam;
-import com.alibaba.dashscope.audio.asr.recognition.RecognitionResult;
+import com.alibaba.dashscope.audio.asr.translation.TranslationRecognizerParam;
+import com.alibaba.dashscope.audio.asr.translation.TranslationRecognizerRealtime;
+import com.alibaba.dashscope.audio.asr.translation.results.TranscriptionResult;
+import com.alibaba.dashscope.audio.asr.translation.results.TranslationRecognizerResult;
 import com.alibaba.dashscope.exception.NoApiKeyException;
 
 import io.reactivex.Flowable;
@@ -19,11 +20,11 @@ import source.hanger.core.extension.component.stream.StreamPipelineChannel;
 import source.hanger.core.tenenv.TenEnv;
 
 @Slf4j
-public class ParaformerASRStreamAdapter extends BaseASRStreamAdapter<RecognitionResult> {
+public class GummyASRStreamAdapter extends BaseASRStreamAdapter<TranslationRecognizerResult> {
 
-    private Recognition recognition;
+    private TranslationRecognizerRealtime translator;
 
-    public ParaformerASRStreamAdapter(
+    public GummyASRStreamAdapter(
         ExtensionStateProvider extensionStateProvider,
         StreamPipelineChannel<OutputBlock> streamPipelineChannel) {
         super(extensionStateProvider, streamPipelineChannel);
@@ -31,43 +32,40 @@ public class ParaformerASRStreamAdapter extends BaseASRStreamAdapter<Recognition
 
     @Override
     public void onStart(TenEnv env) {
-        recognition  = new Recognition();
+        translator = new TranslationRecognizerRealtime();
     }
 
     @Override
-    protected Flowable<RecognitionResult> getRawAsrFlowable(TenEnv env, Flowable<ByteBuffer> audioInput) {
+    protected Flowable<TranslationRecognizerResult> getRawAsrFlowable(TenEnv env, Flowable<ByteBuffer> audioInput) {
         String apiKey = env.getPropertyString("api_key")
             .orElseThrow(() -> new IllegalArgumentException("API Key is required for Paraformer ASR."));
         String model = env.getPropertyString("model")
-            .orElse("paraformer-realtime-v2");
-        try {
-            RecognitionParam param = RecognitionParam.builder()
+            .orElse("gummy-realtime-v1");
+
+        // 创建TranslationRecognizerParam，audioFrames参数中传入上面创建的Flowable<ByteBuffer>
+        TranslationRecognizerParam param =
+            TranslationRecognizerParam.builder()
                 .apiKey(apiKey)
                 .model(model)
                 .format("pcm")
                 .sampleRate(16000)
-                //设置VAD（Voice Activity Detection，语音活动检测）断句的静音时长阈值（单位为ms）。
-                //当一段语音后的静音时长超过该阈值时，系统会判定该句子已结束。
-                //参数范围为200ms至6000ms，默认值为800ms。
-                .parameter("max_sentence_silence", 300)
-                // 开关打开时（true）可以防止VAD断句切割过长。默认关闭。
-                .parameter("multi_threshold_mode_enabled", true)
-                .parameter("language_hints", new String[] {"zh", "en"})
+                .transcriptionEnabled(true)
+                .translationEnabled(false)
                 .build();
-
+        try {
             // Use streamCall directly
-            Flowable<RecognitionResult> resultFlowable = recognition.streamCall(param, audioInput);
+            Flowable<TranslationRecognizerResult> resultFlowable = translator.streamCall(param, audioInput);
 
-            log.info("[{}] ParaformerASR recognition started successfully. channelId={}",
+            log.info("[{}] Gummy ASR recognition started successfully. channelId={}",
                 env.getExtensionName(), streamPipelineChannel.uuid());
             return resultFlowable
                 .subscribeOn(Schedulers.io());
         } catch (NoApiKeyException e) {
-            log.error("[{}] No API Key provided for Paraformer ASR. channelId={}",
+            log.error("[{}] No API Key provided for Gummy ASR. channelId={}",
                 env.getExtensionName(), streamPipelineChannel.uuid(), e);
             return Flowable.error(e);
         } catch (Exception e) {
-            log.error("[{}] Failed to start Paraformer ASR recognition channelId={}",
+            log.error("[{}] Failed to start Gummy ASR recognition channelId={}",
                 env.getExtensionName(), streamPipelineChannel.uuid(), e);
             return Flowable.error(e);
         }
@@ -81,15 +79,15 @@ public class ParaformerASRStreamAdapter extends BaseASRStreamAdapter<Recognition
 
     @Override
     protected Flowable<PipelinePacket<OutputBlock>> transformSingleRecognitionResult(
-        RecognitionResult result,TenEnv env) {
+        TranslationRecognizerResult result,TenEnv env) {
         // 从 env 获取 originalMessageId
         String originalMessageId = env.getPropertyString("original_message_id").orElse(null);
+        TranscriptionResult transcriptionResult = result.getTranscriptionResult();
         return Flowable.just(
-            new PipelinePacket<>(new ASRTranscriptionOutputBlock(result.getRequestId(), originalMessageId, result.getSentence().getText(), result.isSentenceEnd(),
-                result.getSentence().getBeginTime(),
-                result.getSentence().getEndTime() != null && result.getSentence().getBeginTime() != null
-                    ? result.getSentence().getEndTime() - result.getSentence().getBeginTime()
-                    : 0L), null)
+            new PipelinePacket<>(new ASRTranscriptionOutputBlock(result.getRequestId(), originalMessageId,
+                transcriptionResult.getText(), transcriptionResult.isSentenceEnd(),
+                transcriptionResult.getBeginTime(),
+                transcriptionResult.getEndTime() - transcriptionResult.getBeginTime()), null)
         );
     }
 }

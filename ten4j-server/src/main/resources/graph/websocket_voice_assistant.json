@@ -11,6 +11,10 @@
       "model": "cosy_voice"
     }],
     "replaceableModels": [{
+      "type": "语音识别",
+      "key": "asr_model",
+      "model": "gummy-realtime-v1"
+    },{
       "type": "文本生成",
       "key": "text_model",
       "model": "qwen-max",
@@ -27,7 +31,7 @@
       "model": "qwen-vl-max"
     }]
   },
-  "voices": ["cosy_voice", "smart_bert", "qwen_tts"],
+  "voices": ["cosy_voice", "sambert", "qwen_tts"],
   "models" : ["bailian"],
   "graph": {
     "nodes": [
@@ -61,14 +65,11 @@
       },
       {
         "type": "extension",
-        "name": "tts_adapter",
-        "addon": "source.hanger.core.extension.system.TTSAdapterExtension",
+        "name": "tts_self_discovering",
+        "addon": "source.hanger.core.extension.system.TTSSelfDiscoveringExtension",
         "extension_group": "tts_group",
         "property": {
-          "dest_tts": "tts_cosy,tts_qwen,tts_sambert",
-          "tts_cosy": "{{voice_model == 'cosy_voice'}}",
-          "tts_qwen": "{{voice_model == 'qwen_tts'}}",
-          "tts_sambert": "{{voice_model == 'smart_bert'}}"
+          "voice_model": "{{voice_model}}"
         }
       },{
         "type": "extension",
@@ -102,12 +103,30 @@
       },
       {
         "type": "extension",
-        "name": "asr",
+        "name": "asr_self_discovering",
+        "addon": "source.hanger.core.extension.system.AsrSelfDiscoveringExtension",
+        "extension_group": "asr_group",
+        "property": {
+        }
+      },
+      {
+        "type": "extension",
+        "name": "asr_paraformer",
         "addon": "source.hanger.core.extension.dashscope.extension.ParaformerASRExtension",
         "extension_group": "asr_group",
         "property": {
           "api_key": "{{env('bailian.dashscope.api.key')}}",
-          "model": "paraformer-realtime-v2"
+          "model": "{{asr_model}}"
+        }
+      },
+      {
+        "type": "extension",
+        "name": "asr_gummy",
+        "addon": "source.hanger.core.extension.dashscope.extension.GummyASRExtension",
+        "extension_group": "asr_group",
+        "property": {
+          "api_key": "{{env('bailian.dashscope.api.key')}}",
+          "model": "{{asr_model}}"
         }
       },
       {
@@ -184,7 +203,7 @@
             "name": "pcm_frame",
             "dest": [
               {
-                "extension": "asr"
+                "extension": "asr_self_discovering"
               }
             ]
           }
@@ -195,6 +214,22 @@
             "dest": [
               {
                 "extension": "vision"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "extension": "asr_self_discovering",
+        "cmd": [
+          {
+            "name": "asr_discovery",
+            "dest": [
+              {
+                "extension": "asr_paraformer"
+              },
+              {
+                "extension": "asr_gummy"
               }
             ]
           }
@@ -224,7 +259,22 @@
         ]
       },
       {
-        "extension": "asr",
+        "extension": "asr_paraformer",
+        "data": [
+          {
+            "name": "asr_result",
+            "dest": [
+              {
+                "extension": "interrupt_detector"
+              },
+              {
+                "extension": "client_connection"
+              }
+            ]
+          }
+        ]
+      },{
+        "extension": "asr_gummy",
         "data": [
           {
             "name": "asr_result",
@@ -246,7 +296,7 @@
             "name": "flush",
             "dest": [
               {
-                "extension": "tts_adapter"
+                "extension": "tts_self_discovering"
               },{
                 "extension": "vision"
               }
@@ -275,14 +325,30 @@
                 "extension": "client_connection"
               },
               {
-                "extension": "tts_adapter"
+                "extension": "tts_self_discovering"
               }
             ]
           }
         ]
       },
       {
-        "extension": "tts_adapter"
+        "extension": "tts_self_discovering",
+        "cmd": [
+          {
+            "name": "tts_discovery",
+            "dest": [
+              {
+                "extension": "tts_cosy"
+              },
+              {
+                "extension": "tts_qwen"
+              },
+              {
+                "extension": "tts_sambert"
+              }
+            ]
+          }
+        ]
       },
       {
         "extension": "tts_cosy",
@@ -400,7 +466,7 @@
             "name": "flush",
             "dest": [
               {
-                "extension": "tts_adapter"
+                "extension": "tts_self_discovering"
               }
             ]
           }
@@ -413,7 +479,7 @@
                 "extension": "client_connection"
               },
               {
-                "extension": "tts_adapter"
+                "extension": "tts_self_discovering"
               }
             ]
           }

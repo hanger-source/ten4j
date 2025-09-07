@@ -16,10 +16,4 @@ public interface ExtensionMessageDispatcher {
      */
     void dispatchMessage(Message message);
 
-    /**
-     * 分发非命令消息到对应的Extension。
-     *
-     * @param message 待分发的消息
-     */
-    void dispatchOtherMessage(Message message);
 }

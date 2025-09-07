@@ -14,7 +14,7 @@ public class UnifiedContextRegistry {
     // 修改方法签名，不再接收 uniqueSystemPromptSupplier
     public static LLMContextManager<UnifiedMessage> getOrCreateContextManager(TenEnv env) {
         String graphId = env.getGraphId();
-        String commonSystemPrompt = env.getPropertyString("prompt").orElse(null); // 从 TenEnv 获取公共系统提示
+        String commonSystemPrompt = env.getPropertyString("assistantMessage").orElse(null); // 从 TenEnv 获取公共系统提示
         return registry.computeIfAbsent(graphId, k -> {
             log.info("[UnifiedContextRegistry] Creating new UnifiedLLMContextManager for graphId: {}", k);
             return new UnifiedLLMContextManager(commonSystemPrompt); // 传入 commonSystemPrompt

@@ -1,15 +1,15 @@
 package source.hanger.core.extension.component.tool;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.reactivex.disposables.Disposable;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.base.tool.LLMToolMetadata;
-import source.hanger.core.extension.base.tool.LLMToolResult;
-import source.hanger.core.extension.base.tool.LLMToolResult.Noop;
 import source.hanger.core.extension.component.context.LLMContextManager;
 import source.hanger.core.extension.component.llm.LLMStreamAdapter;
 import source.hanger.core.extension.component.llm.ToolCallOutputBlock;
@@ -20,11 +20,14 @@ import source.hanger.core.message.command.Command;
 import source.hanger.core.message.command.GenericCommand;
 import source.hanger.core.tenenv.TenEnv;
 
-import static source.hanger.core.common.ExtensionConstants.CMD_PROPERTY_RESULT;
+import static org.apache.commons.lang3.StringUtils.*;
+import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_PROPERTY_SECOND_ROUND;
+import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_PROPERTY_TOOL_CALL_CONTENT;
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL;
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL_PROPERTY_ARGUMENTS;
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL_PROPERTY_NAME;
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL_PROPERTY_TOOL_CALL_ID;
+import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_PROPERTY_ASSISTANT_MESSAGE;
 import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_TEXT;
 
 /**
@@ -41,17 +44,30 @@ public abstract class BaseLLMToolOrchestrator<MESSAGE, LLM_TOOL_FUNCTION> implem
     private final Map<String, LLMToolMetadata> toolMap = new HashMap<>();
     private final LLMStreamAdapter<MESSAGE, LLM_TOOL_FUNCTION> llmStreamAdapter;
 
+    private final List<Disposable> disposables;
+
     public BaseLLMToolOrchestrator(
         LLMContextManager<MESSAGE> llmContextManager,
         LLMStreamAdapter<MESSAGE, LLM_TOOL_FUNCTION> llmStreamAdapter) {
         this.llmContextManager = llmContextManager;
         this.llmStreamAdapter = llmStreamAdapter;
+        disposables = new ArrayList<>();
     }
 
     @Override
     public void registerTool(LLMToolMetadata LLMToolMetadata) {
         // 实现注册逻辑，这里可以直接调用 ExtensionToolRegistry 的注册方法
         toolMap.computeIfAbsent(LLMToolMetadata.getName(), k -> LLMToolMetadata);
+    }
+
+    @Override
+    public void triggerFlush(TenEnv env) {
+        disposables.forEach(disposable -> {
+            if (!disposable.isDisposed()) {
+                disposable.dispose();
+            }
+        });
+        disposables.clear();
     }
 
     @Override
@@ -98,15 +114,21 @@ public abstract class BaseLLMToolOrchestrator<MESSAGE, LLM_TOOL_FUNCTION> implem
             toolCallOutputBlock.getId());
 
         // 使用 env.sendAsyncCmd 并处理其 CompletableFuture 回调
-        env.sendAsyncCmd(toolCallCommand)
-            .toCompletedFuture() // 获取 CompletableFuture<List<CommandResult>>
-            .whenComplete((cmdResults, cmdThrowable) -> toolCallCommandCompletedCallback(
+        disposables.add(env.submitCommandWithResultHandle(toolCallCommand)
+            .toFlowable()
+            .subscribe(cmdResult -> toolCallCommandCompletedCallback(
                 toolCallOutputBlock,
                 originalMessage,
                 env,
-                cmdResults,
-                cmdThrowable
-            ));
+                cmdResult,
+                null
+            ), throwable -> toolCallCommandCompletedCallback(
+                toolCallOutputBlock,
+                originalMessage,
+                env,
+                null,
+                throwable
+            )));
     }
 
     protected abstract MESSAGE createToolCallAssistantMessage(ToolCallOutputBlock toolCallOutputBlock);
@@ -130,61 +152,62 @@ public abstract class BaseLLMToolOrchestrator<MESSAGE, LLM_TOOL_FUNCTION> implem
      * @param callOutputBlock 工具调用的唯一ID。
      * @param originalMessage 原始消息，用于在需要时构建返回消息。
      * @param env             环境变量。
-     * @param cmdResults      命令执行结果列表。
-     * @param cmdThrowable    命令执行过程中抛出的异常。
+     * @param cmdResult      命令执行结果。
+     * @param error    命令执行过程中抛出的异常。
      */
     private void toolCallCommandCompletedCallback(ToolCallOutputBlock callOutputBlock, Message originalMessage,
         TenEnv env,
-        List<CommandResult> cmdResults, Throwable cmdThrowable) {
+        CommandResult cmdResult, Throwable error) {
         try {
-            LLMToolResult llmToolResult = null;
-            if (cmdThrowable != null) {
-                log.error("[{}] 工具调用命令执行失败: toolName={}, error={}",
-                    env.getExtensionName(), callOutputBlock.getToolName(), cmdThrowable.getMessage(), cmdThrowable);
-                // 将失败结果添加到历史
-                MESSAGE toolErrorMsg = createErrorToolCallMessage(callOutputBlock, cmdThrowable);
-                llmContextManager.onToolCallMsg(toolErrorMsg);
-            } else if (cmdResults != null && !cmdResults.isEmpty()) {
-                // 找到最后一个 isCompleted=true 的 CommandResult，或者最后一个结果
-                CommandResult finalCmdResult = cmdResults.stream()
-                    .filter(CommandResult::getIsCompleted) // 优先找 isCompleted=true 的结果
-                    .findFirst() // 如果有多个，取第一个
-                    .orElse(cmdResults.getLast()); // 如果没有 isCompleted=true，则取列表的最后一个
+            String errorMsg = null;
+            String toolCallContent;
+            String assistantMessage;
+            boolean secondRound = false;
 
-                if (finalCmdResult.isSuccess()) {
-                    String toolResultJson =
-                        finalCmdResult.getPropertyString(CMD_PROPERTY_RESULT).orElse("");
-                    log.info("[{}] 工具调用命令执行成功: toolName={}, result={}",
-                        env.getExtensionName(), callOutputBlock.getToolName(), toolResultJson);
-
-                    llmToolResult = objectMapper.readValue(toolResultJson, LLMToolResult.class);
-                    // 将工具执行结果添加到历史
-                    MESSAGE toolOutputMsg =
-                        createToolCallMessage(callOutputBlock, toolResultJson);
-                    llmContextManager.onToolCallMsg(toolOutputMsg);
-                } else {
-                    String errorMsg = finalCmdResult.getDetail() != null ? finalCmdResult.getDetail()
-                        : "未知错误";
-                    log.error("[{}] 工具调用命令执行失败（非异常）: toolName={}, message={}",
-                        env.getExtensionName(), callOutputBlock.getToolName(), errorMsg);
-                    // 将失败结果添加到历史
-                    MESSAGE toolErrorMsg =
-                        createToolCallMessage(callOutputBlock,
-                            "工具执行失败: %s".formatted(errorMsg));
-                    llmContextManager.onToolCallMsg(toolErrorMsg);
+            if (cmdResult != null) {
+                if (cmdResult.isInvalid()) {
+                    // 忽略无效的命令结果
+                    return;
                 }
-            } else {
-                // 这种情况通常不应该发生，因为即使没有成功的 CommandResult，也应该有一个结果列表
-                log.error("[{}] 工具调用命令执行完成但未返回任何结果: toolName={}",
-                    env.getExtensionName(), callOutputBlock.getToolName());
-                sendErrorResult(env, originalMessage.getId(), originalMessage.getType(),
-                    originalMessage.getName(), "工具调用未返回任何结果");
+                if (cmdResult.isSuccess()) {
+                    toolCallContent = cmdResult.getPropertyString(CMD_TOOL_PROPERTY_TOOL_CALL_CONTENT).orElse("");
+                    assistantMessage = cmdResult.getPropertyString(CMD_TOOL_PROPERTY_ASSISTANT_MESSAGE).orElse("");
+                    secondRound = cmdResult.getPropertyBoolean(CMD_TOOL_PROPERTY_SECOND_ROUND).orElse(false);
+                    log.info("[{}] 工具调用命令执行成功: toolName={}, toolCallContent={} assistantMessage={}",
+                        env.getExtensionName(), callOutputBlock.getToolName(), toolCallContent, assistantMessage);
+                    // 将工具执行结果添加到历史
+                    if (isNotBlank(toolCallContent)) {
+                        MESSAGE toolOutputMsg =
+                            createToolCallMessage(callOutputBlock, toolCallContent);
+                        llmContextManager.onToolCallMsg(toolOutputMsg);
+                    }
+                    // 工具执行记录添加到历史
+                    if (isNotBlank(assistantMessage)) {
+                        llmContextManager.onAssistantMsg(assistantMessage);
+                    }
+
+                } else {
+                    errorMsg = cmdResult.getErrorMessage();
+                }
             }
+
+            if (error != null) {
+                errorMsg = "任务执行失败.";
+            }
+            if (isNotBlank(errorMsg)) {
+                log.error("[{}] 工具调用命令执行失败: toolName={} errorMsg={}", env.getExtensionName(), callOutputBlock.getToolName(), errorMsg, error);
+                // 将失败结果添加到历史
+                MESSAGE toolErrorMsg =
+                    createToolCallMessage(callOutputBlock,
+                        "工具执行失败: %s".formatted(errorMsg));
+                llmContextManager.onToolCallMsg(toolErrorMsg);
+            }
+
             // 收到工具结果后，再次调用LLM
             log.info("[{}] LLM请求工具调用，已收到异步命令结果，开始调用LLM: toolName={}, callOutputBlock={}",
                 env.getExtensionName(), callOutputBlock.getToolName(), callOutputBlock);
 
-            if (!(llmToolResult instanceof Noop)) {
+            if (secondRound) {
                 List<MESSAGE> messagesForNextTurn = llmContextManager.getMessagesForLLM();
                 List<LLM_TOOL_FUNCTION> registeredToolFunctions = getRegisteredToolFunctions();
                 llmStreamAdapter.onRequestLLMAndProcessStream(

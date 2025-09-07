@@ -47,13 +47,18 @@ public class EngineEnvImpl implements TenEnv {
     }
 
     @Override
-    public CommandExecutionHandle<CommandResult> sendAsyncCmd(Command command) {
-        return engine.submitCommand(command);
+    public CommandExecutionHandle<CommandResult> submitCommandWithResultHandle(Command command) {
+        return engine.submitCommandWithResultHandle(command);
+    }
+
+    @Override
+    public void sendCmd(Command command) {
+        engine.submitInboundMessage(command, null);
     }
 
     @Override
     public void sendResult(CommandResult result) {
-        engine.submitCommandResult(result);
+        engine.submitInboundMessage(result, null);
     }
 
     @Override

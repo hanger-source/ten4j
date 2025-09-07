@@ -25,6 +25,6 @@ public class Item {
     private String status;
     @JsonProperty("role")
     private String role;
-    @JsonProperty("content")
+    @JsonProperty("toolCallContext")
     private List<Part> content;
 }

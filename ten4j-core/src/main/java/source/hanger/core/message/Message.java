@@ -164,4 +164,13 @@ public abstract class Message implements Cloneable {
         }
         return Optional.empty();
     }
+
+
+    public MessageBuilder<?, ?> cloneBuilder() {
+        return innerToBuilder()
+            .id(IdGenerator.generateShortId())
+            .timestamp(System.currentTimeMillis());
+    }
+
+    protected abstract MessageBuilder<?, ?> innerToBuilder();
 }

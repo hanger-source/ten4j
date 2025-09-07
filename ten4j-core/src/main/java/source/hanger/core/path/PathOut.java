@@ -1,53 +1,101 @@
 package source.hanger.core.path;
 
-import java.util.concurrent.CompletableFuture;
+import java.util.Objects;
+
+import lombok.Getter;
+import lombok.ToString;
+import source.hanger.core.message.CommandExecutionHandle;
 import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.Location;
-import source.hanger.core.message.Message; // 导入 Message 类
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
-import lombok.experimental.Accessors;
 
 /**
- * `PathOut` 代表一个命令的出站路径，用于追踪命令的执行并回溯其结果。
- * 对应C语言中的 `ten_path_out_t` 结构体。
+ * 对应 C 语言的 `ten_path_out_t` 结构体，通过组合 `PathBase` 来模拟继承 `ten_path_t`。
+ * 用于追踪出站命令的上下文和结果处理。
+ * 严格按照 C 源码 `struct ten_path_out_t` 的核心字段映射。
+ *
+ * @param base                   --- 对应 C 语言 ten_path_out_t 的 `base` 字段 --- C: ten_path_t base;
+ * @param commandExecutionHandle --- 对应 C 语言 ten_path_out_t 的 `result_handler` 字段 --- Java 中使用 CommandExecutionHandle
+ *                               接口来封装回调逻辑和数据
  */
-@EqualsAndHashCode(callSuper = true)
-@Data
-@NoArgsConstructor
-@Accessors(chain = true)
-public class PathOut extends Path { // 继承 Path 基类
-
-    private CompletableFuture<Object> resultFuture; // 用于完成命令结果的 CompletableFuture
-    private ResultReturnPolicy returnPolicy; // 结果返回策略
-    private Message originalCommand; // <-- 对应 C 语言的 ten_shared_ptr_t original_msg_ref
+public record PathOut(PathBase base, CommandExecutionHandle<CommandResult> commandExecutionHandle) {
 
     /**
-     * 构造函数，用于创建 PathOut 实例。
+     * 构造函数。
      *
-     * @param commandId           命令ID
-     * @param parentCommandId     父命令ID
-     * @param commandName         命令名称
-     * @param sourceLocation      命令源位置
-     * @param destinationLocation 命令目标位置 (Java 侧独有，用于路由)
-     * @param resultFuture        用于完成命令结果的 CompletableFuture
-     * @param returnPolicy        结果返回策略
-     * @param returnLocation      命令结果回传到的目标位置
-     * @param originalCommand     原始入站命令
+     * @param base                   PathBase 实例，包含通用路径信息和结果缓存/状态。
+     * @param commandExecutionHandle 用于处理命令结果的 CommandExecutionHandle 接口。
      */
-    public PathOut(String commandId, String parentCommandId, String commandName, Location sourceLocation,
-            Location destinationLocation, CompletableFuture<Object> resultFuture,
-            ResultReturnPolicy returnPolicy, Location returnLocation, Message originalCommand) {
-        // 调用父类构造函数初始化通用属性
-        super(commandName, commandId, parentCommandId, sourceLocation);
-        this.resultFuture = resultFuture;
-        this.returnPolicy = returnPolicy;
-        this.destinationLocation = destinationLocation;
-        this.returnLocation = returnLocation;
-        this.originalCommand = originalCommand;
+    public PathOut(PathBase base, CommandExecutionHandle<CommandResult> commandExecutionHandle) {
+        this.base = Objects.requireNonNull(base, "PathBase must not be null.");
+        this.commandExecutionHandle = commandExecutionHandle; // 允许为 null，表示不需要回调
     }
 
-    private Location destinationLocation;
-    private Location returnLocation;
+    // 提供一些便捷方法来访问 base 中的属性，这是 Java 的习惯做法
+    @ToString.Include
+    public String getCommandId() {
+        return base.getCommandId();
+    }
+
+    @ToString.Include
+    public String getParentCommandId() {
+        return base.getParentCommandId();
+    }
+
+    @ToString.Include
+    public String getCommandName() {
+        return base.getCommandName();
+    }
+
+    public Location getSourceLocation() {
+        return base.getSourceLocation();
+    }
+
+    public long getExpiredTimeUs() {
+        return base.getExpiredTimeUs();
+    }
+
+    public PathTable getAttachedTable() {
+        return base.getAttachedTable();
+    }
+
+    public PathType getType() {
+        return base.getType();
+    }
+
+    public PathGroup getGroup() {
+        return base.getGroup();
+    }
+
+    public boolean isLastInGroup() {
+        return base.isLastInGroup();
+    }
+
+    public CommandResult getCachedCommandResult() {
+        return base.getCachedCommandResult();
+    }
+
+    public Boolean hasReceivedFinalResult() {
+        return base.getHasReceivedFinalCommandResult();
+    } // Changed method name for consistency
+
+    // 设置 PathBase 中的属性 (如果需要)，由于 PathBase 已经有 @Setter，这里是便捷方法
+    public void setGroup(PathGroup group) {
+        base.setGroup(group);
+    }
+
+    public void setLastInGroup(boolean lastInGroup) {
+        base.setLastInGroup(lastInGroup);
+    }
+
+    public void setCachedCommandResult(CommandResult cachedCommandResult) {
+        base.setCachedCommandResult(cachedCommandResult);
+    }
+
+    public void setHasReceivedFinalCommandResult(boolean hasReceivedFinalCommandResult) {
+        base.setHasReceivedFinalCommandResult(hasReceivedFinalCommandResult);
+    }
+
+    public void setExpiredTimeUs(long expiredTimeUs) {
+        base.setExpiredTimeUs(expiredTimeUs);
+    }
 }

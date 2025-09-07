@@ -149,6 +149,31 @@ public class CommandResult extends Message implements Cloneable { // 实现 Clon
         return fromCommand(originalCommand, StatusCode.OK, detail); // 使用 StatusCode.OK
     }
 
+    public static CommandResult invalid(Command originalCommand, String detail) {
+        return fromCommand(originalCommand, StatusCode.INVALID, detail); // 使用 StatusCode.OK
+    }
+
+    public static CommandResultBuilder<?, ?> createSuccessBuilder(Command command) {
+        return Message.defaultMessage(CommandResult.builder())
+            .statusCode(StatusCode.OK)
+            .originalCommandId(command.getId())
+            .originalCmdType(command.getType())
+            .originalCmdName(command.getName())
+            .isFinal(true)
+            .isCompleted(true);
+    }
+
+    public static CommandResultBuilder<?, ?> createErrorBuilder(Command command) {
+        return Message.defaultMessage(CommandResult.builder())
+            .statusCode(StatusCode.ERROR)
+            .originalCommandId(command.getId())
+            .originalCmdType(command.getType())
+            .originalCmdName(command.getName())
+            .isFinal(true)
+            .isCompleted(true);
+    }
+
+
     // 新增：支持 properties 的 success 方法
     public static CommandResult success(Command originalCommand,
             String detail, Map<String, Object> properties) {
@@ -189,6 +214,14 @@ public class CommandResult extends Message implements Cloneable { // 实现 Clon
         return statusCode == StatusCode.OK; // 修改比较方式
     }
 
+    public boolean isInvalid() {
+        return statusCode == StatusCode.INVALID; // 添加判断无效命令的逻辑
+    }
+
+    public boolean isFailed() {
+        return statusCode == StatusCode.ERROR; // 添加判断失败命令的逻辑
+    }
+
     // 新增：获取错误信息 (如果存在)
     public String getErrorMessage() {
         if (getProperties() != null && getProperties().containsKey("error_message")) {
@@ -217,6 +250,16 @@ public class CommandResult extends Message implements Cloneable { // 实现 Clon
         // 例如：cloned.setSrcLoc(this.getSrcLoc().clone());
         // 如果 properties 需要深拷贝，也在此处处理
         return (CommandResult) super.clone();
+    }
+
+    @Override
+    public CommandResultBuilder<?, ?> cloneBuilder() {
+        return (CommandResultBuilder<?, ?>)super.cloneBuilder();
+    }
+
+    @Override
+    protected CommandResultBuilder<?, ?> innerToBuilder() {
+        return toBuilder();
     }
 
     // 辅助方法：获取 detail (从 properties map 中获取)

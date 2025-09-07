@@ -66,7 +66,7 @@ public class QwenMultiModelLLMToolOrchestrator extends BaseLLMToolOrchestrator<M
         return MultiModalMessage.builder()
             .role(Role.TOOL.getValue())
             .toolCallId(toolCallOutputBlock.getToolCallId())
-            .content(List.of(Map.of("text", "工具调用失败: %s".formatted(cmdThrowable.getMessage())))) // 错误信息作为 content
+            .content(List.of(Map.of("text", "工具调用失败: %s".formatted(cmdThrowable.getMessage())))) // 错误信息作为 toolCallContext
             .build();
     }
 

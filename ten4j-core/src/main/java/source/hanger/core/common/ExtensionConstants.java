@@ -27,13 +27,26 @@ public final class ExtensionConstants {
     public static final String CMD_TOOL_CALL_PROPERTY_NAME = "name";
     public static final String CMD_TOOL_CALL_PROPERTY_ARGUMENTS = "arguments";
     public static final String CMD_TOOL_CALL_PROPERTY_TOOL_CALL_ID = "tool_call_id";
-    public static final String CMD_PROPERTY_RESULT = "result";
+    public static final String CMD_TOOL_PROPERTY_TOOL_CALL_CONTENT = "tool_call_content";
+    public static final String CMD_TOOL_PROPERTY_ASSISTANT_MESSAGE = "assistant_message";
+    public static final String CMD_TOOL_PROPERTY_SECOND_ROUND = "second_round";
+
 
     public static final String CONTENT_DATA_OUT_NAME = "content_data";
+
     // ten-framework不存在这种类型，自创的委托，特定情况（例如llm节点直接委托给其他llm节点）会将 text 委托给其他extension处理
     public static final String DELEGATE_TEXT_DATA_OUT_NAME = "delegate_text_data";
 
-    public static final String DEST_TTS_EXTENSION_PROPERTY_NAME = "dest_tts";
+    public static final String CMD_ASR_DISCOVERY = "asr_discovery";
+    public static final String CMD_RESULT_ASR_AVAILABLE = "asr_available";
+    public static final String CMD_RESULT_ASR_UNAVAILABLE = "asr_unavailable";
+
+    public static final String CMD_TTS_DISCOVERY = "tts_discovery";
+    public static final String CMD_RESULT_TTS_AVAILABLE = "tts_available";
+    public static final String CMD_RESULT_TTS_UNAVAILABLE = "tts_unavailable";
+
+
+    public static final String GRAPH_PROPERTY_VOICE_MODEL = "voice_model";
 
     private ExtensionConstants() {
         // Prevent instantiation

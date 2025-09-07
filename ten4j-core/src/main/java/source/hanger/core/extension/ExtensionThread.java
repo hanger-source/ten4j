@@ -182,7 +182,7 @@ public class ExtensionThread implements Agent {
                     log.error("ExtensionThread {}: ExtensionGroup 未设置，无法分发消息 {} (Type: {}) 到 Extension {}.",
                         threadName, messageId, messageType, targetExtensionName);
                     if (message instanceof Command command) {
-                        engineExtensionContext.routeCommandResultFromExtension(CommandResult.fail(command,
+                        engineExtensionContext.submitCommandResultFromExtension(CommandResult.fail(command,
                                 "ExtensionGroup is null for ExtensionThread: %s".formatted(threadName)),
                             targetExtensionName);
                     }
@@ -198,7 +198,7 @@ public class ExtensionThread implements Agent {
                             + "extensionGroup 配置.",
                         threadName, targetExtensionName, messageId, messageType);
                     if (message instanceof Command command) {
-                        engineExtensionContext.routeCommandResultFromExtension(CommandResult.fail(command,
+                        engineExtensionContext.submitCommandResultFromExtension(CommandResult.fail(command,
                                 "Extension or ExtensionEnv not found in group: %s for message %s"
                                     .formatted(targetExtensionName, messageId)),
                             targetExtensionName);
@@ -233,7 +233,7 @@ public class ExtensionThread implements Agent {
                                     + "级别处理。",
                                 threadName, targetExtensionName, messageId, messageType);
                             if (message instanceof Command command) {
-                                engineExtensionContext.routeCommandResultFromExtension(CommandResult.fail(command,
+                                engineExtensionContext.submitCommandResultFromExtension(CommandResult.fail(command,
                                         "App/Engine-level command not handled by Extension: %s"
                                             .formatted(command.getType())),
                                     targetExtensionName);
@@ -243,7 +243,7 @@ public class ExtensionThread implements Agent {
                             log.warn("ExtensionThread {}: 收到 Extension {} 未知消息类型 {} (ID: {}), 已忽略。",
                                 threadName, targetExtensionName, messageType, messageId);
                             if (message instanceof Command command) {
-                                engineExtensionContext.routeCommandResultFromExtension(CommandResult.fail(command,
+                                engineExtensionContext.submitCommandResultFromExtension(CommandResult.fail(command,
                                         "Unknown message type not handled by Extension: %s".formatted(command.getType())),
                                     targetExtensionName);
                             }
@@ -253,7 +253,7 @@ public class ExtensionThread implements Agent {
                     log.error("ExtensionThread {}: Extension {} 处理消息 {} (Type: {}) 时发生异常: {}",
                         threadName, targetExtensionName, messageId, messageType, e.getMessage(), e);
                     if (message instanceof Command command) {
-                        engineExtensionContext.routeCommandResultFromExtension(CommandResult.fail(command,
+                        engineExtensionContext.submitCommandResultFromExtension(CommandResult.fail(command,
                                 "Error processing message by Extension: %s".formatted(e.getMessage())),
                             targetExtensionName);
                     }

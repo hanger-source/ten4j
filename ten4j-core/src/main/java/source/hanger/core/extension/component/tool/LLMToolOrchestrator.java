@@ -39,4 +39,7 @@ public interface LLMToolOrchestrator<TOOL_FUNCTION> {
      * @param originalMessage     触发此工具调用的原始消息。
      */
     void processToolCall(TenEnv env, ToolCallOutputBlock toolCallOutputBlock, Message originalMessage);
+
+    default void triggerFlush(TenEnv env) {
+    }
 }

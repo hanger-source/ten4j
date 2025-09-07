@@ -152,4 +152,14 @@ public class AudioFrameMessage extends Message {
     public MessageType getType() {
         return MessageType.AUDIO_FRAME;
     }
+
+    @Override
+    public AudioFrameMessageBuilder<?, ?> cloneBuilder() {
+        return (AudioFrameMessageBuilder<?, ?>)super.cloneBuilder();
+    }
+
+    @Override
+    protected AudioFrameMessageBuilder<?, ?> innerToBuilder() {
+        return toBuilder();
+    }
 }

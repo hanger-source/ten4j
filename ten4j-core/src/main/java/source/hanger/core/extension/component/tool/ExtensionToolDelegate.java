@@ -8,17 +8,24 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.base.tool.LLMTool;
-import source.hanger.core.extension.base.tool.LLMToolResult;
+import source.hanger.core.extension.base.tool.ToolCallPayload;
+import source.hanger.core.extension.base.tool.ToolCallPayload.ErrorPayload;
+import source.hanger.core.extension.base.tool.ToolCallPayload.FinalPayload;
+import source.hanger.core.extension.base.tool.ToolCallPayload.SegmentPayload;
+import source.hanger.core.message.CommandResult;
 import source.hanger.core.message.command.Command;
 import source.hanger.core.message.command.GenericCommand;
 import source.hanger.core.tenenv.TenEnv;
 
-import static source.hanger.core.common.ExtensionConstants.CMD_PROPERTY_RESULT;
 import static source.hanger.core.common.ExtensionConstants.CMD_PROPERTY_TOOL;
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL_PROPERTY_ARGUMENTS;
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL_PROPERTY_NAME;
+import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_PROPERTY_SECOND_ROUND;
+import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_PROPERTY_TOOL_CALL_CONTENT;
+import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_PROPERTY_ASSISTANT_MESSAGE;
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_REGISTER;
 import static source.hanger.core.message.CommandResult.fail;
+import static source.hanger.core.message.CommandResult.invalid;
 import static source.hanger.core.message.CommandResult.success;
 
 /**
@@ -59,23 +66,44 @@ public abstract class ExtensionToolDelegate {
         }
     }
 
+    public ToolCallPayloadEmitter emitter(TenEnv tenEnv, Command command) {
+        return payloadBuilder -> {
+            ToolCallPayload payload = payloadBuilder.build();
+            if (payload instanceof FinalPayload finalPayload) {
+                tenEnv.sendResult(CommandResult.createSuccessBuilder(command)
+                        .property(CMD_TOOL_PROPERTY_TOOL_CALL_CONTENT, finalPayload.getToolCallContext())
+                        .property(CMD_TOOL_PROPERTY_ASSISTANT_MESSAGE, finalPayload.getAssistantMessage())
+                        .property(CMD_TOOL_PROPERTY_SECOND_ROUND, finalPayload.getSecondRound())
+                    .build());
+            } else if (payload instanceof ErrorPayload errorPayload) {
+                tenEnv.sendResult(CommandResult.createErrorBuilder(command)
+                        .property(CMD_TOOL_PROPERTY_TOOL_CALL_CONTENT, errorPayload.getToolCallContext())
+                        .property(CMD_TOOL_PROPERTY_SECOND_ROUND, errorPayload.getSecondRound())
+                    .build());
+            } else if (payload instanceof SegmentPayload progressUpdate) {
+                tenEnv.sendResult(CommandResult.createSuccessBuilder(command)
+                        .isFinal(false)
+                        .isCompleted(false)
+                        .property(CMD_TOOL_PROPERTY_TOOL_CALL_CONTENT, progressUpdate.getToolCallContext())
+                        .property(CMD_TOOL_PROPERTY_ASSISTANT_MESSAGE, progressUpdate.getAssistantMessage())
+                        .property(CMD_TOOL_PROPERTY_SECOND_ROUND, progressUpdate.getSecondRound())
+                    .build());
+            }
+        };
+    }
+
     public void handleToolCallCommand(TenEnv env, Command command) {
         String toolName = command.getPropertyString(CMD_TOOL_CALL_PROPERTY_NAME).orElse("");
         if (!tools.containsKey(toolName)) {
+            env.sendResult(invalid(command, "收到非本扩展的工具调用或工具名称为空"));
             log.warn("[{}] 收到非本扩展的工具调用或工具名称为空，忽略。toolName={}", env.getExtensionName(), toolName);
             return;
         }
         try {
             String arguments = command.getPropertyString(CMD_TOOL_CALL_PROPERTY_ARGUMENTS).orElse("{}");
             Map<String, Object> args = objectMapper.readValue(arguments, new TypeReference<>() {});
-            LLMToolResult toolResult = tools.get(toolName).runTool(env, command, args);
+            tools.get(toolName).runTool(emitter(env, command), env, command, args);
 
-            String toolResultJson = objectMapper.writeValueAsString(toolResult);
-            // 将工具结果放入 CMD_PROPERTY_RESULT 属性中
-            Map<String, Object> properties = new java.util.HashMap<>();
-            properties.put(CMD_PROPERTY_RESULT, toolResultJson);
-            log.info("[{}] 工具 {} 执行并返回结果，发送成功命令。", env.getExtensionName(), toolName);
-            env.sendResult(success(command, "Tool executed successfully.", properties)); // 使用带 properties 的重载
         } catch (Exception e) {
             String errorMessage = "工具执行失败: %s".formatted(e.getMessage());
             log.error("[{}] 工具 {} 执行失败，发送失败命令: {}", env.getExtensionName(), toolName, errorMessage, e);

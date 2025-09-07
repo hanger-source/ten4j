@@ -10,6 +10,8 @@ import source.hanger.core.tenenv.TenEnv;
  */
 public interface ASRStreamAdapter {
 
+    default void onStart(TenEnv env) {
+    }
     /**
      * 启动 ASR 流处理。
      *
@@ -30,4 +32,7 @@ public interface ASRStreamAdapter {
      * @param env 当前的 TenEnv 环境。
      */
     void onReconnect(TenEnv env);
+
+    default void onStop(TenEnv env) {
+    }
 }

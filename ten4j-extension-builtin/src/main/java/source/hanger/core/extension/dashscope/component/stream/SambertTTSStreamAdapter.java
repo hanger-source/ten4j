@@ -5,6 +5,7 @@ import java.nio.ByteBuffer;
 import io.reactivex.Flowable;
 import io.reactivex.schedulers.Schedulers;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.time.StopWatch;
 import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.common.PipelinePacket;
 import source.hanger.core.extension.component.flush.InterruptionStateProvider;
@@ -43,7 +44,12 @@ public class SambertTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthesi
     }
 
     @Override
-    protected Flowable<SpeechSynthesisResult> getRawTtsFlowable(TenEnv env, String speechTranscription) {
+    public void onStop(TenEnv env) {
+        pool.clear();
+    }
+
+    @Override
+    protected Flowable<SpeechSynthesisResult> getRawTtsFlowable(TenEnv env, String text) {
 
         String apiKey = env.getPropertyString("api_key").orElseThrow(
             () -> new IllegalStateException("No api key found"));
@@ -54,36 +60,48 @@ public class SambertTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthesi
         SpeechSynthesisParam param = SpeechSynthesisParam.builder()
             .apiKey(apiKey)
             .model(voiceName) // Sambert uses voiceName as model
-            .text(speechTranscription)
+            .text(text)
             .format(SpeechSynthesisAudioFormat.PCM)
             .sampleRate(16000)
             .build();
 
+        StopWatch stopWatch = StopWatch.createStarted();
         return Flowable.using(
             () -> { // resourceSupplier: 借用实例
                 SpeechSynthesizer s = pool.borrowObject();
-                log.debug("[{}] SpeechSynthesizer 实例参数更新完毕. channelId={} speechTranscription={}",
-                    env.getExtensionName(), streamPipelineChannel.uuid(), speechTranscription);
+                log.debug("[{}] SpeechSynthesizer 实例参数更新完毕. channelId={} text={}",
+                    env.getExtensionName(), streamPipelineChannel.uuid(), text);
                 return s;
             },
             s -> { // flowableSupplier
                 return s.streamCall(param)
                     .subscribeOn(Schedulers.io()) // 确保 TTS SDK 调用在 IO 线程进行
+                    .doOnNext(result -> {
+                        if (!stopWatch.isStopped()) {
+                            stopWatch.stop();
+                            log.info("[{}] DashScope Sambert channelId={} 音频首帧输出 elapsed_time={}ms text={}",
+                                env.getExtensionName(), streamPipelineChannel.uuid(), stopWatch.getTime(), text);
+                        }
+                    }).doOnTerminate(() -> {
+                        if (!stopWatch.isStopped()) {
+                            stopWatch.stop();
+                        }
+                    })
                     .doOnError(throwable -> {
                         s.getSyncApi().close(1000, "bye");
-                        log.error("[{}] 调用 DashScope Sambert TTS API 错误. channelId={} speechTranscription={}",
-                            env.getExtensionName(), streamPipelineChannel.uuid(), speechTranscription, throwable);
+                        log.error("[{}] 调用 DashScope Sambert TTS API 错误. channelId={} text={}",
+                            env.getExtensionName(), streamPipelineChannel.uuid(), text, throwable);
                     });
             },
             s -> { // disposeResource: 释放资源 (归还到池中)
                 if (interruptionStateProvider.isInterrupted()) {
                     s.getSyncApi().close(1000, "bye");
-                    log.info("[{}] 检测到中断，关闭连接. channelId={} speechTranscription={}",
-                        env.getExtensionName(), streamPipelineChannel.uuid(), speechTranscription);
+                    log.info("[{}] 检测到中断，关闭连接. channelId={} text={}",
+                        env.getExtensionName(), streamPipelineChannel.uuid(), text);
                 }
                 pool.returnObject(s);
-                log.info("[{}] 归还 SpeechSynthesizer 实例到对象池. channelId={} speechTranscription={}",
-                    env.getExtensionName(), streamPipelineChannel.uuid(), speechTranscription);
+                log.info("[{}] 归还 SpeechSynthesizer 实例到对象池. channelId={} text={}",
+                    env.getExtensionName(), streamPipelineChannel.uuid(), text);
             }
         );
     }
@@ -104,9 +122,6 @@ public class SambertTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthesi
                 originalMessage.getId());
             return Flowable.just(new PipelinePacket<>(block, originalMessage));
         } else {
-            log.warn("[{}] TTS原始流音频数据空. text={} originalId: {}", env.getExtensionName(),
-                originalMessage.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse(""),
-                originalMessage.getId());
             return Flowable.empty();
         }
     }

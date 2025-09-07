@@ -1,14 +1,15 @@
 package source.hanger.core.message;
 
-// Force recompile marker
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 @Data
 @NoArgsConstructor
 @Accessors(chain = true)
+@EqualsAndHashCode(of = {"appUri", "graphId", "extensionName"})
 public class Location {
     @JsonProperty("app_uri")
     private String appUri;

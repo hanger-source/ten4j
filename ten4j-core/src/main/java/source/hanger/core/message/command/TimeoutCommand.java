@@ -41,4 +41,14 @@ public class TimeoutCommand extends Command {
     public MessageType getType() {
         return CMD_TIMEOUT;
     }
+
+    @Override
+    public TimeoutCommandBuilder<?, ?> cloneBuilder() {
+        return (TimeoutCommandBuilder<?, ?>)super.cloneBuilder();
+    }
+
+    @Override
+    protected TimeoutCommandBuilder<?, ?> innerToBuilder() {
+        return toBuilder();
+    }
 }

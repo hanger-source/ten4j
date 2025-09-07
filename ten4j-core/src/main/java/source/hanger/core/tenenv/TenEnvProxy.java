@@ -45,9 +45,20 @@ public record TenEnvProxy<T extends TenEnv>(
 
     // Proxy methods, delegating to targetEnv
     @Override
-    public CommandExecutionHandle<CommandResult> sendAsyncCmd(Command command) {
+    public CommandExecutionHandle<CommandResult> submitCommandWithResultHandle(Command command) {
         // 直接委托给目标 TenEnv，CommandExecutionHandle 内部已包含线程调度逻辑
-        return targetEnv.sendAsyncCmd(command);
+        return targetEnv.submitCommandWithResultHandle(command);
+    }
+
+    @Override
+    public void sendCmd(Command command) {
+        targetRunloop.postTask(() -> {
+            try {
+                targetEnv.sendCmd(command);
+            } catch (Exception e) {
+                log.error("Failed to proxy sendCmd to {}: {}", signature, e.getMessage(), e);
+            }
+        });
     }
 
     @Override // Implements TenEnv.sendMessage

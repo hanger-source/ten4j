@@ -12,11 +12,16 @@ import source.hanger.core.extension.component.stream.StreamOutputBlockConsumer;
 import source.hanger.core.extension.component.stream.StreamPipelineChannel;
 import source.hanger.core.message.AudioFrameMessage;
 import source.hanger.core.message.CommandResult;
+import source.hanger.core.message.CommandResult.CommandResultBuilder;
 import source.hanger.core.message.MessageType;
+import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
 import source.hanger.core.util.ByteBufUtils;
 import source.hanger.core.util.MessageUtils;
 
+import static source.hanger.core.common.ExtensionConstants.CMD_ASR_DISCOVERY;
+import static source.hanger.core.common.ExtensionConstants.CMD_RESULT_ASR_AVAILABLE;
+import static source.hanger.core.common.ExtensionConstants.CMD_RESULT_ASR_UNAVAILABLE;
 import static source.hanger.core.extension.component.output.MessageOutputSender.sendAsrTranscriptionOutput;
 
 @Slf4j
@@ -40,10 +45,41 @@ public abstract class BaseAsrExtension extends BaseExtension {
     @Override
     public void onStart(TenEnv env) {
         super.onStart(env);
+        asrStreamAdapter.onStart(env);
         log.info("[{}] BaseAsrExtension 启动，初始化管道。", env.getExtensionName());
         streamPipelineChannel.initPipeline(env);
         // 开始ASR流
         asrStreamAdapter.startASRStream(env); // 调用 ASRStreamAdapter 的启动方法
+    }
+
+    @Override
+    public void onStop(TenEnv env) {
+        super.onStop(env);
+        asrStreamAdapter.onStop(env);
+        streamPipelineChannel.disposeCurrent();
+    }
+
+    @Override
+    public void onCmd(TenEnv env, Command command) {
+        if (!isRunning()) {
+            log.warn("[{}] ASR扩展未运行，忽略命令: extensionName={}, commandName={}", env.getExtensionName(),
+                env.getExtensionName(),
+                command.getName());
+        }
+        if (CMD_ASR_DISCOVERY.equals(command.getName())) {
+            CommandResultBuilder<?, ?> builder = CommandResult.createSuccessBuilder(command);
+            if (canDiscovery(env)) {
+                builder.property(CMD_RESULT_ASR_AVAILABLE, env.getExtensionName());
+            } else {
+                builder.property(CMD_RESULT_ASR_UNAVAILABLE, env.getExtensionName());
+                onStop(env);
+            }
+            env.sendResult(builder.build());
+        }
+    }
+
+    protected boolean canDiscovery(TenEnv env) {
+        return false;
     }
 
     @Override

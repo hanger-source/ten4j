@@ -8,7 +8,10 @@ import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.stream.StreamPipelineChannel;
 import source.hanger.core.extension.component.tts.TTSStreamAdapter;
 import source.hanger.core.extension.dashscope.component.stream.QwenTTSStreamAdapter;
+import source.hanger.core.message.command.Command;
 import source.hanger.core.tenenv.TenEnv;
+
+import static source.hanger.core.common.ExtensionConstants.GRAPH_PROPERTY_VOICE_MODEL;
 
 /**
  * Qwen TTS 扩展。
@@ -26,5 +29,11 @@ public class QwenTTSExtension extends BaseTTSExtension {
     @Override
     protected TTSStreamAdapter createTTSStreamAdapter(StreamPipelineChannel<OutputBlock> streamPipelineChannel) {
         return new QwenTTSStreamAdapter(extensionStateProvider, streamPipelineChannel);
+    }
+
+    @Override
+    protected boolean canDiscovery(TenEnv env, Command command) {
+        String voiceModel = command.getPropertyString(GRAPH_PROPERTY_VOICE_MODEL).orElseThrow(() -> new IllegalArgumentException("voiceModel is null"));
+        return "qwen_tts".equals(voiceModel);
     }
 }

@@ -8,6 +8,7 @@ import com.alibaba.dashscope.audio.ttsv2.SpeechSynthesizer;
 import io.reactivex.Flowable;
 import io.reactivex.schedulers.Schedulers;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.time.StopWatch;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import source.hanger.core.extension.component.common.OutputBlock;
 import source.hanger.core.extension.component.common.PipelinePacket;
@@ -41,6 +42,11 @@ public class CosyVoiceTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthe
     }
 
     @Override
+    public void onStop(TenEnv env) {
+        pool.clear();
+    }
+
+    @Override
     protected Flowable<SpeechSynthesisResult> getRawTtsFlowable(TenEnv env, String text) {
 
         String apiKey = env.getPropertyString("api_key").orElseThrow(
@@ -51,6 +57,7 @@ public class CosyVoiceTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthe
             () -> new IllegalStateException("No model found"));
         SpeechSynthesisAudioFormat format = SpeechSynthesisAudioFormat.PCM_24000HZ_MONO_16BIT; // 固定格式
 
+        StopWatch stopWatch = StopWatch.createStarted();
         return Flowable.using(
             () -> { // resourceSupplier: 借用实例 (这里是关键)
                 SpeechSynthesizer s = pool.borrowObject();
@@ -69,6 +76,17 @@ public class CosyVoiceTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthe
             s -> { // flowableSupplier
                 return s.callAsFlowable(text)
                     .subscribeOn(Schedulers.io()) // 确保 TTS SDK 调用在 IO 线程进行
+                    .doOnNext(result -> {
+                        if (!stopWatch.isStopped()) {
+                            stopWatch.stop();
+                            log.info("[{}] DashScope CosyVoice channelId={} 音频首帧输出 elapsed_time={}ms text={}",
+                                env.getExtensionName(), streamPipelineChannel.uuid(), stopWatch.getTime(), text);
+                        }
+                    }).doOnTerminate(() -> {
+                        if (!stopWatch.isStopped()) {
+                            stopWatch.stop();
+                        }
+                    })
                     .doOnError(throwable -> {
                         s.getDuplexApi().close(1000, "bye");
                         log.error("[{}] 调用 DashScope Cosy Voice TTS API 错误  channelId={} text={}",
@@ -84,10 +102,10 @@ public class CosyVoiceTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthe
                         streamPipelineChannel.uuid(), env.getExtensionName(), text);
                 }
                 pool.returnObject(s);
-                log.info("[{}] '{}' 归还 SpeechSynthesizer 实例到对象池.  channelId={} text={})",
-                    streamPipelineChannel.uuid(), env.getExtensionName(), text, text);
+                log.info("[{}] 归还 SpeechSynthesizer 实例到对象池.  channelId={} text={})",
+                    env.getExtensionName(), streamPipelineChannel.uuid(), text);
             }
-        );
+        ).subscribeOn(Schedulers.io());
     }
 
     @Override
@@ -99,9 +117,6 @@ public class CosyVoiceTTSStreamAdapter extends BaseTTSStreamAdapter<SpeechSynthe
                 originalMessage.getId()); // 修改这里
             return Flowable.just(new PipelinePacket<>(block, originalMessage));
         } else {
-            log.warn("[{}] TTS原始流音频数据空. text={} originalId: {}", env.getExtensionName(),
-                originalMessage.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse(""),
-                originalMessage.getId());
             return Flowable.empty();
         }
     }
