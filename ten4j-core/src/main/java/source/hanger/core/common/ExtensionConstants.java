@@ -34,9 +34,6 @@ public final class ExtensionConstants {
 
     public static final String CONTENT_DATA_OUT_NAME = "content_data";
 
-    // ten-framework不存在这种类型，自创的委托，特定情况（例如llm节点直接委托给其他llm节点）会将 text 委托给其他extension处理
-    public static final String DELEGATE_TEXT_DATA_OUT_NAME = "delegate_text_data";
-
     public static final String CMD_ASR_DISCOVERY = "asr_discovery";
     public static final String CMD_RESULT_ASR_AVAILABLE = "asr_available";
     public static final String CMD_RESULT_ASR_UNAVAILABLE = "asr_unavailable";

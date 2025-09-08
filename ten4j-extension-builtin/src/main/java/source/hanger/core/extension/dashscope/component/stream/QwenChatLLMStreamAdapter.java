@@ -1,7 +1,6 @@
 package source.hanger.core.extension.dashscope.component.stream;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import com.alibaba.dashscope.aigc.generation.Generation;
@@ -22,19 +21,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.StopWatch;
-import source.hanger.core.common.ExtensionConstants;
 import source.hanger.core.extension.component.common.OutputBlock;
-import source.hanger.core.extension.component.common.PipelinePacket;
-import source.hanger.core.extension.component.flush.DefaultFlushOperationCoordinator;
-import source.hanger.core.extension.component.flush.FlushOperationCoordinator;
 import source.hanger.core.extension.component.flush.InterruptionStateProvider;
 import source.hanger.core.extension.component.llm.BaseLLMStreamAdapter;
 import source.hanger.core.extension.component.llm.ToolCallOutputFragment;
 import source.hanger.core.extension.component.stream.StreamPipelineChannel;
 import source.hanger.core.extension.dashscope.common.DashScopeConstants;
 import source.hanger.core.tenenv.TenEnv;
-
-import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 
 /**
  * DashScope LLM 流服务实现类。
@@ -43,18 +36,12 @@ import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 @Slf4j
 public class QwenChatLLMStreamAdapter extends BaseLLMStreamAdapter<GenerationResult, Message, ToolFunction> {
 
-    private final FlushOperationCoordinator flushOperationCoordinator;
     private Generation generation;
 
     public QwenChatLLMStreamAdapter(
         InterruptionStateProvider interruptionStateProvider,
         StreamPipelineChannel<OutputBlock> streamPipelineChannel) {
         super(interruptionStateProvider, streamPipelineChannel);
-        flushOperationCoordinator = new DefaultFlushOperationCoordinator(interruptionStateProvider,
-            streamPipelineChannel, tenEnv -> {
-                String delegateLlm = tenEnv.getPropertyString("chat_delegate_to").orElse("");
-                log.info("[{}] delegate to {}", tenEnv.getExtensionName(), delegateLlm);
-            });
     }
 
     @Override
@@ -120,20 +107,6 @@ public class QwenChatLLMStreamAdapter extends BaseLLMStreamAdapter<GenerationRes
             log.error("[{}] Error calling DashScope stream: {}", env.getExtensionName(), e.getMessage());
             return Flowable.error(e);
         }
-    }
-
-    @Override
-    protected Flowable<PipelinePacket<OutputBlock>> transformSingleGenerationResult(GenerationResult generationResult,
-        source.hanger.core.message.Message originalMessage, Map<String, Object> streamContexts, TenEnv env) {
-        String specifiedTool = env.getPropertyString("chat_delegate_to").orElse("");
-        // 如果没有指定工具，直接委托到另一个llm
-        if (!specifiedTool.isEmpty() && isEmpty(generationResult.getOutput().getChoices().getFirst().getMessage().getToolCalls())) {
-            originalMessage.setName(ExtensionConstants.DELEGATE_TEXT_DATA_OUT_NAME);
-            env.sendMessage(originalMessage);
-            flushOperationCoordinator.triggerFlush( env);
-            return Flowable.empty();
-        }
-        return super.transformSingleGenerationResult(generationResult, originalMessage, streamContexts, env);
     }
 
     @Override
