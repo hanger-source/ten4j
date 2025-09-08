@@ -8,8 +8,8 @@ import java.util.concurrent.Executors;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.base.tool.LLMTool;
-import source.hanger.core.extension.base.tool.ToolCallPayload;
 import source.hanger.core.extension.base.tool.ParameterlessLLMTool;
+import source.hanger.core.extension.base.tool.ToolCallPayload;
 import source.hanger.core.extension.component.tool.ToolCallPayloadEmitter;
 import source.hanger.core.message.Message;
 import source.hanger.core.message.VideoFrameMessage;
@@ -142,7 +142,11 @@ public abstract class BaseVisionExtension<MESSAGE, TOOL_FUNCTION> extends BaseLL
         @Override
         public void runTool(ToolCallPayloadEmitter payloadEmitter, TenEnv env, Command command,
             Map<String, Object> args) {
-            String prompt = command.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse("");
+            String prompt = command.getPropertyString(DATA_OUT_PROPERTY_TEXT)
+                .map("""
+                    我的诉求：%s
+                    要求: 你就是当前vision工具（禁止输出'假设工具调用完成'）,  禁止重复输出正在查看...直接给出描述输出
+                    """.stripIndent()::formatted).orElse("");
             onUserTextInput(env, prompt, command);
             payloadEmitter.emmit(ToolCallPayload
                 .finalPayload()

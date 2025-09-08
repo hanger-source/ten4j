@@ -20,14 +20,15 @@ import source.hanger.core.message.command.Command;
 import source.hanger.core.message.command.GenericCommand;
 import source.hanger.core.tenenv.TenEnv;
 
-import static org.apache.commons.lang3.StringUtils.*;
-import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_PROPERTY_SECOND_ROUND;
-import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_PROPERTY_TOOL_CALL_CONTENT;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
+import static source.hanger.core.common.ExtensionConstants.CMD_IN_FLUSH;
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL;
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL_PROPERTY_ARGUMENTS;
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL_PROPERTY_NAME;
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL_PROPERTY_TOOL_CALL_ID;
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_PROPERTY_ASSISTANT_MESSAGE;
+import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_PROPERTY_SECOND_ROUND;
+import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_PROPERTY_TOOL_CALL_CONTENT;
 import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_TEXT;
 
 /**
@@ -208,6 +209,8 @@ public abstract class BaseLLMToolOrchestrator<MESSAGE, LLM_TOOL_FUNCTION> implem
                 env.getExtensionName(), callOutputBlock.getToolName(), callOutputBlock);
 
             if (secondRound) {
+                env.sendCmd(GenericCommand.create(CMD_IN_FLUSH, originalMessage.getId()));
+                triggerFlush(env);
                 List<MESSAGE> messagesForNextTurn = llmContextManager.getMessagesForLLM();
                 List<LLM_TOOL_FUNCTION> registeredToolFunctions = getRegisteredToolFunctions();
                 llmStreamAdapter.onRequestLLMAndProcessStream(
