@@ -21,7 +21,6 @@ import source.hanger.core.message.command.GenericCommand;
 import source.hanger.core.tenenv.TenEnv;
 
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
-import static source.hanger.core.common.ExtensionConstants.CMD_IN_FLUSH;
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL;
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL_PROPERTY_ARGUMENTS;
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_CALL_PROPERTY_NAME;
@@ -212,7 +211,6 @@ public abstract class BaseLLMToolOrchestrator<MESSAGE, LLM_TOOL_FUNCTION> implem
                 env.getExtensionName(), callOutputBlock.getToolName(), callOutputBlock);
 
             if (secondRound) {
-                env.sendCmd(GenericCommand.create(CMD_IN_FLUSH, originalMessage.getId()));
                 triggerFlush(env);
                 List<MESSAGE> messagesForNextTurn = llmContextManager.getMessagesForLLM();
                 List<LLM_TOOL_FUNCTION> registeredToolFunctions = getRegisteredToolFunctions();
