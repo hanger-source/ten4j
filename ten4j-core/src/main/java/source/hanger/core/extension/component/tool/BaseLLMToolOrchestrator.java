@@ -121,13 +121,13 @@ public abstract class BaseLLMToolOrchestrator<MESSAGE, LLM_TOOL_FUNCTION> implem
             .toFlowable()
             .subscribe(cmdResult -> toolCallCommandCompletedCallback(
                 toolCallOutputBlock,
-                originalMessage,
+                toolCallCommand,
                 env,
                 cmdResult,
                 null
             ), throwable -> toolCallCommandCompletedCallback(
                 toolCallOutputBlock,
-                originalMessage,
+                toolCallCommand,
                 env,
                 null,
                 throwable
