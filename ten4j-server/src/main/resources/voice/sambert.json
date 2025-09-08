@@ -180,7 +180,7 @@
     {
       "name": "知妙（多情感）",
       "voice": "sambert-zhimiao-emo-v1",
-      "tag": ["阅读产品简介、数字人、直播"],
+      "tag": ["阅读产品简介", "数字人", "直播"],
       "previewAudioUrl": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20230713/vept/知妙.wav",
       "feature": "多种情感女声"
     },
