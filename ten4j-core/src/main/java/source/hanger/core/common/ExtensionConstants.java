@@ -45,6 +45,8 @@ public final class ExtensionConstants {
 
     public static final String GRAPH_PROPERTY_VOICE_MODEL = "voice_model";
 
+    public static final String MESSAGE_GROUP_TIMESTAMP_NAME = "group_timestamp";
+
     private ExtensionConstants() {
         // Prevent instantiation
     }
