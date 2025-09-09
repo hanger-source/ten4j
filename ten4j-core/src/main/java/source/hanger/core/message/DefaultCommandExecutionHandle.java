@@ -8,6 +8,7 @@ import io.reactivex.Flowable;
 import io.reactivex.FlowableSubscriber;
 import io.reactivex.processors.PublishProcessor;
 import io.reactivex.schedulers.Schedulers;
+import lombok.extern.slf4j.Slf4j;
 import org.reactivestreams.Subscription;
 import source.hanger.core.runloop.Runloop;
 
@@ -15,6 +16,7 @@ import source.hanger.core.runloop.Runloop;
  * {@code CommandExecutionHandle} 接口的默认实现，使用 RxJava 的 {@link Flowable} 和
  * {@link CompletableFuture}。
  */
+@Slf4j
 public class DefaultCommandExecutionHandle<T> implements CommandExecutionHandle<T> {
 
     private final PublishProcessor<T> processor; // 使用 PublishProcessor 作为内部发布器

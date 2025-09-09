@@ -127,7 +127,7 @@ public class ImageSynthesisTool implements LLMTool {
         if (StringUtils.isEmpty(prompt)) {
             String errorMsg = "[%s] 图片生成工具：缺少 'assistantMessage' 参数。".formatted(tenEnv.getExtensionName());
             log.warn("[{}] {}", tenEnv.getExtensionName(), errorMsg); // 使用 {} 占位符
-            payloadEmitter.emmit(errorPayload(errorMsg));
+            payloadEmitter.emmit(errorPayload());
             return;
         }
 
@@ -136,7 +136,7 @@ public class ImageSynthesisTool implements LLMTool {
         if (StringUtils.isEmpty(apiKey)) {
             String errorMsg = "[%s] DashScope API Key 未设置，无法生成图片。".formatted(tenEnv.getExtensionName());
             log.error("[{}] {}", tenEnv.getExtensionName(), errorMsg); // 使用 {} 占位符
-            payloadEmitter.emmit(errorPayload(errorMsg));
+            payloadEmitter.emmit(errorPayload());
             return;
         }
 
@@ -159,7 +159,7 @@ public class ImageSynthesisTool implements LLMTool {
             if (StringUtils.isEmpty(taskId)) {
                 String errorMsg = "[%s] DashScope 异步调用返回结果中未找到 taskId。".formatted(tenEnv.getExtensionName());
                 log.error("[{}] {}", tenEnv.getExtensionName(), errorMsg); // 使用 {} 占位符
-                payloadEmitter.emmit(errorPayload(errorMsg));
+                payloadEmitter.emmit(errorPayload());
                 return;
             }
             log.info("[{}] 图片生成任务已启动，taskId: {}", tenEnv.getExtensionName(), taskId);
@@ -212,7 +212,7 @@ public class ImageSynthesisTool implements LLMTool {
 
                 @Override
                 public void onFailure(Throwable throwable) {
-                    payloadEmitter.emmit(errorPayload( "图片生成失败"));
+                    payloadEmitter.emmit(errorPayload());
                     if (throwable.getMessage().contains("Task not yet succeeded")) {
                         // 如果是任务未完成导致的失败，则重新提交任务进行下一次轮询
                         log.info("[{}] 任务未完成，重新提交任务进行轮询。 taskId: {}", tenEnv.getExtensionName(), taskId);
@@ -229,7 +229,9 @@ public class ImageSynthesisTool implements LLMTool {
                 public void onTimeout() {
                     // 整个任务已超时，不再进行重提交
                     log.error("[{}] 图片生成任务总超时，任务终止。 taskId: {}", tenEnv.getExtensionName(), taskId);
-                    payloadEmitter.emmit(errorPayload("图片生成超时，请稍后再试"));
+                    payloadEmitter.emmit(errorPayload()
+                        .assistantMessage("图片生成超时，请稍后再试")
+                        .secondRound(true));
                         // 可以发送超时错误消息给用户
                 }
             }, taskId, ofSeconds(TOTAL_TASK_TIMEOUT_SECONDS), ofMillis(DEFAULT_POLLING_INTERVAL_MILLIS)); // 传递默认轮询间隔
@@ -238,12 +240,14 @@ public class ImageSynthesisTool implements LLMTool {
             String errorMsg = "[%s] DashScope API 异步调用启动失败: %s".formatted(tenEnv.getExtensionName(),
                 e.getMessage()); // 使用 %s 占位符
             log.error("[{}] {}", tenEnv.getExtensionName(), errorMsg, e); // 使用 {} 占位符，并传入异常对象
-            payloadEmitter.emmit(errorPayload(errorMsg));
+            payloadEmitter.emmit(errorPayload()
+                .toolCallContext("图片生成失败"));
         } catch (Exception e) {
             String errorMsg = "[%s] 图片生成工具启动异常: %s".formatted(tenEnv.getExtensionName(),
                 e.getMessage()); // 使用 %s 占位符
             log.error("[{}] {}", tenEnv.getExtensionName(), errorMsg, e); // 使用 {} 占位符，并传入异常对象
-            payloadEmitter.emmit(errorPayload(errorMsg));
+            payloadEmitter.emmit(errorPayload()
+                .toolCallContext("图片生成失败"));
         }
 
         String text = """

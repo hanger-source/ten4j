@@ -14,6 +14,19 @@ import source.hanger.core.extension.base.tool.ToolCallPayload.SegmentPayload.Seg
 @NoArgsConstructor
 public abstract class ToolCallPayload {
 
+    public static SegmentPayloadBuilder<?, ?> segmentPayload() {
+        return SegmentPayload.builder();
+    }
+
+    public static FinalPayloadBuilder<?, ?> finalPayload() {
+        return FinalPayload.builder();
+    }
+
+    public static FinalPayloadBuilder<?, ?> errorPayload() {
+        return FinalPayload.builder()
+            .secondRound(true);
+    }
+
     @EqualsAndHashCode(callSuper = true)
     @SuperBuilder
     @Data
@@ -47,20 +60,6 @@ public abstract class ToolCallPayload {
         private Boolean secondRound;
         @Singular
         private Map<String, Object> properties;
-    }
-
-    public static SegmentPayloadBuilder<?, ?> segmentPayload() {
-        return SegmentPayload.builder();
-    }
-
-    public static FinalPayloadBuilder<?, ?> finalPayload() {
-        return FinalPayload.builder();
-    }
-
-    public static FinalPayloadBuilder<?, ?> errorPayload(String content) {
-        return FinalPayload.builder()
-            .secondRound(true)
-            .toolCallContext(content);
     }
 
     @EqualsAndHashCode(callSuper = true)

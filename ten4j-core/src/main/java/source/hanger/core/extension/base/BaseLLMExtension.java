@@ -166,7 +166,6 @@ public abstract class BaseLLMExtension<MESSAGE, TOOL_FUNCTION> extends BaseExten
             log.info("[{}] 收到来自 {} CMD_FLUSH 命令，执行刷新操作并重置历史。", env.getExtensionName(),
                 command.getSrcLoc().getExtensionName());
             flushOperationCoordinator.triggerFlush(env);
-            llmToolOrchestrator.triggerFlush(env);
             env.sendCmd(GenericCommand.create(CMD_OUT_FLUSH, command.getId()));
             return;
         }

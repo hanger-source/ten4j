@@ -28,7 +28,6 @@ import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_PROPERTY_ASS
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_PROPERTY_SECOND_ROUND;
 import static source.hanger.core.common.ExtensionConstants.CMD_TOOL_PROPERTY_TOOL_CALL_CONTENT;
 import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_TEXT;
-import static source.hanger.core.common.ExtensionConstants.MESSAGE_GROUP_TIMESTAMP_NAME;
 
 /**
  * ToolRegistryAndCallerImpl 是工具注册和调用的实现类。
@@ -57,16 +56,6 @@ public abstract class BaseLLMToolOrchestrator<MESSAGE, LLM_TOOL_FUNCTION> implem
     public void registerTool(LLMToolMetadata LLMToolMetadata) {
         // 实现注册逻辑，这里可以直接调用 ExtensionToolRegistry 的注册方法
         toolMap.computeIfAbsent(LLMToolMetadata.getName(), k -> LLMToolMetadata);
-    }
-
-    @Override
-    public void triggerFlush(TenEnv env) {
-        disposables.forEach(disposable -> {
-            if (!disposable.isDisposed()) {
-                disposable.dispose();
-            }
-        });
-        disposables.clear();
     }
 
     @Override
@@ -104,8 +93,8 @@ public abstract class BaseLLMToolOrchestrator<MESSAGE, LLM_TOOL_FUNCTION> implem
             .property(CMD_TOOL_CALL_PROPERTY_ARGUMENTS, toolCallOutputBlock.getArgumentsJson())
             .property(CMD_TOOL_CALL_PROPERTY_TOOL_CALL_ID, toolCallOutputBlock.getId())
             .property(DATA_OUT_PROPERTY_TEXT, originalMessage.getPropertyString(DATA_OUT_PROPERTY_TEXT).orElse(""))
-            .property(MESSAGE_GROUP_TIMESTAMP_NAME, originalMessage.getPropertyLong(MESSAGE_GROUP_TIMESTAMP_NAME)
-                .orElse(System.currentTimeMillis()))
+            //.property(MESSAGE_GROUP_TIMESTAMP_NAME, originalMessage.getPropertyLong(MESSAGE_GROUP_TIMESTAMP_NAME)
+            //    .orElse(System.currentTimeMillis()))
             .build();
 
         llmContextManager.onAssistantMsg(createToolCallAssistantMessage(toolCallOutputBlock));
@@ -209,14 +198,13 @@ public abstract class BaseLLMToolOrchestrator<MESSAGE, LLM_TOOL_FUNCTION> implem
                 env.getExtensionName(), callOutputBlock.getToolName(), callOutputBlock);
 
             if (secondRound) {
-                triggerFlush(env);
                 List<MESSAGE> messagesForNextTurn = llmContextManager.getMessagesForLLM();
                 List<LLM_TOOL_FUNCTION> registeredToolFunctions = getRegisteredToolFunctions();
                 llmStreamAdapter.onRequestLLMAndProcessStream(
                     env,
                     messagesForNextTurn,
                     registeredToolFunctions,
-                    originalMessage
+                    cmdResult
                 );
             }
         } catch (Exception e) {

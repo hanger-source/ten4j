@@ -13,10 +13,15 @@ import source.hanger.core.message.command.Command;
 import source.hanger.core.message.command.GenericCommand;
 import source.hanger.core.tenenv.TenEnv;
 
-import static java.util.Collections.*;
+import static java.util.Collections.singletonList;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
-import static source.hanger.core.common.ExtensionConstants.*;
+import static source.hanger.core.common.ExtensionConstants.CMD_IN_FLUSH;
+import static source.hanger.core.common.ExtensionConstants.CMD_RESULT_TTS_AVAILABLE;
+import static source.hanger.core.common.ExtensionConstants.CMD_RESULT_TTS_UNAVAILABLE;
+import static source.hanger.core.common.ExtensionConstants.CMD_TTS_DISCOVERY;
+import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_TEXT;
+import static source.hanger.core.common.ExtensionConstants.GRAPH_PROPERTY_VOICE_MODEL;
 
 /**
  * @author fuhangbo.hanger.uhfun
