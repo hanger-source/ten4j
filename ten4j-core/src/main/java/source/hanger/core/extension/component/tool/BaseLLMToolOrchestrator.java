@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.reactivex.disposables.Disposable;
 import lombok.extern.slf4j.Slf4j;
 import source.hanger.core.extension.base.tool.LLMToolMetadata;
@@ -41,7 +40,6 @@ public abstract class BaseLLMToolOrchestrator<MESSAGE, LLM_TOOL_FUNCTION> implem
     LLMToolOrchestrator<LLM_TOOL_FUNCTION> {
 
     protected final LLMContextManager<MESSAGE> llmContextManager;
-    private final ObjectMapper objectMapper = new ObjectMapper();
     private final Map<String, LLMToolMetadata> toolMap = new HashMap<>();
     private final LLMStreamAdapter<MESSAGE, LLM_TOOL_FUNCTION> llmStreamAdapter;
 
