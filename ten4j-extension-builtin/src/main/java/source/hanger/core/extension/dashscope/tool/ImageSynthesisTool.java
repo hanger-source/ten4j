@@ -26,7 +26,9 @@ import static java.time.Duration.ofMillis;
 import static java.time.Duration.ofSeconds;
 import static source.hanger.core.common.ExtensionConstants.CONTENT_DATA_OUT_NAME;
 import static source.hanger.core.common.ExtensionConstants.DATA_OUT_PROPERTY_ROLE;
-import static source.hanger.core.extension.base.tool.ToolCallPayload.*;
+import static source.hanger.core.extension.base.tool.ToolCallPayload.errorPayload;
+import static source.hanger.core.extension.base.tool.ToolCallPayload.finalPayload;
+import static source.hanger.core.extension.base.tool.ToolCallPayload.segmentPayload;
 
 /**
  * ImageSynthesisTool 是一个 LLM 工具，用于通过 DashScope API 生成图片。
@@ -218,7 +220,7 @@ public class ImageSynthesisTool implements LLMTool {
                             ofMillis(DEFAULT_POLLING_INTERVAL_MILLIS)); // 重新提交自身，指定轮询间隔
                     } else {
                         log.error("[{}] 图片生成任务失败: param={}", tenEnv.getExtensionName(),
-                            JsonUtils.writeValueAsString(param),
+                            JsonUtils.writeValueAsString(param.getParameters()),
                             throwable);
                     }
                 }
