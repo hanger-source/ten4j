@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>source.hanger</groupId>
+        <artifactId>ten4j</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>ten4j-audio-processing</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <name>ten4j-audio-processing</name>
+    <description>Audio processing module for Ten4j, including GTCRN denoising.</description>
+
+    <dependencies>
+        <!-- 继承自父 pom 的 dependencyManagement -->
+        <dependency>
+            <groupId>com.microsoft.onnxruntime</groupId>
+            <artifactId>onnxruntime</artifactId>
+        </dependency>
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- Apache Commons Math for FFT and complex number operations -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-math3</artifactId>
+            <version>3.6.1</version>
+        </dependency>
+        <!-- Sherpa ONNX Java Native Library (for macOS x64) -->
+        <dependency>
+            <groupId>com.k2fsa.sherpa.onnx</groupId>
+            <artifactId>sherpa-onnx-native-lib-osx-x64</artifactId>
+            <version>1.12.11</version> <!-- 根据实际下载的版本号进行调整 -->
+        </dependency>
+        <!-- Sherpa ONNX Java API -->
+        <dependency>
+            <groupId>com.k2fsa.sherpa.onnx</groupId>
+            <artifactId>sherpa-onnx</artifactId>
+            <version>1.12.11</version> <!-- 根据实际下载的版本号进行调整 -->
+        </dependency>
+    </dependencies>
+    <build>
+        <sourceDirectory>src/main/java</sourceDirectory>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <source>21</source>
+                    <target>21</target>
+                    <forceJavacCompilerUse>true</forceJavacCompilerUse>
+                    <compilerArgs>
+                        <arg>--enable-preview</arg>
+                        <arg>--add-opens</arg>
+                        <arg>java.base/jdk.internal.misc=ALL-UNNAMED</arg>
+                        <arg>--add-opens</arg>
+                        <arg>java.base/java.util.zip=ALL-UNNAMED</arg>
+                    </compilerArgs>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version> <!-- 更新版本到1.18.36 -->
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.2</version>
+                <configuration>
+                    <argLine>--enable-preview --add-opens java.base/jdk.internal.misc=ALL-UNNAMED
+                        --add-opens
+                        java.base/java.util.zip=ALL-UNNAMED
+                    </argLine>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

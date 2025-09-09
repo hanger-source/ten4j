@@ -41,6 +41,17 @@
         "addon": "source.hanger.core.extension.system.ClientConnectionExtension",
         "extension_group": "default",
         "property": {}
+      },{
+        "type": "extension",
+        "name": "noise_reduction",
+        "addon": "source.hanger.core.extension.system.NoiseReductionExtension",
+        "extension_group": "audio_processing",
+        "property": {
+          "input_sample_rate": 16000,
+          "input_channels": 1,
+          "gtcrn_model_path": "gtcrn/gtcrn_simple.onnx",
+          "output_directory": "denoised_audio_output"
+        }
       },
       {
         "type": "extension",
@@ -203,7 +214,7 @@
             "name": "pcm_frame",
             "dest": [
               {
-                "extension": "asr_self_discovering"
+                "extension": "noise_reduction"
               }
             ]
           }
