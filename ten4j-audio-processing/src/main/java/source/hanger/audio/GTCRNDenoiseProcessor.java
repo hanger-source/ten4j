@@ -1,42 +1,22 @@
 package source.hanger.audio;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-// import ai.onnxruntime.NodeInfo;
-// import ai.onnxruntime.OnnxTensor;
-// import ai.onnxruntime.OrtEnvironment;
-// import ai.onnxruntime.OrtException;
-// import ai.onnxruntime.OrtSession;
-// import ai.onnxruntime.OrtSession.SessionOptions;
-// import ai.onnxruntime.TensorInfo;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 
 import com.k2fsa.sherpa.onnx.DenoisedAudio;
 import com.k2fsa.sherpa.onnx.OfflineSpeechDenoiser;
 import com.k2fsa.sherpa.onnx.OfflineSpeechDenoiserConfig;
 import com.k2fsa.sherpa.onnx.OfflineSpeechDenoiserGtcrnModelConfig;
 import com.k2fsa.sherpa.onnx.OfflineSpeechDenoiserModelConfig;
-
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.ShortBuffer;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
-// import java.util.Arrays;
-// import java.util.LinkedList;
-// import java.util.List;
-
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class GTCRNDenoiseProcessor {
-
-    private static final Logger log = LoggerFactory.getLogger(GTCRNDenoiseProcessor.class);
 
     // GTCRN 模型期望的音频参数 (根据 GTCRN 项目 README 和 ONNX 模型确认)
     public static final int GTCRN_SAMPLE_RATE = 16000; // 模型期望的采样率，固定为 16000 Hz

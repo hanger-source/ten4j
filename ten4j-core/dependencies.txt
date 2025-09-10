@@ -1,167 +1,0 @@
-[INFO] Scanning for projects...
-[INFO] 
-[INFO] ----------------------< source.hanger:ten4j-core >----------------------
-[INFO] Building ten4j-core 1.0.0-SNAPSHOT
-[INFO]   from pom.xml
-[INFO] --------------------------------[ jar ]---------------------------------
-[INFO] 
-[INFO] --- dependency:3.7.0:tree (default-cli) @ ten4j-core ---
-[INFO] Artifact org.apache.maven.doxia:doxia-sink-api:pom:1.12.0 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.maven.doxia:doxia-sink-api:pom:1.12.0 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/doxia/doxia-sink-api/1.12.0/doxia-sink-api-1.12.0.pom
-Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/doxia/doxia-sink-api/1.12.0/doxia-sink-api-1.12.0.pom (0 B at 0 B/s)
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/doxia/doxia/1.12.0/doxia-1.12.0.pom
-Progress (1): 2.9/18 kBProgress (1): 5.8/18 kBProgress (1): 8.8/18 kBProgress (1): 12/18 kB Progress (1): 15/18 kBProgress (1): 18/18 kBProgress (1): 18 kB                      Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/doxia/doxia/1.12.0/doxia-1.12.0.pom (18 kB at 148 kB/s)
-[INFO] Artifact org.apache.maven.doxia:doxia-logging-api:pom:1.12.0 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.maven.doxia:doxia-logging-api:pom:1.12.0 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/doxia/doxia-logging-api/1.12.0/doxia-logging-api-1.12.0.pom
-Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/doxia/doxia-logging-api/1.12.0/doxia-logging-api-1.12.0.pom (0 B at 0 B/s)
-[INFO] Artifact org.apache.maven.reporting:maven-reporting-impl:pom:3.2.0 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.maven.reporting:maven-reporting-impl:pom:3.2.0 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/reporting/maven-reporting-impl/3.2.0/maven-reporting-impl-3.2.0.pom
-Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/reporting/maven-reporting-impl/3.2.0/maven-reporting-impl-3.2.0.pom (0 B at 0 B/s)
-[INFO] Artifact org.codehaus.plexus:plexus-component-annotations:pom:2.0.0 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.codehaus.plexus:plexus-component-annotations:pom:2.0.0 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/codehaus/plexus/plexus-component-annotations/2.0.0/plexus-component-annotations-2.0.0.pom
-Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/codehaus/plexus/plexus-component-annotations/2.0.0/plexus-component-annotations-2.0.0.pom (0 B at 0 B/s)
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/codehaus/plexus/plexus-containers/2.0.0/plexus-containers-2.0.0.pom
-Progress (1): 2.9/4.8 kBProgress (1): 4.8 kB                        Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/codehaus/plexus/plexus-containers/2.0.0/plexus-containers-2.0.0.pom (4.8 kB at 57 kB/s)
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/shared/maven-dependency-analyzer/1.14.1/maven-dependency-analyzer-1.14.1.pom
-Progress (1): 2.9/6.4 kBProgress (1): 5.8/6.4 kBProgress (1): 6.4 kB                        Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/shared/maven-dependency-analyzer/1.14.1/maven-dependency-analyzer-1.14.1.pom (6.4 kB at 68 kB/s)
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/assertj/assertj-bom/3.25.3/assertj-bom-3.25.3.pom
-Progress (1): 2.9/3.7 kBProgress (1): 3.7 kB                        Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/assertj/assertj-bom/3.25.3/assertj-bom-3.25.3.pom (3.7 kB at 42 kB/s)
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/shared/maven-dependency-tree/3.3.0/maven-dependency-tree-3.3.0.pom
-Progress (1): 2.9/7.0 kBProgress (1): 5.8/7.0 kBProgress (1): 7.0 kB                        Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/shared/maven-dependency-tree/3.3.0/maven-dependency-tree-3.3.0.pom (7.0 kB at 86 kB/s)
-[INFO] Artifact org.apache.maven.doxia:doxia-sink-api:jar:1.12.0 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.maven.doxia:doxia-logging-api:jar:1.12.0 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.maven.reporting:maven-reporting-impl:jar:3.2.0 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.maven.doxia:doxia-decoration-model:jar:1.11.1 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.maven.doxia:doxia-core:jar:1.11.1 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.httpcomponents:httpcore:jar:4.4.14 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.maven.doxia:doxia-integration-tools:jar:1.11.1 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.maven.doxia:doxia-site-renderer:jar:1.11.1 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.maven.doxia:doxia-skin-model:jar:1.11.1 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.maven.doxia:doxia-module-xhtml:jar:1.11.1 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.maven.doxia:doxia-module-xhtml5:jar:1.11.1 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.codehaus.plexus:plexus-velocity:jar:1.2 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact commons-lang:commons-lang:jar:2.4 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact commons-beanutils:commons-beanutils:jar:1.7.0 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.codehaus.plexus:plexus-i18n:jar:1.0-beta-10 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.maven.shared:maven-common-artifact-filters:jar:3.3.2 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.codehaus.plexus:plexus-component-annotations:jar:2.0.0 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.maven.doxia:doxia-sink-api:jar:1.12.0 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.maven.doxia:doxia-logging-api:jar:1.12.0 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.maven.reporting:maven-reporting-impl:jar:3.2.0 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.maven.doxia:doxia-decoration-model:jar:1.11.1 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.maven.doxia:doxia-core:jar:1.11.1 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.httpcomponents:httpcore:jar:4.4.14 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.maven.doxia:doxia-integration-tools:jar:1.11.1 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.maven.doxia:doxia-site-renderer:jar:1.11.1 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.maven.doxia:doxia-skin-model:jar:1.11.1 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.maven.doxia:doxia-module-xhtml:jar:1.11.1 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.maven.doxia:doxia-module-xhtml5:jar:1.11.1 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.codehaus.plexus:plexus-velocity:jar:1.2 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact commons-lang:commons-lang:jar:2.4 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact commons-beanutils:commons-beanutils:jar:1.7.0 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.codehaus.plexus:plexus-i18n:jar:1.0-beta-10 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.apache.maven.shared:maven-common-artifact-filters:jar:3.3.2 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-[INFO] Artifact org.codehaus.plexus:plexus-component-annotations:jar:2.0.0 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [tbmirror-all (http://mvnrepo.alibaba-inc.com/mvn/repository, default, releases+snapshots)]
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/doxia/doxia-sink-api/1.12.0/doxia-sink-api-1.12.0.jar
-Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/doxia/doxia-sink-api/1.12.0/doxia-sink-api-1.12.0.jar (0 B at 0 B/s)
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/doxia/doxia-logging-api/1.12.0/doxia-logging-api-1.12.0.jar
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/reporting/maven-reporting-impl/3.2.0/maven-reporting-impl-3.2.0.jar
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/doxia/doxia-decoration-model/1.11.1/doxia-decoration-model-1.11.1.jar
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/doxia/doxia-core/1.11.1/doxia-core-1.11.1.jar
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/commons/commons-text/1.12.0/commons-text-1.12.0.jar
-Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/doxia/doxia-logging-api/1.12.0/doxia-logging-api-1.12.0.jar (0 B at 0 B/s)
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/httpcomponents/httpcore/4.4.14/httpcore-4.4.14.jar
-Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/doxia/doxia-core/1.11.1/doxia-core-1.11.1.jar (0 B at 0 B/s)
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/doxia/doxia-integration-tools/1.11.1/doxia-integration-tools-1.11.1.jar
-Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/doxia/doxia-decoration-model/1.11.1/doxia-decoration-model-1.11.1.jar (0 B at 0 B/s)
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/doxia/doxia-site-renderer/1.11.1/doxia-site-renderer-1.11.1.jar
-Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/httpcomponents/httpcore/4.4.14/httpcore-4.4.14.jar (0 B at 0 B/s)
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/doxia/doxia-skin-model/1.11.1/doxia-skin-model-1.11.1.jar
-Progress (1): 5.8/251 kBProgress (1): 12/251 kB                        Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/reporting/maven-reporting-impl/3.2.0/maven-reporting-impl-3.2.0.jar (0 B at 0 B/s)
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/doxia/doxia-module-xhtml/1.11.1/doxia-module-xhtml-1.11.1.jar
-Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/doxia/doxia-integration-tools/1.11.1/doxia-integration-tools-1.11.1.jar (0 B at 0 B/s)
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/doxia/doxia-module-xhtml5/1.11.1/doxia-module-xhtml5-1.11.1.jar
-Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/doxia/doxia-site-renderer/1.11.1/doxia-site-renderer-1.11.1.jar (0 B at 0 B/s)
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/codehaus/plexus/plexus-velocity/1.2/plexus-velocity-1.2.jar
-Progress (1): 21/251 kBProgress (1): 31/251 kB                       Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/doxia/doxia-skin-model/1.11.1/doxia-skin-model-1.11.1.jar (0 B at 0 B/s)
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/commons-lang/commons-lang/2.4/commons-lang-2.4.jar
-Progress (1): 41/251 kB                       Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/doxia/doxia-module-xhtml/1.11.1/doxia-module-xhtml-1.11.1.jar (0 B at 0 B/s)
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/commons-beanutils/commons-beanutils/1.7.0/commons-beanutils-1.7.0.jar
-Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/doxia/doxia-module-xhtml5/1.11.1/doxia-module-xhtml5-1.11.1.jar (0 B at 0 B/s)
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/codehaus/plexus/plexus-i18n/1.0-beta-10/plexus-i18n-1.0-beta-10.jar
-Progress (1): 47/251 kBProgress (1): 56/251 kBProgress (1): 65/251 kBProgress (1): 70/251 kBProgress (1): 75/251 kBProgress (1): 98/251 kBProgress (1): 100/251 kB                        Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/codehaus/plexus/plexus-velocity/1.2/plexus-velocity-1.2.jar (0 B at 0 B/s)
-Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/commons-lang/commons-lang/2.4/commons-lang-2.4.jar (0 B at 0 B/s)
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/shared/maven-dependency-analyzer/1.14.1/maven-dependency-analyzer-1.14.1.jar
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/shared/maven-dependency-tree/3.3.0/maven-dependency-tree-3.3.0.jar
-Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/commons-beanutils/commons-beanutils/1.7.0/commons-beanutils-1.7.0.jar (0 B at 0 B/s)
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/shared/maven-common-artifact-filters/3.3.2/maven-common-artifact-filters-3.3.2.jar
-Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/codehaus/plexus/plexus-i18n/1.0-beta-10/plexus-i18n-1.0-beta-10.jar (0 B at 0 B/s)
-Downloading from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/codehaus/plexus/plexus-component-annotations/2.0.0/plexus-component-annotations-2.0.0.jar
-Progress (1): 106/251 kBProgress (1): 119/251 kBProgress (1): 122/251 kBProgress (1): 136/251 kBProgress (1): 142/251 kBProgress (1): 168/251 kBProgress (1): 179/251 kBProgress (1): 187/251 kBProgress (1): 196/251 kBProgress (1): 198/251 kBProgress (1): 205/251 kBProgress (1): 216/251 kBProgress (2): 216/251 kB | 5.8/42 kBProgress (2): 216/251 kB | 8.8/42 kBProgress (3): 216/251 kB | 8.8/42 kB | 4.4/43 kBProgress (3): 216/251 kB | 8.8/42 kB | 7.3/43 kBProgress (3): 216/251 kB | 8.8/42 kB | 12/43 kB Progress (3): 216/251 kB | 12/42 kB | 12/43 kB Progress (3): 216/251 kB | 15/42 kB | 12/43 kBProgress (3): 216/251 kB | 18/42 kB | 12/43 kBProgress (3): 216/251 kB | 20/42 kB | 12/43 kBProgress (3): 216/251 kB | 23/42 kB | 12/43 kB                                              Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/shared/maven-common-artifact-filters/3.3.2/maven-common-artifact-filters-3.3.2.jar (0 B at 0 B/s)
-Progress (3): 216/251 kB | 29/42 kB | 12/43 kBProgress (3): 216/251 kB | 32/42 kB | 12/43 kBProgress (3): 222/251 kB | 32/42 kB | 12/43 kBProgress (3): 228/251 kB | 32/42 kB | 12/43 kBProgress (3): 228/251 kB | 35/42 kB | 12/43 kBProgress (3): 231/251 kB | 35/42 kB | 12/43 kBProgress (3): 238/251 kB | 35/42 kB | 12/43 kBProgress (3): 249/251 kB | 35/42 kB | 12/43 kBProgress (3): 251 kB | 35/42 kB | 12/43 kB                                              Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/codehaus/plexus/plexus-component-annotations/2.0.0/plexus-component-annotations-2.0.0.jar (0 B at 0 B/s)
-Progress (3): 251 kB | 41/42 kB | 12/43 kBProgress (3): 251 kB | 42 kB | 12/43 kB   Progress (3): 251 kB | 42 kB | 21/43 kBProgress (3): 251 kB | 42 kB | 33/43 kBProgress (3): 251 kB | 42 kB | 41/43 kB                                       Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/shared/maven-dependency-analyzer/1.14.1/maven-dependency-analyzer-1.14.1.jar (42 kB at 160 kB/s)
-Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/commons/commons-text/1.12.0/commons-text-1.12.0.jar (251 kB at 966 kB/s)
-Progress (1): 43 kB                   Downloaded from tbmirror-all: http://mvnrepo.alibaba-inc.com/mvn/repository/org/apache/maven/shared/maven-dependency-tree/3.3.0/maven-dependency-tree-3.3.0.jar (43 kB at 143 kB/s)
-[INFO] source.hanger:ten4j-core:jar:1.0.0-SNAPSHOT
-[INFO] +- com.fasterxml.jackson.core:jackson-core:jar:2.18.4:compile
-[INFO] +- com.fasterxml.jackson.core:jackson-databind:jar:2.18.4:compile
-[INFO] +- com.fasterxml.jackson.core:jackson-annotations:jar:2.18.4:compile
-[INFO] +- com.alibaba:dashscope-sdk-java:jar:2.19.0:compile
-[INFO] |  +- io.reactivex.rxjava2:rxjava:jar:2.2.21:compile
-[INFO] |  |  \- org.reactivestreams:reactive-streams:jar:1.0.3:compile
-[INFO] |  +- com.google.code.gson:gson:jar:2.8.9:compile
-[INFO] |  +- org.jetbrains.kotlin:kotlin-stdlib-jdk8:jar:1.8.21:compile
-[INFO] |  |  +- org.jetbrains.kotlin:kotlin-stdlib:jar:1.8.21:compile
-[INFO] |  |  |  +- org.jetbrains.kotlin:kotlin-stdlib-common:jar:1.8.21:compile
-[INFO] |  |  |  \- org.jetbrains:annotations:jar:13.0:compile
-[INFO] |  |  \- org.jetbrains.kotlin:kotlin-stdlib-jdk7:jar:1.8.21:compile
-[INFO] |  +- com.squareup.okio:okio:jar:3.6.0:compile
-[INFO] |  |  \- com.squareup.okio:okio-jvm:jar:3.6.0:compile
-[INFO] |  +- com.squareup.okhttp3:logging-interceptor:jar:4.12.0:compile
-[INFO] |  +- com.squareup.okhttp3:okhttp-sse:jar:4.12.0:compile
-[INFO] |  +- com.squareup.okhttp3:okhttp:jar:4.12.0:compile
-[INFO] |  \- com.github.victools:jsonschema-generator:jar:4.31.1:compile
-[INFO] |     \- com.fasterxml:classmate:jar:1.5.1:compile
-[INFO] +- io.netty:netty-buffer:jar:4.1.112.Final:compile
-[INFO] |  \- io.netty:netty-common:jar:4.1.112.Final:compile
-[INFO] +- io.netty:netty-transport:jar:4.1.112.Final:compile
-[INFO] |  \- io.netty:netty-resolver:jar:4.1.112.Final:compile
-[INFO] +- io.netty:netty-codec:jar:4.1.112.Final:compile
-[INFO] +- io.netty:netty-codec-http:jar:4.1.112.Final:compile
-[INFO] +- io.netty:netty-handler:jar:4.1.112.Final:compile
-[INFO] |  \- io.netty:netty-transport-native-unix-common:jar:4.1.112.Final:compile
-[INFO] +- org.slf4j:slf4j-api:jar:2.0.13:compile
-[INFO] +- ch.qos.logback:logback-classic:jar:1.4.14:compile
-[INFO] +- ch.qos.logback:logback-core:jar:1.4.14:compile
-[INFO] +- org.projectlombok:lombok:jar:1.18.38:provided
-[INFO] +- org.agrona:agrona:jar:1.18.0:compile
-[INFO] +- org.msgpack:msgpack-core:jar:0.9.10:compile
-[INFO] +- org.msgpack:jackson-dataformat-msgpack:jar:0.9.10:compile
-[INFO] +- org.mvel:mvel2:jar:2.5.0.Final:compile
-[INFO] +- org.junit.jupiter:junit-jupiter:jar:5.11.3:test
-[INFO] |  +- org.junit.jupiter:junit-jupiter-api:jar:5.11.3:test
-[INFO] |  |  +- org.opentest4j:opentest4j:jar:1.3.0:test
-[INFO] |  |  +- org.junit.platform:junit-platform-commons:jar:1.11.3:test
-[INFO] |  |  \- org.apiguardian:apiguardian-api:jar:1.1.2:test
-[INFO] |  +- org.junit.jupiter:junit-jupiter-params:jar:5.11.3:test
-[INFO] |  \- org.junit.jupiter:junit-jupiter-engine:jar:5.11.3:test
-[INFO] |     \- org.junit.platform:junit-platform-engine:jar:1.11.3:test
-[INFO] +- org.mockito:mockito-core:jar:5.14.2:test
-[INFO] |  +- net.bytebuddy:byte-buddy:jar:1.15.4:test
-[INFO] |  +- net.bytebuddy:byte-buddy-agent:jar:1.15.4:test
-[INFO] |  \- org.objenesis:objenesis:jar:3.3:test
-[INFO] +- org.slf4j:slf4j-simple:jar:2.0.13:test
-[INFO] +- io.dropwizard.metrics:metrics-core:jar:4.2.23:compile
-[INFO] +- io.dropwizard.metrics:metrics-healthchecks:jar:4.2.25:compile
-[INFO] \- net.fellbaum:jemoji:jar:1.7.4:compile
-[INFO]    \- org.jspecify:jspecify:jar:1.0.0:compile
-[INFO] ------------------------------------------------------------------------
-[INFO] BUILD SUCCESS
-[INFO] ------------------------------------------------------------------------
-[INFO] Total time:  2.401 s
-[INFO] Finished at: 2025-08-13T23:16:05+08:00
-[INFO] ------------------------------------------------------------------------

@@ -189,17 +189,7 @@
             <artifactId>ten4j-audio-processing</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
-        <dependency>
-            <groupId>com.k2fsa.sherpa.onnx</groupId>
-            <artifactId>sherpa-onnx-native-lib-osx-x64</artifactId>
-            <version>1.12.11</version> <!-- 根据实际下载的版本号进行调整 -->
-        </dependency>
         <!-- Sherpa ONNX Java API -->
-        <dependency>
-            <groupId>com.k2fsa.sherpa.onnx</groupId>
-            <artifactId>sherpa-onnx</artifactId>
-            <version>1.12.11</version> <!-- 根据实际下载的版本号进行调整 -->
-        </dependency>
     </dependencies>
 
     <build>

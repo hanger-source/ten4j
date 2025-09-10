@@ -125,17 +125,6 @@
                 <version>3.6.1</version>
             </dependency>
             <dependency>
-                <groupId>com.k2fsa.sherpa.onnx</groupId>
-                <artifactId>sherpa-onnx-native-lib-osx-x64</artifactId>
-                <version>1.12.11</version> <!-- 根据实际下载的版本号进行调整 -->
-            </dependency>
-            <!-- Sherpa ONNX Java API -->
-            <dependency>
-                <groupId>com.k2fsa.sherpa.onnx</groupId>
-                <artifactId>sherpa-onnx</artifactId>
-                <version>1.12.11</version> <!-- 根据实际下载的版本号进行调整 -->
-            </dependency>
-            <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
                 <version>${slf4j.version}</version>

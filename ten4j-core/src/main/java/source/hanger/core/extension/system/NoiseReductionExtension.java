@@ -1,22 +1,21 @@
 package source.hanger.core.extension.system;
 
-import lombok.extern.slf4j.Slf4j;
-import source.hanger.core.extension.base.BaseExtension;
-import source.hanger.core.message.AudioFrameMessage;
-import source.hanger.core.tenenv.TenEnv;
-import source.hanger.audio.GTCRNDenoiseProcessor; // 导入新模块的处理器
-import source.hanger.core.util.ByteBufUtils;
-import source.hanger.audio.DenoisedAudioFileWriter; // 导入新创建的音频文件写入器
-
 import java.io.File;
-import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
+
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
-import java.io.FileNotFoundException;
+
+import lombok.extern.slf4j.Slf4j;
+import source.hanger.audio.DenoisedAudioFileWriter;
+import source.hanger.audio.GTCRNDenoiseProcessor;
+import source.hanger.core.extension.base.BaseExtension;
+import source.hanger.core.message.AudioFrameMessage;
+import source.hanger.core.tenenv.TenEnv;
 
 @Slf4j
 public class NoiseReductionExtension extends BaseExtension {
@@ -73,7 +72,8 @@ public class NoiseReductionExtension extends BaseExtension {
 
             // --- 测试模式：从 WAV 文件读取音频 --- //
             // this.testWavFilePath = "ten4j/ten4j-audio-processing/samples_Samples1_Samples1_noisy.wav"; // 指定测试文件路径
-            this.testWavFilePath = new File("/Users/fuhangbo/ten-realtime-chat/ten4j/ten4j-audio-processing/samples_Samples1_Samples1_noisy.wav").getAbsolutePath(); // 使用绝对路径
+            this.testWavFilePath = new File(
+                "/Users/hanger/ten-realtime-chat/ten4j/denoised_audio_output/samples_Samples1_Samples1_noisy.wav").getAbsolutePath(); // 使用绝对路径
             log.info("[{}] Attempting to load test WAV file from absolute path: {}", env.getExtensionName(), testWavFilePath);
             File wavFile = new File(testWavFilePath);
             if (!wavFile.exists()) {

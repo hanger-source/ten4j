@@ -1,13 +1,18 @@
 package source.hanger.audio;
 
-import javax.sound.sampled.*;
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.commons.math3.complex.Complex; // 导入 Commons Math 的 Complex 类
+
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.math3.complex.Complex;
 import org.apache.commons.math3.transform.DftNormalization;
 import org.apache.commons.math3.transform.FastFourierTransformer;
 import org.apache.commons.math3.transform.TransformType;
@@ -18,9 +23,8 @@ import org.apache.commons.math3.transform.TransformType;
  * 注意：javax.sound.sampled 在后端服务环境中可能需要额外的配置或库支持，
  * 或者考虑使用更轻量级的音频处理库进行重采样。
  */
+@Slf4j
 public class AudioUtils {
-
-    private static final Logger log = LoggerFactory.getLogger(AudioUtils.class);
 
     /**
      * 将 16-bit PCM (byte[]) 转换为 float[]，并进行重采样到目标采样率和单声道。
