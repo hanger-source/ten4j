@@ -88,4 +88,42 @@ public class ByteBufUtils {
         // 返回的 ByteBuffer 是 ByteBuf 可读区域的一个视图，对其 position/limit 的修改不会影响 ByteBuf。
         return byteBuf.nioBuffer();
     }
+
+    /**
+     * 将 byte[] 数组的指定部分转换为 Java NIO ByteBuffer。
+     * 该方法会创建一个新的 ByteBuffer，并复制指定范围的字节数据到其中。
+     * 如果传入的 byte[] 为 null 或指定范围无效，将返回 ByteBuffer.allocate(0)。
+     *
+     * @param bytes  原始字节数组
+     * @param offset 偏移量
+     * @param length 长度
+     * @return 包含指定字节数据的 Java NIO ByteBuffer
+     */
+    public static ByteBuffer toByteBuffer(byte[] bytes, int offset, int length) {
+        if (bytes == null || offset < 0 || length < 0 || offset + length > bytes.length) {
+            return ByteBuffer.allocate(0);
+        }
+        ByteBuffer buffer = ByteBuffer.allocate(length);
+        buffer.put(bytes, offset, length);
+        buffer.flip(); // 将 limit 设置为当前 position，然后将 position 设置为 0
+        return buffer;
+    }
+
+    /**
+     * 将 byte[] 数组的指定部分转换为 Netty ByteBuf。
+     * 该方法会创建一个新的 ByteBuf，并复制指定范围的字节数据到其中。
+     * 如果传入的 byte[] 为 null 或指定范围无效，将返回 Unpooled.EMPTY_BUFFER。
+     *
+     * @param bytes  原始字节数组
+     * @param offset 偏移量
+     * @param length 长度
+     * @return 包含指定字节数据的 Netty ByteBuf
+     */
+    public static ByteBuf toByteBuf(byte[] bytes, int offset, int length) {
+        if (bytes == null || offset < 0 || length < 0 || offset + length > bytes.length) {
+            return Unpooled.EMPTY_BUFFER;
+        }
+        ByteBuffer byteBuffer = toByteBuffer(bytes, offset, length);
+        return fromByteBuffer(byteBuffer);
+    }
 }

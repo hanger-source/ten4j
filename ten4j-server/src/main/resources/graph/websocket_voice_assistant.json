@@ -51,6 +51,15 @@
       },
       {
         "type": "extension",
+        "name": "denoise",
+        "addon": "source.hanger.core.extension.system.DeppFilterNetDenoiseExtension",
+        "extension_group": "asr_group",
+        "property": {
+          "enableDenoising": "{{enable_denoising}}"
+        }
+      },
+      {
+        "type": "extension",
         "name": "llm",
         "addon": "source.hanger.core.extension.dashscope.extension.QwenChatLlmExtension",
         "extension_group": "llm_group",
@@ -203,7 +212,7 @@
             "name": "pcm_frame",
             "dest": [
               {
-                "extension": "asr_self_discovering"
+                "extension": "denoise"
               }
             ]
           }
@@ -214,6 +223,19 @@
             "dest": [
               {
                 "extension": "vision"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "extension": "denoise",
+        "audio_frame": [
+          {
+            "name": "pcm_frame",
+            "dest": [
+              {
+                "extension": "asr_self_discovering"
               }
             ]
           }

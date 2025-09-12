@@ -1,4 +1,4 @@
-package source.hanger.core.extension.dashscope.test;
+package source.hanger.core.util;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -17,14 +17,12 @@ public class AudioFileWriter {
     private static final int CHANNELS = 1; // Mono
     private static final int BYTES_PER_SECOND = SAMPLE_RATE * SAMPLE_WIDTH_BYTES * CHANNELS;
     private static final long TEN_SECONDS_IN_BYTES = (long) BYTES_PER_SECOND * 10;
-
-    private BufferedOutputStream outputStream;
-    private long currentChunkBytes = 0;
+    public static AudioFileWriter DEFAULT = new AudioFileWriter("output", "output");
     private final AtomicInteger chunkCount = new AtomicInteger(0);
     private final String baseFileName;
     private final String outputDirectory;
-
-    public static AudioFileWriter DEFAULT = new AudioFileWriter("output", "output");
+    private BufferedOutputStream outputStream;
+    private long currentChunkBytes = 0;
 
     public AudioFileWriter(String baseFileName, String outputDirectory) {
         this.baseFileName = baseFileName;

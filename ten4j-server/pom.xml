@@ -116,6 +116,11 @@
             <artifactId>mockito-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>source.hanger</groupId>
+            <artifactId>dfnet-java</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

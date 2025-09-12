@@ -184,6 +184,24 @@
             <artifactId>gson</artifactId>
         </dependency>
 
+        <!-- JNA Core -->
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna</artifactId>
+            <version>${jna.version}</version>
+        </dependency>
+        <!-- JNA Platform (可选，提供更多平台特定功能) -->
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna-platform</artifactId>
+            <version>${jna.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>source.hanger</groupId>
+            <artifactId>dfnet-java</artifactId>
+        </dependency>
+
     </dependencies>
 
     <build>

@@ -46,6 +46,7 @@
         <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
         <maven-surefire-plugin.version>3.1.2</maven-surefire-plugin.version>
         <commons-pool2.version>2.12.0</commons-pool2.version> <!-- 添加 commons-pool2 版本 -->
+        <jna.version>5.14.0</jna.version> <!-- JNA 版本 -->
     </properties>
 
     <modules>
@@ -266,6 +267,25 @@
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-pool2</artifactId>
                 <version>${commons-pool2.version}</version>
+            </dependency>
+
+            <!-- JNA Core -->
+            <dependency>
+                <groupId>net.java.dev.jna</groupId>
+                <artifactId>jna</artifactId>
+                <version>${jna.version}</version>
+            </dependency>
+            <!-- JNA Platform (可选，提供更多平台特定功能) -->
+            <dependency>
+                <groupId>net.java.dev.jna</groupId>
+                <artifactId>jna-platform</artifactId>
+                <version>${jna.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>source.hanger</groupId>
+                <artifactId>dfnet-java</artifactId>
+                <version>1.0-SNAPSHOT</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
