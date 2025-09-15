@@ -33,14 +33,13 @@ public class DeppFilterNetDenoiseExtension extends BaseExtension {
         }
 
         float attenLim = 100.0f; // 固定值
-        String logLevel = "error"; // 固定值
         int ringBufferCapacity = 8192; // 固定值
         int listenerQueueCapacity = 500; // 固定值
 
         // 默认音频格式 (可从配置中获取)
         AudioFormat format = new AudioFormat(48000.0f, 16, 1, true, false);
 
-        deepFilterNetStreamProcessor = new DeepFilterNetStreamProcessor(attenLim, logLevel,
+        deepFilterNetStreamProcessor = new DeepFilterNetStreamProcessor(attenLim,
             (bytes, offset, length) -> {
                 // 创建并发送降噪后的 AudioFrameMessage
                 AudioFrameMessage audioFrameMessage = AudioFrameMessage.createBuilder("pcm_frame")
@@ -55,9 +54,9 @@ public class DeppFilterNetDenoiseExtension extends BaseExtension {
             }, ringBufferCapacity, listenerQueueCapacity);
 
         log.info(
-            "[{}] DeepFilterNetStreamProcessor configured with fixed parameters: attenLim: {}, logLevel: {}, "
-                + "ringBufferCapacity: {}, listenerQueueCapacity: {}",
-            env.getExtensionName(), attenLim, logLevel, ringBufferCapacity, listenerQueueCapacity);
+            "[{}] DeepFilterNetStreamProcessor configured with fixed parameters: attenLim={} "
+                + "ringBufferCapacity={}, listenerQueueCapacity={}",
+            env.getExtensionName(), attenLim, ringBufferCapacity, listenerQueueCapacity);
     }
 
     @Override
